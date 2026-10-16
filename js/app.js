@@ -3009,6 +3009,7 @@ function updateUserUI() {
     const loginBtn = document.getElementById('btn-login');
     const userMenu = document.getElementById('user-menu');
     const notifBtn = document.getElementById('notification-btn');
+    const notifWrapper = document.getElementById('notification-wrapper');
     const uploadSidebar = document.getElementById('btn-upload-sidebar');
     const menuDashboard = document.getElementById('menu-dashboard');
     const menuAdmin = document.getElementById('menu-admin');
@@ -3016,6 +3017,7 @@ function updateUserUI() {
     if (state.user) {
         if (loginBtn) loginBtn.style.display = 'none';
         if (userMenu) userMenu.style.display = 'block';
+        if (notifWrapper) notifWrapper.style.display = 'block';
         if (notifBtn) notifBtn.style.display = 'flex';
         if (uploadSidebar) uploadSidebar.style.display = 'flex';
 
@@ -3038,8 +3040,11 @@ function updateUserUI() {
     } else {
         if (loginBtn) loginBtn.style.display = 'inline-flex';
         if (userMenu) userMenu.style.display = 'none';
-        if (notifBtn) notifBtn.style.display = 'flex';
+        if (notifWrapper) notifWrapper.style.display = 'none';
+        if (notifBtn) notifBtn.style.display = 'none';
         if (uploadSidebar) uploadSidebar.style.display = 'none';
+        if (menuDashboard) menuDashboard.style.display = 'none';
+        if (menuAdmin) menuAdmin.style.display = 'none';
     }
 }
 
@@ -3048,11 +3053,12 @@ function restoreSession() {
         const saved = localStorage.getItem('khls-user');
         if (saved) {
             state.user = JSON.parse(saved);
-            updateUserUI();
         }
     } catch (e) {
         localStorage.removeItem('khls-user');
+        state.user = null;
     }
+    updateUserUI();
 }
 
 // ======================== EVENT LISTENERS ========================
