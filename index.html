@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kho Học Liệu Số - Trường Tiểu Học Núi Thành</title>
+    <meta name="description" content="Kho học liệu số dành cho giáo viên Trường Tiểu Học Núi Thành - Chia sẻ, khám phá và phát triển chuyên môn">
+    <meta name="keywords" content="kho học liệu, tiểu học, núi thành, giáo viên, tài liệu giảng dạy">
+    <link rel="icon" href="assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=2.5">
+</head>
+<body>
+    <!-- ============ HEADER ============ -->
+    <header class="header" id="main-header">
+        <div class="header-left">
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <a class="logo" href="#/" id="logo-link">
+                <img src="assets/images/logo.jpg" alt="Logo Kho Học Liệu Số" class="logo-img">
+                <div class="logo-text">
+                    <span class="logo-title">Kho Học Liệu Số</span>
+                    <span class="logo-subtitle">Trường TH Núi Thành</span>
+                </div>
+            </a>
+        </div>
+        <div class="header-center">
+            <div class="search-bar" id="global-search">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" placeholder="Tìm kiếm tài liệu, tác giả..." id="search-input">
+                <kbd class="search-shortcut">Ctrl+K</kbd>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Chuyển đổi giao diện">
+                <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+            <div class="notification-wrapper" id="notification-wrapper" style="position: relative;">
+                <button class="icon-btn notification-btn" id="notification-btn" aria-label="Thông báo" title="Thông báo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span class="badge" id="notification-badge">0</span>
+                </button>
+                <div class="dropdown-menu notification-dropdown" id="notification-dropdown">
+                    <div class="notification-header">
+                        <div class="notification-header-title">
+                            <span>🔔</span> <span>Thông báo</span>
+                        </div>
+                        <button type="button" class="btn-mark-all" id="btn-mark-all-read">Đã đọc tất cả</button>
+                    </div>
+                    <div class="notification-list" id="notification-list">
+                        <!-- Render qua JS -->
+                    </div>
+                    <div class="notification-footer" id="notification-footer">
+                        <a href="#/review" class="notification-footer-link" id="notification-review-link">
+                            Đi đến trang kiểm duyệt học liệu →
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="user-area" id="user-area">
+                <button class="btn btn-primary btn-login" id="btn-login">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    Đăng nhập
+                </button>
+                <!-- Khi đã đăng nhập -->
+                <div class="user-menu" id="user-menu" style="display:none;">
+                    <button class="user-avatar-btn" id="user-avatar-btn">
+                        <div class="user-avatar">
+                            <span id="user-avatar-letter">A</span>
+                        </div>
+                        <span class="user-name" id="user-display-name">Admin</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <a href="#/profile" class="dropdown-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Hồ sơ cá nhân
+                        </a>
+                        <a href="#/dashboard" class="dropdown-item" id="menu-dashboard" style="display:none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                            Dashboard
+                        </a>
+                        <a href="#/admin" class="dropdown-item" id="menu-admin" style="display:none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                            Quản trị hệ thống
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item text-danger" id="btn-logout">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            Đăng xuất
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>📂 Danh mục học liệu</h3>
+        </div>
+        <nav class="sidebar-nav" id="sidebar-nav">
+            <ul class="category-tree" id="category-tree">
+                <!-- Sẽ render bằng JS -->
+            </ul>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="#/upload" class="btn btn-primary btn-upload-sidebar" id="btn-upload-sidebar" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Đóng góp học liệu
+            </a>
+        </div>
+    </aside>
+
+    <!-- ============ SIDEBAR OVERLAY (mobile) ============ -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <main class="main-content" id="main-content">
+        
+        <!-- ========== TRANG CHỦ ========== -->
+        <div class="page active" id="page-home">
+            <!-- Hero Banner -->
+            <section class="hero">
+                <div class="hero-bg">
+                    <div class="hero-shape hero-shape-1"></div>
+                    <div class="hero-shape hero-shape-2"></div>
+                    <div class="hero-shape hero-shape-3"></div>
+                </div>
+                <div class="hero-content">
+                    <div class="hero-badge">🏫 Trường Tiểu Học Núi Thành</div>
+                    <h1 class="hero-title">Kho Học Liệu <span class="gradient-text">Số</span></h1>
+                    <p class="hero-desc">Nơi chia sẻ, khám phá và phát triển chuyên môn dành cho đội ngũ giáo viên. Cùng nhau xây dựng nguồn tài nguyên giáo dục chất lượng cao.</p>
+                    <div class="hero-search">
+                        <div class="hero-search-inner">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            <input type="text" placeholder="Tìm bài giảng, đề thi, kế hoạch bài dạy..." id="hero-search-input">
+                            <button class="btn btn-primary" id="hero-search-btn">Tìm kiếm</button>
+                        </div>
+                    </div>
+                    <div class="hero-tags">
+                        <span class="hero-tag" data-search="Toán lớp 1">Toán lớp 1</span>
+                        <span class="hero-tag" data-search="Tiếng Việt">Tiếng Việt</span>
+                        <span class="hero-tag" data-search="Bài giảng PowerPoint">Bài giảng PPT</span>
+                        <span class="hero-tag" data-search="Đề thi giữa kỳ">Đề thi giữa kỳ</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stats -->
+            <section class="stats-section">
+                <div class="container">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-docs">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" data-target="0" id="stat-docs">0</span>
+                                <span class="stat-label">Tài liệu</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-teachers">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" data-target="0" id="stat-teachers">0</span>
+                                <span class="stat-label">Giáo viên</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-downloads">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" data-target="0" id="stat-downloads">0</span>
+                                <span class="stat-label">Lượt tải</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-stars">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" data-target="0" id="stat-stars">0</span>
+                                <span class="stat-label">Đánh giá</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Danh mục chính -->
+            <section class="categories-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">📚 Danh mục học liệu</h2>
+                        <p class="section-desc">Khám phá kho tài liệu theo từng lĩnh vực</p>
+                    </div>
+                    <div class="categories-grid" id="categories-grid">
+                        <!-- Sẽ render bằng JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tài liệu mới nhất -->
+            <section class="recent-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">🆕 Tài liệu mới nhất</h2>
+                        <a href="#/browse" class="section-link">Xem tất cả →</a>
+                    </div>
+                    <div class="docs-grid" id="recent-docs-grid">
+                        <!-- Sẽ render bằng JS -->
+                        <div class="empty-state" id="recent-empty">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <p>Chưa có tài liệu nào. Hãy là người đầu tiên đóng góp!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top đóng góp -->
+            <section class="leaderboard-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title">🏆 Nhà giáo sáng tạo</h2>
+                        <p class="section-desc">Bảng xếp hạng giáo viên đóng góp nhiều nhất</p>
+                    </div>
+                    <div class="leaderboard" id="leaderboard">
+                        <div class="empty-state">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <p>Bảng xếp hạng sẽ cập nhật khi có đóng góp!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========== TRANG DUYỆT TÀI LIỆU ========== -->
+        <div class="page" id="page-browse">
+            <div class="container">
+                <div class="page-header">
+                    <div class="breadcrumb" id="browse-breadcrumb">
+                        <a href="#/">Trang chủ</a>
+                        <span class="breadcrumb-sep">›</span>
+                        <span>Duyệt tài liệu</span>
+                    </div>
+                    <h1 class="page-title" id="browse-title">Tất cả tài liệu</h1>
+                </div>
+                <div class="browse-toolbar">
+                    <div class="filter-group">
+                        <select class="select-filter" id="filter-grade">
+                            <option value="">Tất cả khối</option>
+                            <option value="1">Khối 1</option>
+                            <option value="2">Khối 2</option>
+                            <option value="3">Khối 3</option>
+                            <option value="4">Khối 4</option>
+                            <option value="5">Khối 5</option>
+                        </select>
+                        <select class="select-filter" id="filter-subject">
+                            <option value="">Tất cả môn</option>
+                            <option value="toan">Toán</option>
+                            <option value="tiengviet">Tiếng Việt</option>
+                            <option value="tnxh">TN & XH</option>
+                            <option value="khoahoc">Khoa học</option>
+                            <option value="lsdl">LS & ĐL</option>
+                            <option value="daoduc">Đạo đức</option>
+                            <option value="tinhoc">Tin học</option>
+                            <option value="tienganh">Tiếng Anh</option>
+                            <option value="amnhac">Âm nhạc</option>
+                            <option value="mythuat">Mỹ thuật</option>
+                            <option value="gdtc">GD Thể chất</option>
+                        </select>
+                        <select class="select-filter" id="filter-sort">
+                            <option value="newest">Mới nhất</option>
+                            <option value="popular">Phổ biến nhất</option>
+                            <option value="rating">Đánh giá cao nhất</option>
+                        </select>
+                    </div>
+                    <div class="view-toggle">
+                        <button class="view-btn active" data-view="grid" aria-label="Grid view">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                        </button>
+                        <button class="view-btn" data-view="list" aria-label="List view">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="docs-grid" id="browse-docs-grid">
+                    <div class="empty-state">
+                        <p>Chọn danh mục từ menu bên trái để xem tài liệu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TRANG CHI TIẾT TÀI LIỆU ========== -->
+        <div class="page" id="page-detail">
+            <div class="container">
+                <div class="page-header">
+                    <div class="breadcrumb" id="detail-breadcrumb">
+                        <a href="#/">Trang chủ</a>
+                        <span class="breadcrumb-sep">›</span>
+                        <a href="#/browse">Duyệt tài liệu</a>
+                        <span class="breadcrumb-sep">›</span>
+                        <span id="detail-breadcrumb-title">Chi tiết tài liệu</span>
+                    </div>
+                </div>
+                <div class="detail-container" id="detail-container">
+                    <!-- Sẽ render động qua renderDetailPage() -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TRANG ĐÓNG GÓP ========== -->
+        <div class="page" id="page-upload">
+            <div class="container container-sm">
+                <div class="page-header">
+                    <div class="breadcrumb">
+                        <a href="#/">Trang chủ</a>
+                        <span class="breadcrumb-sep">›</span>
+                        <span>Đóng góp học liệu</span>
+                    </div>
+                    <h1 class="page-title">📤 Đóng góp học liệu mới</h1>
+                    <p class="page-desc">Chia sẻ tài liệu của bạn với đồng nghiệp</p>
+                </div>
+                <form class="upload-form card" id="upload-form">
+                    <div class="form-group">
+                        <label class="form-label" for="upload-title">Tiêu đề tài liệu <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="upload-title" placeholder="VD: Kế hoạch bài dạy Toán lớp 3 - Phép nhân" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="upload-desc">Mô tả</label>
+                        <textarea class="form-input form-textarea" id="upload-desc" placeholder="Mô tả ngắn về nội dung tài liệu..." rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="upload-category">Loại tài liệu <span class="required">*</span></label>
+                            <select class="form-input" id="upload-category" required>
+                                <option value="">-- Chọn loại --</option>
+                                <option value="khbd">KHBD</option>
+                                <option value="baigiang">Bài giảng điện tử</option>
+                                <option value="dethi">Đề thi</option>
+                                <option value="phieubaitap">Phiếu bài tập</option>
+                                <option value="trocho">Trò chơi tương tác</option>
+                                <option value="video">Video</option>
+                                <option value="taphuan">Tập huấn</option>
+                                <option value="thuvien">Thư viện số</option>
+                                <option value="khac">Tài liệu khác</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="upload-grade">Khối lớp <span class="required">*</span></label>
+                            <select class="form-input" id="upload-grade" required>
+                                <option value="">-- Chọn khối --</option>
+                                <option value="1">Khối 1</option>
+                                <option value="2">Khối 2</option>
+                                <option value="3">Khối 3</option>
+                                <option value="4">Khối 4</option>
+                                <option value="5">Khối 5</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="upload-subject">Môn học <span class="required">*</span></label>
+                            <select class="form-input" id="upload-subject" required>
+                                <option value="">-- Chọn môn --</option>
+                                <option value="toan">Toán</option>
+                                <option value="tiengviet">Tiếng Việt</option>
+                                <option value="tnxh">TN & XH</option>
+                                <option value="khoahoc">Khoa học</option>
+                                <option value="lsdl">LS & ĐL</option>
+                                <option value="daoduc">Đạo đức</option>
+                                <option value="tinhoc">Tin học</option>
+                                <option value="tienganh">Tiếng Anh</option>
+                                <option value="amnhac">Âm nhạc</option>
+                                <option value="mythuat">Mỹ thuật</option>
+                                <option value="gdtc">GD Thể chất</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tệp đính kèm <span class="required">*</span></label>
+                        <div class="upload-dropzone" id="upload-dropzone">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <p class="dropzone-text">Kéo thả file vào đây hoặc <span class="dropzone-link">chọn file</span></p>
+                            <p class="dropzone-hint">Hỗ trợ: DOC, DOCX, PPT, PPTX, PDF, MP4, ZIP (Tối đa 50MB)</p>
+                            <input type="file" id="upload-file" hidden accept=".doc,.docx,.ppt,.pptx,.pdf,.mp4,.zip,.rar,.xls,.xlsx">
+                        </div>
+                        <div class="upload-file-preview" id="upload-file-preview" style="display:none;">
+                            <div class="file-preview-info">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <span class="file-preview-name" id="upload-file-name"></span>
+                                <span class="file-preview-size" id="upload-file-size"></span>
+                            </div>
+                            <button type="button" class="file-preview-remove" id="upload-file-remove">✕</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="upload-url">🔗 Đường dẫn tệp trực tuyến (Tùy chọn: URL công khai / Cloudflare R2 / OneDrive / Google Drive để xem qua Microsoft Office Online)</label>
+                        <input type="url" class="form-input" id="upload-url" placeholder="https://... (Nếu có liên kết xem trực tuyến)">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-lg" id="btn-submit-upload">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            Gửi tài liệu để duyệt
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ========== TRANG HỒ SƠ CÁ NHÂN ========== -->
+        <div class="page" id="page-profile">
+            <div class="container">
+                <div class="page-header">
+                    <div class="breadcrumb">
+                        <a href="#/">Trang chủ</a>
+                        <span class="breadcrumb-sep">›</span>
+                        <span>Hồ sơ cá nhân</span>
+                    </div>
+                </div>
+                <div class="profile-header-card card" id="profile-card">
+                    <div class="profile-avatar-lg">
+                        <span id="profile-avatar-letter">?</span>
+                    </div>
+                    <div class="profile-info">
+                        <h1 class="profile-name" id="profile-name">--</h1>
+                        <p class="profile-role" id="profile-role">--</p>
+                        <p class="profile-dept" id="profile-dept">--</p>
+                    </div>
+                    <div class="profile-stats">
+                        <div class="profile-stat">
+                            <span class="profile-stat-number" id="profile-uploads">0</span>
+                            <span class="profile-stat-label">Đã đóng góp</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-number" id="profile-downloads">0</span>
+                            <span class="profile-stat-label">Lượt tải</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-number" id="profile-stars">0</span>
+                            <span class="profile-stat-label">Điểm sao</span>
+                        </div>
+                    </div>
+                </div>
+                <h2 class="section-title mt-2">Tài liệu đã đóng góp</h2>
+                <div class="docs-grid" id="profile-docs-grid">
+                    <div class="empty-state">
+                        <p>Chưa có tài liệu nào</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TRANG KIỂM DUYỆT (Tổ trưởng) ========== -->
+        <div class="page" id="page-review">
+            <div class="container">
+                <div class="page-header">
+                    <div class="breadcrumb">
+                        <a href="#/">Trang chủ</a>
+                        <span class="breadcrumb-sep">›</span>
+                        <span>Kiểm duyệt tài liệu</span>
+                    </div>
+                    <h1 class="page-title">📋 Tài liệu chờ duyệt</h1>
+                </div>
+                <div class="review-list" id="review-docs-grid">
+                    <div class="empty-state">
+                        <p>Không có tài liệu nào chờ duyệt</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TRANG ADMIN ========== -->
+        <div class="page" id="page-admin">
+            <div class="container">
+                <div class="page-header">
+                    <h1 class="page-title">⚙️ Quản trị hệ thống</h1>
+                </div>
+                <div class="admin-tabs" id="admin-tabs">
+                    <button class="admin-tab active" data-tab="users">👥 Tài khoản</button>
+                    <button class="admin-tab" data-tab="categories">📂 Danh mục</button>
+                    <button class="admin-tab" data-tab="system">🔧 Hệ thống</button>
+                </div>
+                <div class="admin-panel" id="admin-panel">
+                    <div class="empty-state">
+                        <p>Chức năng quản trị sẽ được xây dựng ở bước tiếp theo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TRANG DASHBOARD ========== -->
+        <div class="page" id="page-dashboard">
+            <div class="container">
+                <div class="page-header">
+                    <h1 class="page-title">📊 Dashboard Thống Kê</h1>
+                    <p class="page-desc">Tổng quan hoạt động kho học liệu số</p>
+                </div>
+                <div class="dashboard-content" id="dashboard-content">
+                    <div class="empty-state">
+                        <p>Dashboard sẽ được xây dựng ở bước tiếp theo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="footer" id="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="assets/images/logo.jpg" alt="Logo" class="footer-logo">
+                    <div>
+                        <h3>Kho Học Liệu Số</h3>
+                        <p>Trường Tiểu Học Núi Thành</p>
+                    </div>
+                </div>
+                <div class="footer-info">
+                    <p>📍 Xã Núi Thành, Huyện Núi Thành, Tỉnh Quảng Nam</p>
+                    <p>📧 Email: thntieuhocnuithanh@quangnam.edu.vn</p>
+                </div>
+                <div class="footer-copy">
+                    <p>&copy; 2026 Trường Tiểu Học Núi Thành. Phát triển bởi ❤️ cho giáo dục.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ============ LOGIN MODAL ============ -->
+    <div class="modal-overlay" id="login-modal">
+        <div class="modal">
+            <button class="modal-close" id="login-modal-close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header">
+                <img src="assets/images/logo.jpg" alt="Logo" class="modal-logo">
+                <h2 class="modal-title">Đăng nhập hệ thống</h2>
+                <p class="modal-desc">Kho Học Liệu Số - Trường TH Núi Thành</p>
+            </div>
+            <form class="modal-body" id="login-form">
+                <div class="form-group">
+                    <label class="form-label" for="login-email">Email / Tên đăng nhập</label>
+                    <div class="input-with-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <input type="text" class="form-input" id="login-email" placeholder="Nhập email hoặc tên đăng nhập" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-password">Mật khẩu</label>
+                    <div class="input-with-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="password" class="form-input" id="login-password" placeholder="Nhập mật khẩu" required>
+                        <button type="button" class="toggle-password" id="toggle-password" aria-label="Show password">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg btn-full">Đăng nhập</button>
+            </form>
+            <div class="modal-footer">
+                <p>Liên hệ quản trị viên nếu chưa có tài khoản</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ PREVIEW MODAL ============ -->
+    <div class="modal-overlay" id="preview-modal">
+        <div class="modal modal-xl">
+            <button class="modal-close" id="preview-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-body preview-modal-body" id="preview-modal-content">
+                <!-- Nội dung tệp tin xem trước -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ REPORT MODAL ============ -->
+    <div class="modal-overlay" id="report-modal">
+        <div class="modal">
+            <button class="modal-close" id="report-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header">
+                <h2 class="modal-title">⚠️ Báo cáo tài liệu</h2>
+                <p class="modal-desc">Gửi phản hồi nếu tài liệu có lỗi hoặc vi phạm</p>
+            </div>
+            <form class="modal-body" id="report-form">
+                <input type="hidden" id="report-doc-id">
+                <div class="form-group">
+                    <label class="form-label">Lý do báo cáo</label>
+                    <select class="form-input" id="report-reason" required>
+                        <option value="Tài liệu bị lỗi, không đọc được">Tài liệu bị lỗi, không đọc được</option>
+                        <option value="Nội dung kiến thức chưa chính xác">Nội dung kiến thức chưa chính xác</option>
+                        <option value="Trùng lặp với tài liệu khác">Trùng lặp với tài liệu khác</option>
+                        <option value="Vi phạm bản quyền / chính sách">Vi phạm bản quyền / chính sách</option>
+                        <option value="Khác">Lý do khác</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chi tiết phản ánh</label>
+                    <textarea class="form-input form-textarea" id="report-detail" placeholder="Mô tả cụ thể lỗi phát hiện..." rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-danger btn-full">Gửi báo cáo</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ BATCH USER MODAL ============ -->
+    <div class="modal-overlay" id="batch-user-modal">
+        <div class="modal modal-lg">
+            <button class="modal-close" id="batch-user-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header">
+                <h2 class="modal-title">👥 Tạo tài khoản hàng loạt</h2>
+                <p class="modal-desc">Nhập danh sách giáo viên để cấp tài khoản nhanh chóng</p>
+            </div>
+            <form class="modal-body" id="batch-user-form">
+                <div class="form-group">
+                    <label class="form-label">Danh sách giáo viên (Họ tên, Email, Vai trò, Tổ chuyên môn)</label>
+                    <textarea class="form-input form-textarea" id="batch-user-input" rows="8" placeholder="Nguyễn Văn A, nva@nuithanh.edu.vn, teacher, Tổ 1&#10;Trần Thị B, ttb@nuithanh.edu.vn, leader, Tổ 2&#10;Lê Văn C, lvc@nuithanh.edu.vn, teacher, Tổ 3"></textarea>
+                </div>
+                <div class="modal-actions" style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" class="btn btn-secondary" id="btn-fill-sample-users">Tải mẫu 10 giáo viên</button>
+                    <button type="submit" class="btn btn-primary">Tạo tài khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ TOAST NOTIFICATION ============ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- ============ SCRIPTS ============ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
+    <script src="js/app.js?v=2.4"></script>
+</body>
+</html>

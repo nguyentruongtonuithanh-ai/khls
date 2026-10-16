@@ -1,0 +1,14 @@
+name = "khls-nuithanh-api"
+main = "src/index.js"
+compatibility_date = "2024-04-01"
+
+# Cloudflare D1 SQLite Database Binding (Gói Free 5GB, 5 triệu reads/ngày)
+[[d1_databases]]
+binding = "DB"
+database_name = "khls_nuithanh_db"
+database_id = "your-d1-database-id-after-creation"
+
+# Cấu hình biến môi trường
+[vars]
+ENVIRONMENT = "production"
+SCHOOL_NAME = "Trường Tiểu Học Núi Thành"
