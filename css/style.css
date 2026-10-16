@@ -2703,3 +2703,107 @@ body.sidebar-collapsed .footer {
 .role-leader { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
 .role-teacher { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
+/* ================================================
+   GOOGLE DRIVE INTEGRATION STYLES
+   ================================================ */
+.btn-drive-header {
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    color: var(--text-primary);
+    transition: all var(--transition-base);
+}
+.btn-drive-header:hover {
+    background: rgba(37, 99, 235, 0.18);
+    border-color: #3b82f6;
+    color: #3b82f6;
+    transform: translateY(-1px);
+}
+.btn-drive-sidebar {
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: var(--text-primary);
+    transition: all var(--transition-base);
+}
+.btn-drive-sidebar:hover {
+    background: rgba(37, 99, 235, 0.2);
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+.badge-drive {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(37, 99, 235, 0.12);
+    color: #3b82f6;
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.drive-integration-box {
+    position: relative;
+    overflow: hidden;
+}
+
+/* ================================================
+   CONTRIBUTE & DRIVE UPLOAD MODAL STYLES
+   ================================================ */
+.btn-contribute-header {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #ffffff !important;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-contribute-header:hover {
+    background: linear-gradient(135deg, #4338ca, #6d28d9);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5) !important;
+}
+
+.btn-hero-contribute {
+    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    color: #ffffff !important;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+.btn-hero-contribute:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(6, 182, 212, 0.45) !important;
+}
+
+.drive-modal-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    flex-shrink: 0;
+}
+
+.contribute-modal-dialog {
+    max-width: 680px !important;
+    width: 95% !important;
+}
+
+#modal-dropzone.drag-over {
+    border-color: #06b6d4 !important;
+    background: rgba(6, 182, 212, 0.08) !important;
+    transform: scale(1.01);
+}
+
+@media (max-width: 640px) {
+    .btn-contribute-header span {
+        display: none;
+    }
+    .btn-contribute-header {
+        padding: 0.45rem !important;
+    }
+}
+
+

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=2.6">
+    <link rel="stylesheet" href="css/style.css?v=2.9">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -35,6 +35,14 @@
             </div>
         </div>
         <div class="header-right">
+            <button type="button" class="btn btn-primary btn-sm btn-contribute-header" id="btn-header-contribute" title="Đóng góp học liệu mới lên Google Drive" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.95rem; border-radius:var(--radius-md); box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Đóng góp học liệu</span>
+            </button>
+            <a href="https://drive.google.com" target="_blank" rel="noopener" class="btn btn-outline btn-sm btn-drive-header" id="btn-header-drive" title="Mở Thư mục Google Drive chung của Trường" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:600; padding:0.45rem 0.85rem; border-radius:var(--radius-md);">
+                <svg width="16" height="16" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                <span>Google Drive</span>
+            </a>
             <div class="notification-wrapper" id="notification-wrapper" style="position: relative; display: none;">
                 <button class="icon-btn notification-btn" id="notification-btn" aria-label="Thông báo" title="Thông báo">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -106,10 +114,14 @@
             </ul>
         </nav>
         <div class="sidebar-footer">
-            <a href="#/upload" class="btn btn-primary btn-upload-sidebar" id="btn-upload-sidebar" style="display:none;">
+            <a href="https://drive.google.com" target="_blank" rel="noopener" class="btn btn-secondary btn-drive-sidebar" id="btn-sidebar-drive" style="width:100%; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; font-weight:600;">
+                <svg width="18" height="18" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                Google Drive Trường
+            </a>
+            <button type="button" class="btn btn-primary btn-upload-sidebar" id="btn-upload-sidebar" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 Đóng góp học liệu
-            </a>
+            </button>
         </div>
     </aside>
 
@@ -144,6 +156,12 @@
                         <span class="hero-tag" data-search="Tiếng Việt">Tiếng Việt</span>
                         <span class="hero-tag" data-search="Bài giảng PowerPoint">Bài giảng PPT</span>
                         <span class="hero-tag" data-search="Đề thi giữa kỳ">Đề thi giữa kỳ</span>
+                    </div>
+                    <div class="hero-actions" style="margin-top: 1.35rem; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-primary btn-hero-contribute" id="hero-btn-contribute" style="box-shadow: 0 4px 18px rgba(99, 102, 241, 0.4); font-weight: 600; padding: 0.65rem 1.45rem; display: inline-flex; align-items: center; gap: 8px; border-radius: var(--radius-full); font-size: 0.95rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span>📤 Đóng góp học liệu lên Google Drive</span>
+                        </button>
                     </div>
                 </div>
             </section>
@@ -325,8 +343,24 @@
                         <span>Đóng góp học liệu</span>
                     </div>
                     <h1 class="page-title">📤 Đóng góp học liệu mới</h1>
-                    <p class="page-desc">Chia sẻ tài liệu của bạn với đồng nghiệp</p>
+                    <p class="page-desc">Tất cả tệp sẽ được chuyển và lưu trữ tại Google Drive Quản trị (<strong>nguyentruongtonuithanh@gmail.com</strong>)</p>
                 </div>
+
+                <!-- Quick Action Banner -->
+                <div class="card" style="background: linear-gradient(135deg, rgba(79,70,229,0.12), rgba(6,182,212,0.14)); border: 1px solid rgba(79,70,229,0.3); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: var(--space-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-size: 1.8rem;">🚀</span>
+                        <div>
+                            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.98rem;">Tải thẳng vào Google Drive Quản trị</div>
+                            <div style="font-size: 0.82rem; color: var(--text-secondary);">Thầy cô chỉ cần chọn file, hệ thống sẽ tự động chuyển vào Drive <strong>nguyentruongtonuithanh@gmail.com</strong></div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="triggerContributeFlow()" style="font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>Chọn tệp &amp; Đóng góp ngay</span>
+                    </button>
+                </div>
+
                 <form class="upload-form card" id="upload-form">
                     <div class="form-group">
                         <label class="form-label" for="upload-title">Tiêu đề tài liệu <span class="required">*</span></label>
@@ -345,7 +379,7 @@
                                 <option value="baigiang">Bài giảng điện tử</option>
                                 <option value="dethi">Đề thi</option>
                                 <option value="phieubaitap">Phiếu bài tập</option>
-                                <option value="trocho">Trò chơi tương tác</option>
+                                <option value="trochoi">Trò chơi tương tác</option>
                                 <option value="video">Video</option>
                                 <option value="taphuan">Tập huấn</option>
                                 <option value="thuvien">Thư viện số</option>
@@ -398,9 +432,46 @@
                             <button type="button" class="file-preview-remove" id="upload-file-remove">✕</button>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" for="upload-url">🔗 Đường dẫn tệp trực tuyến (Tùy chọn: URL công khai / Cloudflare R2 / OneDrive / Google Drive để xem qua Microsoft Office Online)</label>
-                        <input type="url" class="form-input" id="upload-url" placeholder="https://... (Nếu có liên kết xem trực tuyến)">
+                    <!-- KHỐI LIÊN KẾT GOOGLE DRIVE QUẢN TRỊ -->
+                    <div class="drive-integration-box card" style="background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(59,130,246,0.12)); border: 1px solid rgba(59,130,246,0.3); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: var(--space-lg);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 38px; height: 38px; border-radius: 8px; background: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                                    <svg width="24" height="24" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)</h4>
+                                    <p style="margin: 0; font-size: 0.82rem; color: var(--text-muted);">Tài khoản lưu trữ trung tâm của nhà trường</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="openDriveSetupModal()" style="display: inline-flex; align-items: center; gap: 6px;">
+                                <span>⚙️ Cấu hình Drive Quản trị</span>
+                            </button>
+                        </div>
+                        
+                        <!-- 3 Bước lấy link Drive -->
+                        <div class="drive-steps-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 12px;">
+                            <div style="background: var(--bg-surface); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.82rem;">
+                                <strong>1️⃣ Tải lên Drive:</strong> Nhấn nút "Mở Thư mục Drive Trường" ở trên và tải file lên.
+                            </div>
+                            <div style="background: var(--bg-surface); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.82rem;">
+                                <strong>2️⃣ Bật chia sẻ:</strong> Chuột phải vào file ➔ <em>Chia sẻ</em> ➔ Chọn <em>Bất kỳ ai có đường liên kết</em>.
+                            </div>
+                            <div style="background: var(--bg-surface); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.82rem;">
+                                <strong>3️⃣ Dán link:</strong> Dán link vào ô bên dưới. Hệ thống tự động liên kết và trích xuất xem trực tuyến!
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="upload-url" style="font-weight: 600;">🔗 Dán liên kết Google Drive của bài giảng / giáo án:</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="url" class="form-input" id="upload-url" placeholder="https://drive.google.com/file/d/1aB2c.../view?usp=sharing" style="flex: 1;">
+                                <button type="button" class="btn btn-secondary" id="btn-test-drive-url" onclick="testCurrentDriveUrl()">
+                                    👁️ Kiểm tra link
+                                </button>
+                            </div>
+                            <div id="drive-url-status" style="margin-top: 6px; font-size: 0.82rem; display: none;"></div>
+                        </div>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary btn-lg" id="btn-submit-upload">
@@ -483,6 +554,7 @@
                 <div class="admin-tabs" id="admin-tabs">
                     <button class="admin-tab active" data-tab="users">👥 Tài khoản</button>
                     <button class="admin-tab" data-tab="categories">📂 Danh mục</button>
+                    <button class="admin-tab" data-tab="drive">☁️ Google Drive &amp; Đám mây</button>
                     <button class="admin-tab" data-tab="system">🔧 Hệ thống</button>
                 </div>
                 <div class="admin-panel" id="admin-panel">
@@ -635,12 +707,246 @@
         </div>
     </div>
 
+    <!-- ============ CONTRIBUTE MODAL (ĐÓNG GÓP HỌC LIỆU VÀO GOOGLE DRIVE) ============ -->
+    <div class="modal-overlay" id="contribute-modal">
+        <div class="modal modal-lg contribute-modal-dialog">
+            <button class="modal-close" id="contribute-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="drive-modal-icon">
+                        <svg width="28" height="28" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="modal-title" style="margin:0; font-size:1.25rem;">📤 Đóng góp học liệu lên Google Drive Trường</h2>
+                        <p class="modal-desc" style="margin:2px 0 0; font-size:0.83rem;">File tải lên sẽ tự động lưu vào Google Drive Quản trị (<strong>nguyentruongtonuithanh@gmail.com</strong>)</p>
+                    </div>
+                </div>
+            </div>
+
+            <form class="modal-body" id="contribute-form" style="max-height: calc(85vh - 120px); overflow-y: auto;">
+                <!-- 1. Vùng chọn / kéo thả tệp -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+                        <span>Tệp học liệu đính kèm <span class="required">*</span></span>
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">Word, PPT, PDF, Excel, Video, ZIP</span>
+                    </label>
+
+                    <div class="upload-dropzone" id="modal-dropzone" style="cursor:pointer; border: 2px dashed var(--primary); background: var(--bg-surface); padding: 1.5rem; text-align: center; border-radius: var(--radius-md); transition: all 0.2s ease;">
+                        <div style="width:48px; height:48px; border-radius:50%; background:var(--primary-soft); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; margin-bottom:8px;">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                        <p class="dropzone-text" style="margin:4px 0; font-weight:600;">Kéo thả file vào đây hoặc <span style="color:var(--primary); text-decoration:underline;">chọn từ máy tính</span></p>
+                        <p class="dropzone-hint" style="margin:0; font-size:0.8rem; color:var(--text-muted);">Tối đa 50MB mỗi tệp • Tự động nhận diện môn &amp; khối lớp</p>
+                        <input type="file" id="modal-upload-file" hidden accept=".doc,.docx,.ppt,.pptx,.pdf,.mp4,.zip,.rar,.xls,.xlsx,.txt,.png,.jpg">
+                    </div>
+
+                    <div class="upload-file-preview" id="modal-file-preview" style="display:none; margin-top:8px;">
+                        <div class="file-preview-info" style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+                            <span id="modal-file-icon" style="font-size:1.5rem;">📄</span>
+                            <div style="min-width:0; flex:1;">
+                                <div class="file-preview-name" id="modal-file-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600;">ten-file.docx</div>
+                                <div class="file-preview-size" id="modal-file-size" style="font-size:0.78rem; color:var(--text-muted);">1.2 MB</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary" id="modal-file-change" style="padding:0.3rem 0.6rem; font-size:0.8rem;">Đổi file khác</button>
+                    </div>
+                </div>
+
+                <!-- 2. Thẻ hiển thị Trạng thái Google Drive Quản trị -->
+                <div class="drive-target-banner" id="drive-target-banner" style="background:linear-gradient(135deg, rgba(37,99,235,0.08), rgba(59,130,246,0.14)); border:1px solid rgba(59,130,246,0.3); border-radius:var(--radius-md); padding:10px 14px; margin-bottom:var(--space-md); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <svg width="22" height="22" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                        <div>
+                            <div style="font-size:0.88rem; font-weight:700; color:var(--text-primary);">
+                                Nơi lưu trữ: <span id="drive-destination-name" style="color:var(--primary);">Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)</span>
+                            </div>
+                            <div style="font-size:0.77rem; color:var(--text-secondary);" id="drive-destination-status">
+                                🟢 Tự động chuyển thẳng vào tài khoản Drive Quản trị trường
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-open-drive-setup" style="font-size:0.78rem; padding:0.3rem 0.75rem; border-radius:var(--radius-sm); font-weight:600;" title="Quản trị viên cài đặt kết nối">
+                        ⚙️ Cấu hình Drive Quản trị
+                    </button>
+                </div>
+
+                <!-- 3. Form thông tin học liệu -->
+                <div class="form-group">
+                    <label class="form-label" for="modal-upload-title">Tiêu đề học liệu <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="modal-upload-title" placeholder="VD: Kế hoạch bài dạy Toán lớp 3 - Bảng nhân 7" required>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label" for="modal-upload-category">Loại học liệu <span class="required">*</span></label>
+                        <select class="form-input" id="modal-upload-category" required>
+                            <option value="">-- Chọn loại --</option>
+                            <option value="khbd">KHBD (Giáo án)</option>
+                            <option value="baigiang">Bài giảng điện tử</option>
+                            <option value="dethi">Đề thi / Kiểm tra</option>
+                            <option value="phieubaitap">Phiếu bài tập</option>
+                            <option value="trochoi">Trò chơi tương tác</option>
+                            <option value="video">Video bài giảng</option>
+                            <option value="taphuan">Tập huấn</option>
+                            <option value="thuvien">Thư viện số</option>
+                            <option value="khac">Tài liệu khác</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modal-upload-grade">Khối lớp <span class="required">*</span></label>
+                        <select class="form-input" id="modal-upload-grade" required>
+                            <option value="">-- Khối --</option>
+                            <option value="1">Khối 1</option>
+                            <option value="2">Khối 2</option>
+                            <option value="3">Khối 3</option>
+                            <option value="4">Khối 4</option>
+                            <option value="5">Khối 5</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modal-upload-subject">Môn học <span class="required">*</span></label>
+                        <select class="form-input" id="modal-upload-subject" required>
+                            <option value="">-- Môn --</option>
+                            <option value="toan">Toán</option>
+                            <option value="tiengviet">Tiếng Việt</option>
+                            <option value="tnxh">TN &amp; XH</option>
+                            <option value="khoahoc">Khoa học</option>
+                            <option value="lsdl">LS &amp; ĐL</option>
+                            <option value="daoduc">Đạo đức</option>
+                            <option value="tinhoc">Tin học</option>
+                            <option value="tienganh">Tiếng Anh</option>
+                            <option value="amnhac">Âm nhạc</option>
+                            <option value="mythuat">Mỹ thuật</option>
+                            <option value="gdtc">GD Thể chất</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label" for="modal-upload-author">Tên giáo viên đóng góp</label>
+                        <input type="text" class="form-input" id="modal-upload-author" placeholder="Họ và tên giáo viên">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modal-upload-dept">Tổ chuyên môn</label>
+                        <select class="form-input" id="modal-upload-dept">
+                            <option value="Tổ 1">Tổ 1</option>
+                            <option value="Tổ 2">Tổ 2</option>
+                            <option value="Tổ 3">Tổ 3</option>
+                            <option value="Tổ 4">Tổ 4</option>
+                            <option value="Tổ 5">Tổ 5</option>
+                            <option value="Tổ Tin học - Ngoại ngữ">Tổ Tin học - Ngoại ngữ</option>
+                            <option value="Tổ Âm nhạc - Mỹ thuật">Tổ Âm nhạc - Mỹ thuật</option>
+                            <option value="Tổ Thể chất">Tổ Thể chất</option>
+                            <option value="Ban Giám Hiệu">Ban Giám Hiệu</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="modal-upload-desc">Mô tả tóm tắt (tùy chọn)</label>
+                    <textarea class="form-input form-textarea" id="modal-upload-desc" rows="2" placeholder="Ghi chú mục tiêu bài học hoặc yêu cầu cần đạt..."></textarea>
+                </div>
+
+                <!-- 4. Thanh tiến trình khi đang tải lên Google Drive Quản trị -->
+                <div id="modal-upload-progress-container" style="display:none; margin: 12px 0; background: var(--bg-surface); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.85rem;">
+                        <span id="modal-progress-status" style="font-weight:600; color:var(--primary);">Đang tải lên Drive Quản trị...</span>
+                        <span id="modal-progress-percent" style="font-weight:700;">0%</span>
+                    </div>
+                    <div style="width:100%; height:8px; background:var(--bg-hover); border-radius:4px; overflow:hidden;">
+                        <div id="modal-progress-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #4f46e5, #06b6d4); transition:width 0.3s ease;"></div>
+                    </div>
+                </div>
+
+                <!-- 5. Nút submit -->
+                <div class="modal-actions" style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+                    <button type="button" class="btn btn-secondary" id="modal-btn-cancel">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary btn-lg" id="modal-btn-submit" style="display:inline-flex; align-items:center; gap:8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>🚀 Tải lên &amp; Lưu vào Google Drive Quản trị</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ DRIVE SETUP MODAL (CẤU HÌNH GOOGLE DRIVE QUẢN TRỊ) ============ -->
+    <div class="modal-overlay" id="drive-setup-modal">
+        <div class="modal modal-lg">
+            <button class="modal-close" id="drive-setup-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header">
+                <h2 class="modal-title" style="display:flex; align-items:center; gap:8px;">
+                    <svg width="24" height="24" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                    <span>Cấu hình Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)</span>
+                </h2>
+                <p class="modal-desc">Kết nối Google Drive để nhận tất cả bài giảng, đề thi do toàn bộ giáo viên tải lên</p>
+            </div>
+            <div class="modal-body" style="max-height:calc(85vh - 120px); overflow-y:auto;">
+                <!-- Hướng dẫn tài khoản quản trị -->
+                <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:14px;">
+                    <div style="background:rgba(37,99,235,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:6px; padding:10px 14px; margin-bottom:12px; font-size:0.88rem; color:var(--text-primary); line-height:1.5;">
+                        👤 <strong>Tài khoản Quản trị nhận file:</strong> <code style="color:var(--primary); font-weight:700;">nguyentruongtonuithanh@gmail.com</code><br>
+                        <em>Tất cả giáo viên khi bấm "Đóng góp học liệu" và chọn file sẽ tự động được hệ thống đẩy file thẳng vào Google Drive của tài khoản này. Thầy cô giáo không cần tự cài đặt.</em>
+                    </div>
+                    <h4 style="margin:0 0 8px; color:var(--primary); font-size:0.95rem;">⚡ 3 Bước thiết lập dành cho Quản trị viên:</h4>
+                    <ol style="margin:0; padding-left:18px; font-size:0.85rem; line-height:1.6; color:var(--text-secondary);">
+                        <li>Nhấn <strong>"Sao chép mã Google Apps Script"</strong> bên dưới.</li>
+                        <li>Đăng nhập <a href="https://script.google.com" target="_blank" rel="noopener" style="color:var(--primary); font-weight:600;">script.google.com</a> bằng tài khoản <strong>nguyentruongtonuithanh@gmail.com</strong> ➔ Bấm <strong>Dự án mới (New Project)</strong> ➔ Dán mã vào ➔ Nhấn <strong>Triển khai (Deploy)</strong> ➔ Chọn <strong>Ứng dụng web (Web app)</strong> ➔ Ai có quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong> ➔ Triển khai.</li>
+                        <li>Dán đường dẫn URL Web App (đuôi <code>/exec</code>) vào ô bên dưới rồi nhấn <strong>Lưu cấu hình Quản trị</strong>.</li>
+                    </ol>
+                    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-sm btn-secondary" id="btn-copy-gas-script">
+                            📋 Sao chép mã Google Apps Script
+                        </button>
+                        <a href="https://script.google.com" target="_blank" rel="noopener" class="btn btn-sm btn-outline">
+                            ↗️ Mở script.google.com
+                        </a>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="my-drive-gas-url">
+                        🔗 URL Web App Google Apps Script của nguyentruongtonuithanh@gmail.com <span class="required">*</span>
+                    </label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="url" class="form-input" id="my-drive-gas-url" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;">
+                        <button type="button" class="btn btn-secondary" id="btn-test-my-gas">
+                            🧪 Kiểm tra
+                        </button>
+                    </div>
+                    <div id="gas-test-result" style="font-size:0.82rem; margin-top:6px; display:none;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="my-drive-folder-id">
+                        📁 ID Thư mục trên Drive nguyentruongtonuithanh@gmail.com (Tùy chọn)
+                    </label>
+                    <input type="text" class="form-input" id="my-drive-folder-id" placeholder="Để trống nếu muốn lưu thẳng vào Drive gốc, hoặc nhập Folder ID">
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin:4px 0 0;">Nhập Folder ID (chuỗi sau <code>folders/...</code>) nếu muốn gom tất cả bài của giáo viên vào 1 thư mục riêng.</p>
+                </div>
+
+                <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+                    <button type="button" class="btn btn-secondary" id="btn-close-drive-setup">Đóng</button>
+                    <button type="button" class="btn btn-primary" id="btn-save-my-drive">💾 Lưu cấu hình Quản trị</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden global input for 1-click native file picker trigger -->
+    <input type="file" id="global-contribute-file-input" hidden accept=".doc,.docx,.ppt,.pptx,.pdf,.mp4,.zip,.rar,.xls,.xlsx,.txt,.png,.jpg">
+
     <!-- ============ TOAST NOTIFICATION ============ -->
     <div class="toast-container" id="toast-container"></div>
 
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=2.6"></script>
+    <script src="js/app.js?v=2.9"></script>
 </body>
 </html>

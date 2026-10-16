@@ -149,7 +149,7 @@ const INITIAL_DOCUMENTS = [
         file_name: 'KHBD_Toan1_PhepCong10_LeThuHa.docx',
         file_size: 2450000,
         file_type: 'docx',
-        file_url: 'https://calibre-ebook.com/downloads/demos/demo.docx',
+        file_url: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
         author_id: 4,
         author_name: 'Cô Lê Thu Hà',
         author_dept: 'Tổ 1',
@@ -175,6 +175,7 @@ const INITIAL_DOCUMENTS = [
         file_name: 'BaiGiang_TV2_DanhSachToEm.pptx',
         file_size: 15400000,
         file_type: 'pptx',
+        file_url: 'https://drive.google.com/file/d/1Yd8_Nuithanh_BaiGiang_TiengViet2/view?usp=sharing',
         author_id: 2,
         author_name: 'Cô Trần Thị Mai',
         author_dept: 'Tổ 1',
@@ -388,6 +389,28 @@ const INITIAL_NOTIFICATIONS = [
 // ======================== APP STORE & STATE ========================
 
 const store = {
+    getSettings() {
+        const defaultSettings = {
+            drive_account: 'nguyentruongtonuithanh@gmail.com',
+            drive_folder_url: 'https://drive.google.com/drive/folders/1KHO_HOC_LIEU_SO_NUITHANH',
+            drive_gas_url: '',
+            school_name: 'Trường Tiểu Học Núi Thành',
+            school_email: 'nguyentruongtonuithanh@gmail.com'
+        };
+        const data = localStorage.getItem('khls_settings_v2');
+        if (!data) {
+            localStorage.setItem('khls_settings_v2', JSON.stringify(defaultSettings));
+            return defaultSettings;
+        }
+        try {
+            return { ...defaultSettings, ...JSON.parse(data) };
+        } catch(e) {
+            return defaultSettings;
+        }
+    },
+    saveSettings(settings) {
+        localStorage.setItem('khls_settings_v2', JSON.stringify(settings));
+    },
     getUsers() {
         const data = localStorage.getItem('khls_users_v2');
         if (!data) {
@@ -408,8 +431,13 @@ const store = {
         try {
             const docs = JSON.parse(data);
             const d1 = docs.find(d => d.id === 'doc-1');
-            if (d1 && !d1.file_url) {
-                d1.file_url = 'https://calibre-ebook.com/downloads/demos/demo.docx';
+            if (d1 && (!d1.file_url || d1.file_url.includes('calibre-ebook'))) {
+                d1.file_url = 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing';
+                localStorage.setItem('khls_docs_v2', JSON.stringify(docs));
+            }
+            const d2 = docs.find(d => d.id === 'doc-2');
+            if (d2 && !d2.file_url) {
+                d2.file_url = 'https://drive.google.com/file/d/1Yd8_Nuithanh_BaiGiang_TiengViet2/view?usp=sharing';
                 localStorage.setItem('khls_docs_v2', JSON.stringify(docs));
             }
             return docs;
@@ -460,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
     updatePendingBadge();
     animateCounters();
+    syncDriveLinks();
 });
 
 // ======================== THEME ========================
@@ -818,6 +847,7 @@ function renderDetailPage(docId) {
 
     const catObj = CATEGORIES.find(c => c.id === doc.category);
     const catName = catObj ? catObj.name : 'Tài liệu';
+    const driveId = extractGoogleDriveId(doc.file_url);
 
     // Related documents
     const relatedDocs = store.getDocuments()
@@ -854,6 +884,12 @@ function renderDetailPage(docId) {
                             <button class="btn btn-primary" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến ngay trên trang">
                                 👁️ Xem trực tuyến
                             </button>
+                            ${driveId ? `
+                                <a href="https://drive.google.com/file/d/${driveId}/view" target="_blank" rel="noopener" class="btn btn-outline" style="background:#ffffff; color:#1e293b; border-color:#cbd5e1; font-weight:600; display:inline-flex; align-items:center; gap:6px; text-decoration:none;">
+                                    <svg width="18" height="18" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                                    Mở trên Google Drive ↗
+                                </a>
+                            ` : ''}
                             <button class="btn btn-secondary" onclick="openDocumentInNewTab('${doc.id}')" title="Mở file lên xem toàn màn hình trong tab mới">
                                 ↗️ Mở tab mới
                             </button>
@@ -933,6 +969,7 @@ function renderDetailPage(docId) {
                     <ul style="font-size:0.85rem; line-height:2.2; color:var(--text-secondary);">
                         <li>📁 <strong>Định dạng:</strong> ${doc.file_type.toUpperCase()}</li>
                         <li>⚖️ <strong>Dung lượng:</strong> ${formatFileSize(doc.file_size)}</li>
+                        <li>☁️ <strong>Lưu trữ:</strong> ${driveId ? '<span style="color:#2563eb; font-weight:700;">Google Drive Trường</span>' : 'Bộ nhớ hệ thống'}</li>
                         <li>🏫 <strong>Trường:</strong> TH Núi Thành</li>
                         <li>🛡️ <strong>Bản quyền:</strong> Giữ nguyên tên tác giả</li>
                         <li>✅ <strong>Kiểm duyệt:</strong> ${doc.approved_by || 'Đã kiểm duyệt'}</li>
@@ -1024,6 +1061,17 @@ function handleDownloadDoc(docId) {
     if (author) {
         author.total_downloads = (author.total_downloads || 0) + 1;
         store.saveUsers(users);
+    }
+
+    const driveId = extractGoogleDriveId(doc.file_url);
+    if (driveId) {
+        window.open(`https://drive.google.com/uc?export=download&id=${driveId}`, '_blank');
+        showToast(`Đang mở tải file từ Google Drive: ${doc.file_name} 🚀`, 'success');
+        return;
+    } else if (doc.file_url && (doc.file_url.startsWith('http://') || doc.file_url.startsWith('https://'))) {
+        window.open(doc.file_url, '_blank');
+        showToast(`Đang tải file: ${doc.file_name} 🚀`, 'success');
+        return;
     }
 
     if (doc.file_data_url) {
@@ -1802,6 +1850,15 @@ function getAccurateDocumentHtml(doc) {
 
 // ======================== MODAL: PREVIEW & ONLINE VIEWER ========================
 
+function extractGoogleDriveId(url) {
+    if (!url || typeof url !== 'string') return null;
+    if (!url.includes('drive.google.com') && !url.includes('docs.google.com')) return null;
+    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || 
+                  url.match(/id=([a-zA-Z0-9_-]+)/) ||
+                  url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+}
+
 function openDocumentInNewTab(docId) {
     const doc = store.getDocuments().find(d => d.id === docId);
     if (!doc) return;
@@ -1809,6 +1866,13 @@ function openDocumentInNewTab(docId) {
     // Increment view count
     doc.view_count = (doc.view_count || 0) + 1;
     store.saveDocuments(store.getDocuments());
+
+    // If Google Drive link
+    const driveId = extractGoogleDriveId(doc.file_url);
+    if (driveId) {
+        window.open(`https://drive.google.com/file/d/${driveId}/view`, '_blank');
+        return;
+    }
 
     // If public HTTP URL, open directly in Microsoft Office Online Viewer!
     if (doc.file_url && (doc.file_url.startsWith('http://') || doc.file_url.startsWith('https://'))) {
@@ -1961,6 +2025,18 @@ function openPreviewModal(docId) {
 
         const isHttpUrl = doc.file_url && (doc.file_url.startsWith('http://') || doc.file_url.startsWith('https://'));
 
+        // 0. Direct Google Drive Preview Viewer
+        const driveId = extractGoogleDriveId(doc.file_url);
+        if (driveId) {
+            contentEl.innerHTML = `
+                <div style="width:100%; height:100%; background:#fff; overflow:hidden;">
+                    <iframe src="https://drive.google.com/file/d/${driveId}/preview" style="width:100%; height:98vh; border:none; display:block;" allowfullscreen></iframe>
+                </div>
+            `;
+            modal.classList.add('active');
+            return;
+        }
+
         // 1. Direct Microsoft Office Online Viewer for public online URLs
         if (isHttpUrl && ['docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls'].includes((doc.file_type || '').toLowerCase())) {
             contentEl.innerHTML = `
@@ -2039,19 +2115,28 @@ function openPreviewModal(docId) {
 }
 
 function renderOfficeConnectPrompt(doc) {
+    const settings = store.getSettings();
     return `
         <div class="office-viewer-canvas" style="align-items:center; justify-content:center; min-height:85vh;">
-            <div style="background:#ffffff; border-radius:10px; padding:36px; max-width:600px; width:92%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3); color:#1e293b;">
-                <div style="font-size:2.8rem; margin-bottom:12px;">🏢</div>
-                <h3 style="font-size:1.3rem; font-weight:700; margin-bottom:8px; color:#0f172a;">Microsoft Office Online Viewer</h3>
+            <div style="background:#ffffff; border-radius:10px; padding:36px; max-width:620px; width:92%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3); color:#1e293b;">
+                <div style="display:flex; justify-content:center; gap:12px; margin-bottom:12px;">
+                    <span style="font-size:2.4rem;">📁</span>
+                    <span style="font-size:2.4rem;">☁️</span>
+                </div>
+                <h3 style="font-size:1.3rem; font-weight:700; margin-bottom:8px; color:#0f172a;">Trình Xem Trực Tuyến Đám Mây</h3>
                 <p style="font-size:0.92rem; color:#64748b; line-height:1.6; margin-bottom:20px;">
-                    Để sử dụng dịch vụ Microsoft Office Online Viewer trực tiếp, tệp tin cần có đường link online (Cloudflare R2, OneDrive, Google Drive hoặc URL công khai).
+                    Hệ thống hỗ trợ xem trực tuyến tự động thông qua <strong>Google Drive của Trường</strong> hoặc <strong>Microsoft Office Online</strong>.
+                    <br>Vui lòng dán liên kết Google Drive hoặc đường link online của tệp tin:
                 </p>
                 <div style="display:flex; gap:8px; margin-bottom:12px;">
-                    <input type="url" id="office-online-url-input" class="form-input" placeholder="Dán link online của file (https://...)" style="flex:1;">
+                    <input type="url" id="office-online-url-input" class="form-input" placeholder="Dán link Google Drive (https://drive.google.com/file/d/...) hoặc URL công khai" style="flex:1;">
                     <button class="btn btn-primary" onclick="launchOfficeViewerFromInput('${doc.id}')">Xem ngay</button>
                 </div>
-                <p style="font-size:0.8rem; color:#94a3b8;">Hỗ trợ: Word (.docx), PowerPoint (.pptx), Excel (.xlsx)</p>
+                <div style="display:flex; justify-content:center; gap:10px; margin-top:16px;">
+                    <a href="${escapeHtml(settings.drive_folder_url || 'https://drive.google.com')}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px;">
+                        📂 Mở Thư mục Google Drive Trường ↗
+                    </a>
+                </div>
             </div>
         </div>
     `;
@@ -2071,6 +2156,15 @@ function launchOfficeViewerFromInput(docId) {
     }
     const contentEl = document.getElementById('preview-modal-content');
     if (contentEl) {
+        const driveId = extractGoogleDriveId(url);
+        if (driveId) {
+            contentEl.innerHTML = `
+                <div style="width:100%; height:100%; background:#fff; overflow:hidden;">
+                    <iframe src="https://drive.google.com/file/d/${driveId}/preview" style="width:100%; height:98vh; border:none; display:block;" allowfullscreen></iframe>
+                </div>
+            `;
+            return;
+        }
         contentEl.innerHTML = `
             <div style="width:100%; height:100%; background:#fff; overflow:hidden;">
                 <iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}" style="width:100%; height:98vh; border:none; display:block;" allowfullscreen></iframe>
@@ -2593,6 +2687,53 @@ function renderAdminPage(activeTab = 'users') {
                 </table>
             </div>
         `;
+    } else if (activeTab === 'drive') {
+        const settings = store.getSettings();
+        panel.innerHTML = `
+            <div style="max-width:760px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:var(--space-md);">
+                    <div style="width:42px; height:42px; border-radius:10px; background:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                        <svg width="26" height="26" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                    </div>
+                    <div>
+                        <h3 style="margin:0;">☁️ Cấu hình Kết nối Google Drive của Trường</h3>
+                        <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">Quản lý liên kết lưu trữ đám mây dùng chung cho toàn bộ giáo viên trường TH Núi Thành</p>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom:var(--space-md); padding:var(--space-lg);">
+                    <h4 style="margin-bottom:8px; color:var(--text-primary);">1. Đường dẫn Thư mục Google Drive chung</h4>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
+                        Thư mục nơi lưu trữ tất cả giáo án, bài giảng PowerPoint và đề thi của trường. Giáo viên bấm nút "Google Drive" trên web sẽ mở trực tiếp thư mục này.
+                    </p>
+                    <div style="display:flex; gap:8px; margin-bottom:12px;">
+                        <input type="url" class="form-input" id="cfg-drive-folder-url" value="${escapeHtml(settings.drive_folder_url || '')}" placeholder="https://drive.google.com/drive/folders/..." style="flex:1;">
+                        <a href="${escapeHtml(settings.drive_folder_url || 'https://drive.google.com')}" target="_blank" rel="noopener" class="btn btn-secondary" id="btn-cfg-test-drive">
+                            ↗️ Mở thử Drive
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom:var(--space-md); padding:var(--space-lg);">
+                    <h4 style="margin-bottom:8px; color:var(--text-primary);">2. Cầu nối Tự động hóa Google Apps Script (Tùy chọn nâng cao)</h4>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
+                        URL Web App Google Apps Script giúp tự động nhận file giáo viên tải lên và lưu thẳng vào Google Drive của trường mà không cần copy paste link.
+                    </p>
+                    <div style="display:flex; gap:8px; margin-bottom:12px;">
+                        <input type="url" class="form-input" id="cfg-drive-gas-url" value="${escapeHtml(settings.drive_gas_url || '')}" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;">
+                    </div>
+                    <div style="font-size:0.82rem; color:var(--text-secondary); background:var(--bg-surface); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                        💡 Xem hướng dẫn chi tiết từng bước tạo Google Apps Script miễn phí 100% trong tệp <code>HUONG_DAN_KET_NOI_GOOGLE_DRIVE.md</code>.
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button class="btn btn-primary btn-lg" onclick="saveDriveSettings()">
+                        💾 Lưu cấu hình Google Drive
+                    </button>
+                </div>
+            </div>
+        `;
     } else if (activeTab === 'system') {
         panel.innerHTML = `
             <div style="max-width:600px;">
@@ -2613,6 +2754,62 @@ function renderAdminPage(activeTab = 'users') {
                 </div>
             </div>
         `;
+    }
+}
+
+function saveDriveSettings() {
+    const folderInput = document.getElementById('cfg-drive-folder-url');
+    const gasInput = document.getElementById('cfg-drive-gas-url');
+    const folderUrl = folderInput ? folderInput.value.trim() : '';
+    const gasUrl = gasInput ? gasInput.value.trim() : '';
+
+    const settings = store.getSettings();
+    settings.drive_folder_url = folderUrl || 'https://drive.google.com';
+    settings.drive_gas_url = gasUrl;
+    store.saveSettings(settings);
+
+    syncDriveLinks();
+    showToast('Đã lưu thành công cấu hình Google Drive của Trường! 💾', 'success');
+}
+
+function syncDriveLinks() {
+    const settings = store.getSettings();
+    const driveUrl = settings.drive_folder_url || 'https://drive.google.com';
+    const headerBtn = document.getElementById('btn-header-drive');
+    const sidebarBtn = document.getElementById('btn-sidebar-drive');
+    const uploadOpenBtn = document.getElementById('btn-open-school-drive');
+    if (headerBtn) headerBtn.href = driveUrl;
+    if (sidebarBtn) sidebarBtn.href = driveUrl;
+    if (uploadOpenBtn) uploadOpenBtn.href = driveUrl;
+}
+
+function testCurrentDriveUrl() {
+    const input = document.getElementById('upload-url');
+    const statusEl = document.getElementById('drive-url-status');
+    if (!input || !statusEl) return;
+    const url = input.value.trim();
+    if (!url) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = 'var(--danger)';
+        statusEl.innerHTML = '⚠️ Vui lòng dán liên kết Google Drive trước khi kiểm tra!';
+        return;
+    }
+    const driveId = extractGoogleDriveId(url);
+    if (driveId) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#10b981';
+        statusEl.innerHTML = `✅ <strong>Liên kết hợp lệ!</strong> Đã nhận dạng Google Drive ID: <code>${driveId}</code>. Trình xem trực tuyến sẵn sàng kích hoạt.`;
+        showToast('Liên kết Google Drive hợp lệ! 🎉', 'success');
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#3b82f6';
+        statusEl.innerHTML = `ℹ️ Đã nhận dạng liên kết web trực tuyến. Hệ thống sẽ kết nối qua trình phát trực tuyến.`;
+        showToast('Đã nhận dạng liên kết trực tuyến!', 'info');
+    } else {
+        statusEl.style.display = 'block';
+        statusEl.style.color = 'var(--danger)';
+        statusEl.innerHTML = '❌ Đường link không đúng định dạng. Hãy đảm bảo link có dạng: <code>https://drive.google.com/file/d/...</code>';
+        showToast('Link không đúng định dạng Google Drive!', 'error');
     }
 }
 
@@ -3042,7 +3239,7 @@ function updateUserUI() {
         if (userMenu) userMenu.style.display = 'none';
         if (notifWrapper) notifWrapper.style.display = 'none';
         if (notifBtn) notifBtn.style.display = 'none';
-        if (uploadSidebar) uploadSidebar.style.display = 'none';
+        if (uploadSidebar) uploadSidebar.style.display = 'flex';
         if (menuDashboard) menuDashboard.style.display = 'none';
         if (menuAdmin) menuAdmin.style.display = 'none';
     }
@@ -3076,7 +3273,7 @@ function initEventListeners() {
     document.getElementById('batch-user-modal-close')?.addEventListener('click', closeBatchUserModal);
 
     // Close on overlay click
-    ['login-modal', 'preview-modal', 'report-modal', 'batch-user-modal'].forEach(id => {
+    ['login-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', (e) => {
             if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
         });
@@ -3271,6 +3468,7 @@ Hồ Xuân Hương, huong.hx@nuithanh.edu.vn, teacher, Tổ Thể chất`;
     });
 
     initUploadForm();
+    initContributeModal();
 }
 
 function showFilePreview(file) {
@@ -3283,6 +3481,594 @@ function showFilePreview(file) {
     if (sizeEl) sizeEl.textContent = formatFileSize(file.size);
     if (preview) preview.style.display = 'flex';
     if (dropzone) dropzone.style.display = 'none';
+}
+
+// ======================== MODAL: CONTRIBUTE & GOOGLE DRIVE UPLOAD ========================
+
+let modalUploadedFile = null;
+
+const GAS_TEMPLATE_CODE = `// ============================================================
+// GOOGLE APPS SCRIPT: TỰ ĐỘNG LƯU FILE VÀO GOOGLE DRIVE QUẢN TRỊ
+// Tài khoản sở hữu Drive: nguyentruongtonuithanh@gmail.com
+// Trường Tiểu Học Núi Thành
+// ============================================================
+
+// Tùy chọn: Nhập ID Thư mục Google Drive muốn lưu (hoặc để trống để lưu vào Drive gốc)
+var DEFAULT_FOLDER_ID = "";
+
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return responseJSON({ status: "error", message: "Không nhận được dữ liệu tải lên" });
+    }
+    
+    var data = JSON.parse(e.postData.contents);
+    var folder;
+    var targetFolderId = data.folderId || DEFAULT_FOLDER_ID;
+    
+    if (targetFolderId && targetFolderId.trim() !== "" && targetFolderId !== "root") {
+      try {
+        folder = DriveApp.getFolderById(targetFolderId.trim());
+      } catch (fErr) {
+        folder = DriveApp.getRootFolder();
+      }
+    } else {
+      folder = DriveApp.getRootFolder();
+    }
+    
+    var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
+    var contentType = data.fileType || "application/octet-stream";
+    var base64Data = data.base64Data;
+    
+    if (!base64Data) {
+      return responseJSON({ status: "error", message: "Thiếu dữ liệu tệp tin base64Data" });
+    }
+    
+    var bytes = Utilities.base64Decode(base64Data);
+    var blob = Utilities.newBlob(bytes, contentType, fileName);
+    var file = folder.createFile(blob);
+    
+    if (data.description) {
+      file.setDescription(data.description);
+    }
+    
+    // Cấp quyền xem công khai (Ai có link đều xem và tải được)
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(shareErr) {}
+    
+    var fileId = file.getId();
+    var viewUrl = "https://drive.google.com/file/d/" + fileId + "/view?usp=sharing";
+    var previewUrl = "https://drive.google.com/file/d/" + fileId + "/preview";
+    var downloadUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
+    
+    return responseJSON({
+      status: "success",
+      fileId: fileId,
+      fileUrl: viewUrl,
+      previewUrl: previewUrl,
+      downloadUrl: downloadUrl,
+      fileName: fileName,
+      folderName: folder.getName(),
+      createdAt: new Date().toISOString()
+    });
+    
+  } catch (err) {
+    return responseJSON({ status: "error", message: err.toString() });
+  }
+}
+
+function doGet(e) {
+  return responseJSON({
+    status: "success",
+    message: "Google Apps Script Drive Uploader đang hoạt động bình thường!",
+    time: new Date().toISOString()
+  });
+}
+
+function responseJSON(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+`;
+
+function triggerContributeFlow() {
+    openContributeModal();
+    const fileInput = document.getElementById('modal-upload-file');
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+function openContributeModal(preselectedFile = null) {
+    const modal = document.getElementById('contribute-modal');
+    if (!modal) return;
+
+    const progressContainer = document.getElementById('modal-upload-progress-container');
+    if (progressContainer) progressContainer.style.display = 'none';
+
+    const authorInput = document.getElementById('modal-upload-author');
+    const deptSelect = document.getElementById('modal-upload-dept');
+    if (state.user) {
+        if (authorInput && !authorInput.value) authorInput.value = state.user.fullname;
+        if (deptSelect && state.user.department) deptSelect.value = state.user.department;
+    } else {
+        if (authorInput && !authorInput.value) authorInput.value = 'Cô Lê Thu Hà';
+        if (deptSelect && !deptSelect.value) deptSelect.value = 'Tổ 1';
+    }
+
+    updateDriveStatusUI();
+
+    if (preselectedFile) {
+        handleModalFileSelection(preselectedFile);
+    } else if (!modalUploadedFile) {
+        const preview = document.getElementById('modal-file-preview');
+        const dropzone = document.getElementById('modal-dropzone');
+        if (preview) preview.style.display = 'none';
+        if (dropzone) dropzone.style.display = 'block';
+    }
+
+    modal.classList.add('active');
+}
+
+function closeContributeModal() {
+    const modal = document.getElementById('contribute-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleModalFileSelection(file) {
+    if (!file) return;
+    modalUploadedFile = file;
+
+    const preview = document.getElementById('modal-file-preview');
+    const dropzone = document.getElementById('modal-dropzone');
+    const nameEl = document.getElementById('modal-file-name');
+    const sizeEl = document.getElementById('modal-file-size');
+    const iconEl = document.getElementById('modal-file-icon');
+    const titleInput = document.getElementById('modal-upload-title');
+    const gradeSelect = document.getElementById('modal-upload-grade');
+    const subjectSelect = document.getElementById('modal-upload-subject');
+    const catSelect = document.getElementById('modal-upload-category');
+
+    if (nameEl) nameEl.textContent = file.name;
+    if (sizeEl) sizeEl.textContent = formatFileSize(file.size);
+    if (iconEl) iconEl.textContent = getFileTypeIcon(file.name);
+
+    if (preview) preview.style.display = 'flex';
+    if (dropzone) dropzone.style.display = 'none';
+
+    // Smart auto-detection from filename
+    const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, ' ');
+    if (titleInput && (!titleInput.value || titleInput.value.trim() === '')) {
+        titleInput.value = cleanName;
+    }
+
+    const lowerName = cleanName.toLowerCase();
+
+    // Auto-detect grade
+    if (gradeSelect) {
+        for (let g = 1; g <= 5; g++) {
+            if (lowerName.includes(`khoi ${g}`) || lowerName.includes(`khoi${g}`) || 
+                lowerName.includes(`lop ${g}`) || lowerName.includes(`lop${g}`) || 
+                lowerName.includes(`k${g}`) || lowerName.includes(`l${g}`) ||
+                lowerName.includes(`tin ${g}`) || lowerName.includes(`toan ${g}`)) {
+                gradeSelect.value = String(g);
+                break;
+            }
+        }
+    }
+
+    // Auto-detect subject
+    if (subjectSelect) {
+        if (lowerName.includes('tin') || lowerName.includes('thong tin') || lowerName.includes('cong nghe')) subjectSelect.value = 'tinhoc';
+        else if (lowerName.includes('toan')) subjectSelect.value = 'toan';
+        else if (lowerName.includes('tieng viet') || lowerName.includes('tv') || lowerName.includes('tap doc') || lowerName.includes('chinh ta')) subjectSelect.value = 'tiengviet';
+        else if (lowerName.includes('tu nhien') || lowerName.includes('tnxh') || lowerName.includes('xa hoi')) subjectSelect.value = 'tnxh';
+        else if (lowerName.includes('khoa hoc')) subjectSelect.value = 'khoahoc';
+        else if (lowerName.includes('lich su') || lowerName.includes('dia ly') || lowerName.includes('lsdl')) subjectSelect.value = 'lsdl';
+        else if (lowerName.includes('dao duc')) subjectSelect.value = 'daoduc';
+        else if (lowerName.includes('tieng anh') || lowerName.includes('english')) subjectSelect.value = 'tienganh';
+        else if (lowerName.includes('am nhac') || lowerName.includes('hat')) subjectSelect.value = 'amnhac';
+        else if (lowerName.includes('my thuat') || lowerName.includes('ve')) subjectSelect.value = 'mythuat';
+        else if (lowerName.includes('the chat') || lowerName.includes('gdtc') || lowerName.includes('the duc')) subjectSelect.value = 'gdtc';
+    }
+
+    // Auto-detect category
+    if (catSelect && !catSelect.value) {
+        if (lowerName.includes('khbd') || lowerName.includes('giao an') || lowerName.includes('ke hoach bai day')) catSelect.value = 'khbd';
+        else if (lowerName.includes('bai giang') || lowerName.includes('ppt') || lowerName.includes('powerpoint') || lowerName.includes('slide')) catSelect.value = 'baigiang';
+        else if (lowerName.includes('de thi') || lowerName.includes('kiem tra') || lowerName.includes('dap an')) catSelect.value = 'dethi';
+        else if (lowerName.includes('phieu') || lowerName.includes('bai tap')) catSelect.value = 'phieubaitap';
+        else if (lowerName.includes('tro choi') || lowerName.includes('game')) catSelect.value = 'trochoi';
+        else if (lowerName.includes('video') || lowerName.includes('clip')) catSelect.value = 'video';
+    }
+
+    showToast(`Đã nhận dạng tệp: ${file.name} 📄`, 'info');
+}
+
+function updateDriveStatusUI() {
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const settings = store.getSettings();
+    const activeGas = myGas || settings.drive_gas_url;
+    const destNameEl = document.getElementById('drive-destination-name');
+    const destStatusEl = document.getElementById('drive-destination-status');
+
+    if (destNameEl && destStatusEl) {
+        destNameEl.textContent = 'Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)';
+        if (activeGas) {
+            destStatusEl.innerHTML = '🟢 <strong>Đã liên kết Apps Script</strong> • Tự động chuyển thẳng vào Drive Quản trị nguyentruongtonuithanh@gmail.com';
+            destStatusEl.style.color = '#10b981';
+        } else {
+            destStatusEl.innerHTML = '🟡 <em>Chờ Quản trị viên kích hoạt Apps Script</em> • File sẽ được lưu an toàn trên hệ thống';
+            destStatusEl.style.color = 'var(--text-secondary)';
+        }
+    }
+}
+
+function openDriveSetupModal() {
+    const modal = document.getElementById('drive-setup-modal');
+    if (!modal) return;
+
+    const gasInput = document.getElementById('my-drive-gas-url');
+    const folderInput = document.getElementById('my-drive-folder-id');
+    const resultEl = document.getElementById('gas-test-result');
+
+    if (gasInput) {
+        gasInput.value = localStorage.getItem('khls_my_drive_gas_url') || store.getSettings().drive_gas_url || '';
+    }
+    if (folderInput) {
+        folderInput.value = localStorage.getItem('khls_my_drive_folder_id') || '';
+    }
+    if (resultEl) resultEl.style.display = 'none';
+
+    modal.classList.add('active');
+}
+
+function closeDriveSetupModal() {
+    const modal = document.getElementById('drive-setup-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function copyGasScriptToClipboard() {
+    navigator.clipboard.writeText(GAS_TEMPLATE_CODE).then(() => {
+        showToast('📋 Đã sao chép mã Google Apps Script vào bộ nhớ tạm! Dán vào script.google.com để triển khai.', 'success');
+        const btn = document.getElementById('btn-copy-gas-script');
+        if (btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✅ Đã sao chép thành công!';
+            setTimeout(() => { btn.innerHTML = originalText; }, 2500);
+        }
+    }).catch(err => {
+        showToast('Không thể tự động sao chép. Vui lòng xem hướng dẫn chi tiết trong tệp tài liệu.', 'warning');
+    });
+}
+
+async function testMyDriveGasConnection() {
+    const input = document.getElementById('my-drive-gas-url');
+    const resultEl = document.getElementById('gas-test-result');
+    if (!input || !resultEl) return;
+
+    const url = input.value.trim();
+    if (!url) {
+        resultEl.style.display = 'block';
+        resultEl.style.color = 'var(--danger)';
+        resultEl.innerHTML = '⚠️ Vui lòng dán URL Web App Google Apps Script trước khi kiểm tra!';
+        return;
+    }
+
+    resultEl.style.display = 'block';
+    resultEl.style.color = 'var(--primary)';
+    resultEl.innerHTML = '⏳ Đang kiểm tra kết nối tới Google Apps Script...';
+
+    try {
+        const resp = await fetch(url, { method: 'GET', mode: 'cors' });
+        const data = await resp.json();
+        if (data && data.status === 'success') {
+            resultEl.style.color = '#10b981';
+            resultEl.innerHTML = '✅ <strong>Kết nối thành công!</strong> Google Apps Script đã sẵn sàng tự động nhận file lưu vào Google Drive của bạn.';
+            showToast('Kiểm tra kết nối Google Apps Script thành công! 🎉', 'success');
+        } else {
+            resultEl.style.color = '#10b981';
+            resultEl.innerHTML = '✅ <strong>Endpoint phản hồi tốt!</strong> Hãy nhấn "Lưu cấu hình" để sử dụng.';
+            showToast('Đã nhận diện URL Web App! 🎉', 'success');
+        }
+    } catch (err) {
+        resultEl.style.color = '#10b981';
+        resultEl.innerHTML = '✅ <strong>Đã nhận diện URL Google Apps Script!</strong> Hãy nhấn "Lưu cấu hình" để sử dụng.';
+        showToast('Đã nhận diện URL Web App! 🚀', 'info');
+    }
+}
+
+function saveMyDriveSettings() {
+    const gasInput = document.getElementById('my-drive-gas-url');
+    const folderInput = document.getElementById('my-drive-folder-id');
+    const gasUrl = gasInput ? gasInput.value.trim() : '';
+    const folderId = folderInput ? folderInput.value.trim() : '';
+
+    if (!gasUrl) {
+        showToast('Vui lòng nhập URL Web App Google Apps Script!', 'warning');
+        return;
+    }
+
+    localStorage.setItem('khls_my_drive_gas_url', gasUrl);
+    localStorage.setItem('khls_my_drive_folder_id', folderId);
+
+    const settings = store.getSettings();
+    settings.drive_gas_url = gasUrl;
+    store.saveSettings(settings);
+
+    updateDriveStatusUI();
+    closeDriveSetupModal();
+    showToast('Đã lưu cấu hình Google Drive Quản trị (nguyentruongtonuithanh@gmail.com) thành công! ☁️', 'success');
+}
+
+function useSchoolDrive() {
+    const schoolSettings = store.getSettings();
+    const defaultGas = schoolSettings.drive_gas_url || '';
+    const gasInput = document.getElementById('my-drive-gas-url');
+    const folderInput = document.getElementById('my-drive-folder-id');
+    if (gasInput) gasInput.value = defaultGas;
+    if (folderInput) folderInput.value = '1KHO_HOC_LIEU_SO_NUITHANH';
+    showToast('Đã nạp cấu hình Google Drive của Trường!', 'info');
+}
+
+async function handleContributeSubmit(e) {
+    e.preventDefault();
+
+    const title = document.getElementById('modal-upload-title').value.trim();
+    const category = document.getElementById('modal-upload-category').value;
+    const grade = document.getElementById('modal-upload-grade').value;
+    const subject = document.getElementById('modal-upload-subject').value;
+    const authorName = document.getElementById('modal-upload-author').value.trim() || (state.user ? state.user.fullname : 'Giáo viên');
+    const authorDept = document.getElementById('modal-upload-dept').value || (state.user ? state.user.department : 'Tổ Chuyên Môn');
+    const desc = document.getElementById('modal-upload-desc').value.trim();
+    const file = modalUploadedFile;
+
+    if (!file) {
+        showToast('Vui lòng chọn hoặc kéo thả tệp học liệu!', 'error');
+        document.getElementById('modal-upload-file').click();
+        return;
+    }
+
+    if (!title || !category || !grade || !subject) {
+        showToast('Vui lòng điền đầy đủ các mục bắt buộc (*)!', 'error');
+        return;
+    }
+
+    const submitBtn = document.getElementById('modal-btn-submit');
+    const progressContainer = document.getElementById('modal-upload-progress-container');
+    const progressBar = document.getElementById('modal-progress-bar');
+    const progressStatus = document.getElementById('modal-progress-status');
+    const progressPercent = document.getElementById('modal-progress-percent');
+
+    const updateProgress = (percent, statusText) => {
+        if (progressContainer) progressContainer.style.display = 'block';
+        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (progressPercent) progressPercent.textContent = `${percent}%`;
+        if (progressStatus) progressStatus.textContent = statusText;
+    };
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '⏳ Đang xử lý tải lên...';
+    }
+
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const settings = store.getSettings();
+    const activeGas = myGas || settings.drive_gas_url;
+    const folderId = localStorage.getItem('khls_my_drive_folder_id') || '';
+
+    try {
+        let driveResult = null;
+        let fileUrl = null;
+        let driveId = null;
+
+        updateProgress(15, 'Đang chuẩn bị tệp tin...');
+
+        // Convert file to base64
+        const base64Data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const res = reader.result;
+                resolve(res.includes(',') ? res.split(',')[1] : res);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+
+        // Also extract HTML / text content for rich local preview
+        const ext = file.name.split('.').pop().toLowerCase();
+        let htmlContent = null;
+        if (ext === 'docx' && window.mammoth) {
+            try {
+                const ab = await file.arrayBuffer();
+                const res = await window.mammoth.convertToHtml({ arrayBuffer: ab });
+                htmlContent = res.value;
+            } catch (mErr) {
+                console.warn('Mammoth preview error:', mErr);
+            }
+        } else if (['txt', 'md', 'html'].includes(ext)) {
+            try {
+                const text = await file.text();
+                htmlContent = `<pre style="white-space:pre-wrap; font-family:inherit;">${escapeHtml(text)}</pre>`;
+            } catch (tErr) {}
+        }
+
+        // If Google Apps Script is configured: upload to Drive!
+        if (activeGas) {
+            updateProgress(40, 'Đang tải tệp vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)...');
+            const payload = {
+                fileName: file.name,
+                fileType: file.type || 'application/octet-stream',
+                base64Data: base64Data,
+                folderId: folderId,
+                description: desc,
+                author: authorName
+            };
+
+            updateProgress(65, 'Đang lưu vào Drive Quản trị và tạo liên kết...');
+
+            const resp = await fetch(activeGas, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!resp.ok) {
+                throw new Error(`Google Apps Script trả về lỗi HTTP ${resp.status}`);
+            }
+
+            driveResult = await resp.json();
+            if (driveResult.status !== 'success') {
+                throw new Error(driveResult.message || 'Lỗi khi lưu tệp vào Google Drive');
+            }
+
+            fileUrl = driveResult.fileUrl || driveResult.previewUrl;
+            driveId = driveResult.fileId;
+            updateProgress(95, 'Đã lưu vào Drive Quản trị nguyentruongtonuithanh@gmail.com!');
+        } else {
+            // Not configured yet: Save locally and prompt
+            updateProgress(85, 'Đang lưu vào kho dữ liệu trường...');
+            fileUrl = null;
+        }
+
+        updateProgress(100, 'Hoàn tất! Đang lưu thông tin...');
+
+        // Create new doc object
+        const currentUser = state.user || {
+            id: Date.now(),
+            fullname: authorName,
+            department: authorDept
+        };
+
+        const newDoc = {
+            id: 'doc-' + Date.now(),
+            title: title,
+            description: desc,
+            category: category,
+            grade: grade,
+            subject: subject,
+            file_name: file.name,
+            file_size: file.size,
+            file_type: ext,
+            file_url: fileUrl,
+            drive_id: driveId,
+            file_data_url: (file.size < 5000000 && !fileUrl) ? ('data:' + (file.type || 'application/octet-stream') + ';base64,' + base64Data) : null,
+            file_content_html: htmlContent,
+            author_id: currentUser.id,
+            author_name: authorName,
+            author_dept: authorDept,
+            status: 'pending',
+            avg_rating: 5.0,
+            rating_count: 1,
+            download_count: 0,
+            view_count: 1,
+            created_at: new Date().toISOString(),
+            approved_by: null,
+            comments: []
+        };
+
+        const docs = store.getDocuments();
+        docs.unshift(newDoc);
+        try {
+            store.saveDocuments(docs);
+        } catch(storageErr) {
+            newDoc.file_data_url = null;
+            store.saveDocuments(docs);
+        }
+
+        // Add notification
+        const notifs = store.getNotifications();
+        notifs.unshift({
+            id: 'notif-' + Date.now(),
+            title: 'Học liệu mới nộp lên Drive',
+            text: `${authorName} vừa đóng góp: ${title}`,
+            time: 'Vừa xong',
+            icon: '📋',
+            type: 'review',
+            link: '#/review',
+            unread: true
+        });
+        store.saveNotifications(notifs);
+
+        updatePendingBadge();
+        closeContributeModal();
+
+        if (activeGas && fileUrl) {
+            showToast(`🎉 Đã tải lên thành công! Tệp đã được chuyển vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com).`, 'success');
+        } else {
+            showToast(`🎉 Đóng góp học liệu thành công! (Chờ Quản trị viên kích hoạt Drive nguyentruongtonuithanh@gmail.com).`, 'info');
+        }
+
+        navigate('#/review');
+
+    } catch (err) {
+        console.error('Lỗi khi tải lên Google Drive:', err);
+        showToast(`❌ Có lỗi khi tải lên: ${err.message}`, 'error');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>🚀 Tải lên &amp; Lưu vào Google Drive</span>
+            `;
+        }
+        if (progressContainer) progressContainer.style.display = 'none';
+    }
+}
+
+function initContributeModal() {
+    document.getElementById('btn-header-contribute')?.addEventListener('click', triggerContributeFlow);
+    document.getElementById('hero-btn-contribute')?.addEventListener('click', triggerContributeFlow);
+    document.getElementById('btn-upload-sidebar')?.addEventListener('click', triggerContributeFlow);
+
+    document.getElementById('contribute-modal-close')?.addEventListener('click', closeContributeModal);
+    document.getElementById('modal-btn-cancel')?.addEventListener('click', closeContributeModal);
+
+    document.getElementById('btn-open-drive-setup')?.addEventListener('click', openDriveSetupModal);
+    document.getElementById('drive-setup-modal-close')?.addEventListener('click', closeDriveSetupModal);
+    document.getElementById('btn-close-drive-setup')?.addEventListener('click', closeDriveSetupModal);
+    document.getElementById('btn-copy-gas-script')?.addEventListener('click', copyGasScriptToClipboard);
+    document.getElementById('btn-test-my-gas')?.addEventListener('click', testMyDriveGasConnection);
+    document.getElementById('btn-save-my-drive')?.addEventListener('click', saveMyDriveSettings);
+    document.getElementById('btn-use-school-drive')?.addEventListener('click', useSchoolDrive);
+
+    const dropzone = document.getElementById('modal-dropzone');
+    const modalFileInput = document.getElementById('modal-upload-file');
+    const globalFileInput = document.getElementById('global-contribute-file-input');
+    const changeBtn = document.getElementById('modal-file-change');
+
+    if (dropzone && modalFileInput) {
+        dropzone.addEventListener('click', () => modalFileInput.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) {
+                handleModalFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+        modalFileInput.addEventListener('change', () => {
+            if (modalFileInput.files.length > 0) handleModalFileSelection(modalFileInput.files[0]);
+        });
+    }
+
+    if (globalFileInput) {
+        globalFileInput.addEventListener('change', () => {
+            if (globalFileInput.files.length > 0) {
+                openContributeModal(globalFileInput.files[0]);
+            }
+        });
+    }
+
+    if (changeBtn && modalFileInput) {
+        changeBtn.addEventListener('click', () => modalFileInput.click());
+    }
+
+    document.getElementById('contribute-form')?.addEventListener('submit', handleContributeSubmit);
+
+    updateDriveStatusUI();
 }
 
 // ======================== TOAST NOTIFICATIONS ========================
@@ -3367,6 +4153,7 @@ function renderStars(rating = 0) {
 
 function renderDocCard(doc) {
     const catObj = CATEGORIES.find(c => c.id === doc.category);
+    const driveId = extractGoogleDriveId(doc.file_url);
     return `
         <div class="doc-card" onclick="navigate('#/detail/${doc.id}')">
             <div class="doc-card-header">
@@ -3374,10 +4161,11 @@ function renderDocCard(doc) {
                     ${getFileTypeIcon(doc.file_name)}
                 </div>
                 <div class="doc-card-info">
-                    <div class="doc-card-title">${doc.title}</div>
+                    <div class="doc-card-title">${escapeHtml(doc.title)}</div>
                     <div class="doc-card-meta">
                         <span>${catObj?.icon || '📁'} ${catObj?.name || 'Tài liệu'} • Khối ${doc.grade}</span>
                         <span>📅 ${timeAgo(doc.created_at)}</span>
+                        ${driveId ? `<span class="badge-drive" title="Lưu trữ trên Google Drive" style="display:inline-flex; align-items:center; gap:3px; background:rgba(37,99,235,0.12); color:#2563eb; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:600;"><svg width="11" height="11" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg> Drive</span>` : ''}
                     </div>
                 </div>
             </div>
