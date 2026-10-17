@@ -43,7 +43,7 @@ const INITIAL_USERS = [
     {
         id: 1,
         username: 'admin',
-        fullname: 'Thầy Lê Hoàng Nam',
+        fullname: 'Lê Hoàng Nam',
         role: 'admin',
         department: 'Ban Giám Hiệu',
         honor: 'Hiệu trưởng - Quản trị viên',
@@ -55,7 +55,7 @@ const INITIAL_USERS = [
     {
         id: 2,
         username: 'totruong1',
-        fullname: 'Cô Trần Thị Mai',
+        fullname: 'Trần Thị Mai',
         role: 'leader',
         department: 'Tổ 1',
         honor: 'Tổ trưởng Chuyên môn - GV Dạy Giỏi',
@@ -67,7 +67,7 @@ const INITIAL_USERS = [
     {
         id: 3,
         username: 'totruong3',
-        fullname: 'Thầy Nguyễn Văn Đức',
+        fullname: 'Nguyễn Văn Đức',
         role: 'leader',
         department: 'Tổ 3',
         honor: 'Tổ trưởng Chuyên môn Khối 3',
@@ -79,7 +79,7 @@ const INITIAL_USERS = [
     {
         id: 4,
         username: 'gvha',
-        fullname: 'Cô Lê Thu Hà',
+        fullname: 'Lê Thu Hà',
         role: 'teacher',
         department: 'Tổ 1',
         honor: 'Top 1 Nhà giáo sáng tạo tháng 9',
@@ -91,7 +91,7 @@ const INITIAL_USERS = [
     {
         id: 5,
         username: 'gvlong',
-        fullname: 'Thầy Phạm Hoàng Long',
+        fullname: 'Phạm Hoàng Long',
         role: 'teacher',
         department: 'Tổ 5',
         honor: 'Chuyên gia Thiết kế Bài giảng Số',
@@ -103,7 +103,7 @@ const INITIAL_USERS = [
     {
         id: 6,
         username: 'gvlinh',
-        fullname: 'Cô Đỗ Mỹ Linh',
+        fullname: 'Đỗ Mỹ Linh',
         role: 'teacher',
         department: 'Tổ Tin học - Ngoại ngữ',
         honor: 'Giáo viên Tiên phong Chuyển đổi số',
@@ -115,7 +115,7 @@ const INITIAL_USERS = [
     {
         id: 7,
         username: 'gvtuan',
-        fullname: 'Thầy Vũ Minh Tuấn',
+        fullname: 'Vũ Minh Tuấn',
         role: 'teacher',
         department: 'Tổ 4',
         honor: 'Giáo viên Dạy giỏi Cấp trường',
@@ -127,7 +127,7 @@ const INITIAL_USERS = [
     {
         id: 8,
         username: 'gvoanh',
-        fullname: 'Cô Hoàng Kim Oanh',
+        fullname: 'Hoàng Kim Oanh',
         role: 'teacher',
         department: 'Tổ Âm nhạc - Mỹ thuật',
         honor: 'Bàn tay vàng Sáng tạo Học cụ',
@@ -417,7 +417,22 @@ const store = {
             localStorage.setItem('khls_users_v2', JSON.stringify(INITIAL_USERS));
             return INITIAL_USERS;
         }
-        return JSON.parse(data);
+        try {
+            const users = JSON.parse(data);
+            let updated = false;
+            users.forEach(u => {
+                if (u && u.fullname && /^(Thầy|Cô)\s+/i.test(u.fullname)) {
+                    u.fullname = u.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
+                    updated = true;
+                }
+            });
+            if (updated) {
+                localStorage.setItem('khls_users_v2', JSON.stringify(users));
+            }
+            return users;
+        } catch(e) {
+            return INITIAL_USERS;
+        }
     },
     saveUsers(users) {
         localStorage.setItem('khls_users_v2', JSON.stringify(users));
@@ -2387,6 +2402,20 @@ function toggleNotificationDropdown() {
     const isOpen = dropdown.classList.toggle('active');
     if (isOpen) {
         renderNotificationList();
+
+        // Khi người dùng bấm vào xem thông báo -> Đã xem rồi nên xóa số 3 trên badge
+        const notifs = store.getNotifications();
+        let changed = false;
+        notifs.forEach(n => {
+            if (n.unread) {
+                n.unread = false;
+                changed = true;
+            }
+        });
+        if (changed) {
+            store.saveNotifications(notifs);
+            updatePendingBadge();
+        }
     }
 }
 
@@ -3214,7 +3243,7 @@ function handleLogin(e) {
 
     loginAs(matchedUser);
     closeLoginModal();
-    showToast(`Chào mừng Thầy/Cô ${matchedUser.fullname} đã đăng nhập! 🎉`, 'success');
+    showToast(`Chào mừng ${matchedUser.fullname} đã đăng nhập! 🎉`, 'success');
     if (state.pendingContributeAfterLogin) {
         state.pendingContributeAfterLogin = false;
         setTimeout(() => {
@@ -3224,6 +3253,9 @@ function handleLogin(e) {
 }
 
 function loginAs(user) {
+    if (user && user.fullname) {
+        user.fullname = user.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
+    }
     state.user = user;
     localStorage.setItem('khls-user', JSON.stringify(user));
     updateUserUI();
@@ -3250,13 +3282,16 @@ function updateUserUI() {
     const menuAdmin = document.getElementById('menu-admin');
 
     if (state.user) {
+        if (state.user.fullname) {
+            state.user.fullname = state.user.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
+        }
         if (loginBtn) loginBtn.style.display = 'none';
         if (userMenu) userMenu.style.display = 'block';
         if (notifWrapper) notifWrapper.style.display = 'block';
         if (notifBtn) notifBtn.style.display = 'flex';
         if (uploadSidebar) uploadSidebar.style.display = 'flex';
 
-        const letter = (state.user.avatar_letter || state.user.fullname.charAt(0)).toUpperCase();
+        const letter = (state.user.avatar_letter || (state.user.fullname || 'A').charAt(0)).toUpperCase();
         const avatarLetterEl = document.getElementById('user-avatar-letter');
         const displayNameEl = document.getElementById('user-display-name');
         if (avatarLetterEl) avatarLetterEl.textContent = letter;
@@ -3288,6 +3323,10 @@ function restoreSession() {
         const saved = localStorage.getItem('khls-user');
         if (saved) {
             state.user = JSON.parse(saved);
+            if (state.user && state.user.fullname) {
+                state.user.fullname = state.user.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
+                localStorage.setItem('khls-user', JSON.stringify(state.user));
+            }
         }
     } catch (e) {
         localStorage.removeItem('khls-user');

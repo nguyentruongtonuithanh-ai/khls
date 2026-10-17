@@ -389,7 +389,7 @@ ul, ol { list-style: none; }
     min-width: 16px;
     height: 16px;
     border-radius: var(--radius-full);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     line-height: 1;
@@ -435,9 +435,6 @@ ul, ol { list-style: none; }
 .user-name {
     font-size: 0.85rem;
     font-weight: 500;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
 }
 

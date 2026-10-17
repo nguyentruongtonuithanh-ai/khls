@@ -92,14 +92,14 @@ CREATE TABLE IF NOT EXISTS reports (
 -- ============================================================
 
 INSERT OR IGNORE INTO users (id, username, fullname, email, role, department, honor, avatar_letter, total_uploads, total_downloads, total_stars) VALUES
-(1, 'admin', 'Thầy Lê Hoàng Nam', 'admin@nuithanh.edu.vn', 'admin123', 'admin', 'Ban Giám Hiệu', 'Hiệu trưởng - Quản trị viên', 'N', 8, 620, 42),
-(2, 'totruong1', 'Cô Trần Thị Mai', 'mai.tt@nuithanh.edu.vn', '123456', 'leader', 'Tổ 1', 'Tổ trưởng Chuyên môn - GV Dạy Giỏi', 'M', 14, 1250, 68),
-(3, 'totruong3', 'Thầy Nguyễn Văn Đức', 'duc.nv@nuithanh.edu.vn', '123456', 'leader', 'Tổ 3', 'Tổ trưởng Chuyên môn Khối 3', 'Đ', 11, 890, 55),
-(4, 'gvha', 'Cô Lê Thu Hà', 'ha.lt@nuithanh.edu.vn', '123456', 'teacher', 'Tổ 1', 'Top 1 Nhà giáo sáng tạo tháng 9', 'H', 19, 1680, 94),
-(5, 'gvlong', 'Thầy Phạm Hoàng Long', 'long.ph@nuithanh.edu.vn', '123456', 'teacher', 'Tổ 5', 'Chuyên gia Thiết kế Bài giảng Số', 'L', 16, 1420, 80),
-(6, 'gvlinh', 'Cô Đỗ Mỹ Linh', 'linh.dm@nuithanh.edu.vn', '123456', 'teacher', 'Tổ Tin học - Ngoại ngữ', 'Giáo viên Tiên phong Chuyển đổi số', 'L', 12, 980, 59),
-(7, 'gvtuan', 'Thầy Vũ Minh Tuấn', 'tuan.vm@nuithanh.edu.vn', '123456', 'teacher', 'Tổ 4', 'Giáo viên Dạy giỏi Cấp trường', 'T', 9, 710, 44),
-(8, 'gvoanh', 'Cô Hoàng Kim Oanh', 'oanh.hk@nuithanh.edu.vn', '123456', 'teacher', 'Tổ Âm nhạc - Mỹ thuật', 'Bàn tay vàng Sáng tạo Học cụ', 'O', 7, 530, 36);
+(1, 'admin', 'Lê Hoàng Nam', 'admin@nuithanh.edu.vn', 'admin123', 'admin', 'Ban Giám Hiệu', 'Hiệu trưởng - Quản trị viên', 'N', 8, 620, 42),
+(2, 'totruong1', 'Trần Thị Mai', 'mai.tt@nuithanh.edu.vn', '123456', 'leader', 'Tổ 1', 'Tổ trưởng Chuyên môn - GV Dạy Giỏi', 'M', 14, 1250, 68),
+(3, 'totruong3', 'Nguyễn Văn Đức', 'duc.nv@nuithanh.edu.vn', '123456', 'leader', 'Tổ 3', 'Tổ trưởng Chuyên môn Khối 3', 'Đ', 11, 890, 55),
+(4, 'gvha', 'Lê Thu Hà', 'ha.lt@nuithanh.edu.vn', '123456', 'teacher', 'Tổ 1', 'Top 1 Nhà giáo sáng tạo tháng 9', 'H', 19, 1680, 94),
+(5, 'gvlong', 'Phạm Hoàng Long', 'long.ph@nuithanh.edu.vn', '123456', 'teacher', 'Tổ 5', 'Chuyên gia Thiết kế Bài giảng Số', 'L', 16, 1420, 80),
+(6, 'gvlinh', 'Đỗ Mỹ Linh', 'linh.dm@nuithanh.edu.vn', '123456', 'teacher', 'Tổ Tin học - Ngoại ngữ', 'Giáo viên Tiên phong Chuyển đổi số', 'L', 12, 980, 59),
+(7, 'gvtuan', 'Vũ Minh Tuấn', 'tuan.vm@nuithanh.edu.vn', '123456', 'teacher', 'Tổ 4', 'Giáo viên Dạy giỏi Cấp trường', 'T', 9, 710, 44),
+(8, 'gvoanh', 'Hoàng Kim Oanh', 'oanh.hk@nuithanh.edu.vn', '123456', 'teacher', 'Tổ Âm nhạc - Mỹ thuật', 'Bàn tay vàng Sáng tạo Học cụ', 'O', 7, 530, 36);
 
 INSERT OR IGNORE INTO categories (id, name, parent_id, icon, description, sort_order) VALUES
 ('khbd', 'Kế hoạch bài dạy', NULL, '📋', 'Kế hoạch bài dạy chuẩn CV 2345', 1),
