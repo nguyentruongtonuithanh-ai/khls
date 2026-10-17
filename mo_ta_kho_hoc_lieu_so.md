@@ -3,7 +3,7 @@ I. Ý tưởng cốt lõi & Định hướng hệ thống
 ●	Triết lý thiết kế: "Dễ dùng như Google Drive - Chuẩn mực như Thư viện số - Gắn kết như Mạng xã hội chuyên môn".
 ●	Nguyên lý hoạt động: Phân quyền rõ ràng, kiểm duyệt minh bạch, vinh danh xứng đáng và tương tác hai chiều.
 II. Cấu trúc danh mục học liệu số (Các mục chính)
--	Các mục chính: KHBD, Bài giảng điện tử, Đề thi, Phiếu bài tập, Trò chơi tương tác, Video, Tập huấn, Thư viện số, Tài liệu khác
+-	Các mục chính: Kế hoạch bài dạy, Bài giảng điện tử, Đề thi, Phiếu bài tập, Trò chơi tương tác, Video, Tập huấn, Thư viện số, Tài liệu khác
 -	Khi vào các mục chính sẽ có cây thư mục (giống violet.vn)
 (Thiết kế giao diện để admin tạo cây thư mục, có thể tạo, sửa, xóa thư mục) Cây thư mục :Khối 1 đến Khối 5. Trong mỗi khối sẽ có các môn: Toán, Tiếng Việt, Tự nhiên và Xã hội, Khoa học, Lịch sử và Địa lý, Đạo đức, Tin học, Tiếng Anh, Âm nhạc, Mỹ thuật, Giáo dục thể chất…
 III. Bản mô tả các chức năng cần có của hệ thống

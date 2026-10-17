@@ -6,7 +6,7 @@
 // ======================== DATA & CONSTANTS ========================
 
 const CATEGORIES = [
-    { id: 'khbd', name: 'KHBD', icon: '📋', desc: 'Kế hoạch bài dạy' },
+    { id: 'khbd', name: 'Kế hoạch bài dạy', icon: '📋', desc: 'Kế hoạch bài dạy' },
     { id: 'baigiang', name: 'Bài giảng điện tử', icon: '💻', desc: 'Slide, PowerPoint' },
     { id: 'dethi', name: 'Đề thi', icon: '📝', desc: 'Đề kiểm tra định kỳ' },
     { id: 'phieubaitap', name: 'Phiếu bài tập', icon: '📄', desc: 'Phiếu học tập' },
@@ -472,6 +472,7 @@ const state = {
     currentPage: 'home',
     currentRouteParams: {},
     user: null,
+    pendingContributeAfterLogin: false,
     theme: localStorage.getItem('khls-theme') || 'dark',
     viewMode: 'grid', // 'grid' or 'list'
     activeSlideIndex: 0
@@ -538,6 +539,12 @@ function handleRoute() {
     // Route dispatcher
     if (page === 'home') {
         renderHomePage();
+    } else if (page === 'upload') {
+        if (!state.user) {
+            openAuthRequiredModal();
+            navigate('#/');
+            return;
+        }
     } else if (page === 'browse') {
         const cat = segments[1] || '';
         const grade = segments[2] || '';
@@ -2997,6 +3004,11 @@ function initUploadForm() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        if (!state.user) {
+            openAuthRequiredModal();
+            return;
+        }
+
         const title = document.getElementById('upload-title').value.trim();
         const desc = document.getElementById('upload-desc').value.trim();
         const cat = document.getElementById('upload-category').value;
@@ -3136,9 +3148,29 @@ function initUploadForm() {
 
 // ======================== AUTH & LOGIN ========================
 
+function openAuthRequiredModal() {
+    const modal = document.getElementById('auth-required-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeAuthRequiredModal() {
+    const modal = document.getElementById('auth-required-modal');
+    if (modal) modal.classList.remove('active');
+}
+
 function openLoginModal() {
     const modal = document.getElementById('login-modal');
-    if (modal) modal.classList.add('active');
+    if (modal) {
+        const loginPassInput = document.getElementById('login-password');
+        const togglePassBtn = document.getElementById('toggle-password');
+        if (loginPassInput) loginPassInput.type = 'password';
+        if (togglePassBtn) {
+            togglePassBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+            togglePassBtn.setAttribute('title', 'Hiện/ẩn mật khẩu');
+            togglePassBtn.setAttribute('aria-label', 'Hiện mật khẩu');
+        }
+        modal.classList.add('active');
+    }
 }
 
 function closeLoginModal() {
@@ -3183,6 +3215,12 @@ function handleLogin(e) {
     loginAs(matchedUser);
     closeLoginModal();
     showToast(`Chào mừng Thầy/Cô ${matchedUser.fullname} đã đăng nhập! 🎉`, 'success');
+    if (state.pendingContributeAfterLogin) {
+        state.pendingContributeAfterLogin = false;
+        setTimeout(() => {
+            triggerContributeFlow();
+        }, 350);
+    }
 }
 
 function loginAs(user) {
@@ -3266,6 +3304,14 @@ function initEventListeners() {
     document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
 
     // Modals
+    document.getElementById('auth-required-modal-close')?.addEventListener('click', closeAuthRequiredModal);
+    document.getElementById('btn-auth-required-cancel')?.addEventListener('click', closeAuthRequiredModal);
+    document.getElementById('btn-auth-required-login')?.addEventListener('click', () => {
+        closeAuthRequiredModal();
+        state.pendingContributeAfterLogin = true;
+        openLoginModal();
+    });
+
     document.getElementById('btn-login')?.addEventListener('click', openLoginModal);
     document.getElementById('login-modal-close')?.addEventListener('click', closeLoginModal);
     document.getElementById('preview-modal-close')?.addEventListener('click', closePreviewModal);
@@ -3273,7 +3319,7 @@ function initEventListeners() {
     document.getElementById('batch-user-modal-close')?.addEventListener('click', closeBatchUserModal);
 
     // Close on overlay click
-    ['login-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
+    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', (e) => {
             if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
         });
@@ -3281,6 +3327,23 @@ function initEventListeners() {
 
     document.getElementById('login-form')?.addEventListener('submit', handleLogin);
     document.getElementById('btn-logout')?.addEventListener('click', handleLogout);
+
+    // Toggle password visibility
+    const togglePassBtn = document.getElementById('toggle-password');
+    const loginPassInput = document.getElementById('login-password');
+    if (togglePassBtn && loginPassInput) {
+        togglePassBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isPassword = loginPassInput.type === 'password';
+            loginPassInput.type = isPassword ? 'text' : 'password';
+            togglePassBtn.setAttribute('aria-label', isPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+            togglePassBtn.setAttribute('title', isPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+            togglePassBtn.innerHTML = isPassword
+                ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+                : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+            loginPassInput.focus();
+        });
+    }
 
     // User dropdown
     document.getElementById('user-avatar-btn')?.addEventListener('click', (e) => {
@@ -3573,6 +3636,10 @@ function responseJSON(obj) {
 `;
 
 function triggerContributeFlow() {
+    if (!state.user) {
+        openAuthRequiredModal();
+        return;
+    }
     openContributeModal();
     const fileInput = document.getElementById('modal-upload-file');
     if (fileInput) {
@@ -3581,6 +3648,10 @@ function triggerContributeFlow() {
 }
 
 function openContributeModal(preselectedFile = null) {
+    if (!state.user) {
+        openAuthRequiredModal();
+        return;
+    }
     const modal = document.getElementById('contribute-modal');
     if (!modal) return;
 
@@ -3814,6 +3885,12 @@ function useSchoolDrive() {
 
 async function handleContributeSubmit(e) {
     e.preventDefault();
+
+    if (!state.user) {
+        closeContributeModal();
+        openAuthRequiredModal();
+        return;
+    }
 
     const title = document.getElementById('modal-upload-title').value.trim();
     const category = document.getElementById('modal-upload-category').value;

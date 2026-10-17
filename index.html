@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=2.9">
+    <link rel="stylesheet" href="css/style.css?v=3.2">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -35,14 +35,11 @@
             </div>
         </div>
         <div class="header-right">
-            <button type="button" class="btn btn-primary btn-sm btn-contribute-header" id="btn-header-contribute" title="Đóng góp học liệu mới lên Google Drive" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.95rem; border-radius:var(--radius-md); box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);">
+            <button type="button" class="btn btn-sm btn-contribute-header" id="btn-header-contribute" title="Đóng góp học liệu mới lên hệ thống" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.95rem; border-radius:var(--radius-md);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span>Đóng góp học liệu</span>
             </button>
-            <a href="https://drive.google.com" target="_blank" rel="noopener" class="btn btn-outline btn-sm btn-drive-header" id="btn-header-drive" title="Mở Thư mục Google Drive chung của Trường" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:600; padding:0.45rem 0.85rem; border-radius:var(--radius-md);">
-                <svg width="16" height="16" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
-                <span>Google Drive</span>
-            </a>
+
             <div class="notification-wrapper" id="notification-wrapper" style="position: relative; display: none;">
                 <button class="icon-btn notification-btn" id="notification-btn" aria-label="Thông báo" title="Thông báo">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -113,16 +110,7 @@
                 <!-- Sẽ render bằng JS -->
             </ul>
         </nav>
-        <div class="sidebar-footer">
-            <a href="https://drive.google.com" target="_blank" rel="noopener" class="btn btn-secondary btn-drive-sidebar" id="btn-sidebar-drive" style="width:100%; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; font-weight:600;">
-                <svg width="18" height="18" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
-                Google Drive Trường
-            </a>
-            <button type="button" class="btn btn-primary btn-upload-sidebar" id="btn-upload-sidebar" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                Đóng góp học liệu
-            </button>
-        </div>
+
     </aside>
 
     <!-- ============ SIDEBAR OVERLAY (mobile) ============ -->
@@ -141,28 +129,8 @@
                     <div class="hero-shape hero-shape-3"></div>
                 </div>
                 <div class="hero-content">
-                    <div class="hero-badge">🏫 Trường Tiểu Học Núi Thành</div>
                     <h1 class="hero-title">Kho Học Liệu <span class="gradient-text">Số</span></h1>
-                    <p class="hero-desc">Nơi chia sẻ, khám phá và phát triển chuyên môn dành cho đội ngũ giáo viên. Cùng nhau xây dựng nguồn tài nguyên giáo dục chất lượng cao.</p>
-                    <div class="hero-search">
-                        <div class="hero-search-inner">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                            <input type="text" placeholder="Tìm bài giảng, đề thi, kế hoạch bài dạy..." id="hero-search-input">
-                            <button class="btn btn-primary" id="hero-search-btn">Tìm kiếm</button>
-                        </div>
-                    </div>
-                    <div class="hero-tags">
-                        <span class="hero-tag" data-search="Toán lớp 1">Toán lớp 1</span>
-                        <span class="hero-tag" data-search="Tiếng Việt">Tiếng Việt</span>
-                        <span class="hero-tag" data-search="Bài giảng PowerPoint">Bài giảng PPT</span>
-                        <span class="hero-tag" data-search="Đề thi giữa kỳ">Đề thi giữa kỳ</span>
-                    </div>
-                    <div class="hero-actions" style="margin-top: 1.35rem; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-                        <button type="button" class="btn btn-primary btn-hero-contribute" id="hero-btn-contribute" style="box-shadow: 0 4px 18px rgba(99, 102, 241, 0.4); font-weight: 600; padding: 0.65rem 1.45rem; display: inline-flex; align-items: center; gap: 8px; border-radius: var(--radius-full); font-size: 0.95rem;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            <span>📤 Đóng góp học liệu lên Google Drive</span>
-                        </button>
-                    </div>
+                    <p class="hero-desc" style="margin-bottom: 0;">Nơi chia sẻ, khám phá và phát triển chuyên môn dành cho đội ngũ giáo viên. Cùng nhau xây dựng nguồn tài nguyên giáo dục chất lượng cao.</p>
                 </div>
             </section>
 
@@ -375,7 +343,7 @@
                             <label class="form-label" for="upload-category">Loại tài liệu <span class="required">*</span></label>
                             <select class="form-input" id="upload-category" required>
                                 <option value="">-- Chọn loại --</option>
-                                <option value="khbd">KHBD</option>
+                                <option value="khbd">Kế hoạch bài dạy</option>
                                 <option value="baigiang">Bài giảng điện tử</option>
                                 <option value="dethi">Đề thi</option>
                                 <option value="phieubaitap">Phiếu bài tập</option>
@@ -604,6 +572,33 @@
         </div>
     </footer>
 
+    <!-- ============ AUTH REQUIRED NOTICE MODAL ============ -->
+    <div class="modal-overlay" id="auth-required-modal">
+        <div class="modal" style="max-width: 440px; text-align: center;">
+            <button class="modal-close" id="auth-required-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-body" style="padding: 2.2rem 1.8rem 1.8rem;">
+                <div style="width: 68px; height: 68px; margin: 0 auto 1.25rem; border-radius: 50%; background: linear-gradient(135deg, rgba(99,102,241,0.18), rgba(168,85,247,0.22)); display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 1px solid rgba(99,102,241,0.35); box-shadow: 0 8px 24px rgba(99,102,241,0.25);">
+                    🔐
+                </div>
+                <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--text-primary);">Yêu cầu đăng nhập</h3>
+                <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.75rem;">
+                    Bạn phải đăng nhập để đóng góp học liệu lên hệ thống. Vui lòng đăng nhập để tiếp tục.
+                </p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button type="button" class="btn btn-outline" id="btn-auth-required-cancel" style="flex: 1; padding: 0.7rem 1.2rem; font-weight: 600;">
+                        Để sau
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-auth-required-login" style="flex: 1.2; padding: 0.7rem 1.2rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(99,102,241,0.4);">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        <span>Đăng nhập</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ LOGIN MODAL ============ -->
     <div class="modal-overlay" id="login-modal">
         <div class="modal">
@@ -627,9 +622,9 @@
                     <label class="form-label" for="login-password">Mật khẩu</label>
                     <div class="input-with-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        <input type="password" class="form-input" id="login-password" placeholder="Nhập mật khẩu" required>
-                        <button type="button" class="toggle-password" id="toggle-password" aria-label="Show password">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <input type="password" class="form-input" id="login-password" placeholder="Nhập mật khẩu" required autocomplete="current-password">
+                        <button type="button" class="toggle-password" id="toggle-password" aria-label="Hiện mật khẩu" title="Hiện/ẩn mật khẩu">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
                     </div>
                 </div>
@@ -783,7 +778,7 @@
                         <label class="form-label" for="modal-upload-category">Loại học liệu <span class="required">*</span></label>
                         <select class="form-input" id="modal-upload-category" required>
                             <option value="">-- Chọn loại --</option>
-                            <option value="khbd">KHBD (Giáo án)</option>
+                            <option value="khbd">Kế hoạch bài dạy</option>
                             <option value="baigiang">Bài giảng điện tử</option>
                             <option value="dethi">Đề thi / Kiểm tra</option>
                             <option value="phieubaitap">Phiếu bài tập</option>
@@ -947,6 +942,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=2.9"></script>
+    <script src="js/app.js?v=3.2"></script>
 </body>
 </html>

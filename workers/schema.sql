@@ -102,7 +102,7 @@ INSERT OR IGNORE INTO users (id, username, fullname, email, role, department, ho
 (8, 'gvoanh', 'Cô Hoàng Kim Oanh', 'oanh.hk@nuithanh.edu.vn', '123456', 'teacher', 'Tổ Âm nhạc - Mỹ thuật', 'Bàn tay vàng Sáng tạo Học cụ', 'O', 7, 530, 36);
 
 INSERT OR IGNORE INTO categories (id, name, parent_id, icon, description, sort_order) VALUES
-('khbd', 'KHBD', NULL, '📋', 'Kế hoạch bài dạy chuẩn CV 2345', 1),
+('khbd', 'Kế hoạch bài dạy', NULL, '📋', 'Kế hoạch bài dạy chuẩn CV 2345', 1),
 ('baigiang', 'Bài giảng điện tử', NULL, '💻', 'Slide PowerPoint & bài giảng số', 2),
 ('dethi', 'Đề thi', NULL, '📝', 'Đề kiểm tra định kỳ có ma trận', 3),
 ('phieubaitap', 'Phiếu bài tập', NULL, '📄', 'Phiếu học tập phân hóa năng lực', 4),
