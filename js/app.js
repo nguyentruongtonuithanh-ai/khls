@@ -3680,10 +3680,6 @@ function triggerContributeFlow() {
         return;
     }
     openContributeModal();
-    const fileInput = document.getElementById('modal-upload-file');
-    if (fileInput) {
-        fileInput.click();
-    }
 }
 
 function openContributeModal(preselectedFile = null) {
