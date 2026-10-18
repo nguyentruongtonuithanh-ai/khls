@@ -3994,21 +3994,21 @@ async function testMyDriveGasConnection() {
     resultEl.innerHTML = '⏳ Đang kiểm tra kết nối tới Google Apps Script...';
 
     try {
-        const resp = await fetch(url, { method: 'GET', mode: 'cors' });
+        const resp = await fetch(url + (url.includes('?') ? '&' : '?') + 'test=' + Date.now(), { method: 'GET' });
         const data = await resp.json();
         if (data && data.status === 'success') {
             resultEl.style.color = '#10b981';
-            resultEl.innerHTML = '✅ <strong>Kết nối thành công!</strong> Google Apps Script đã sẵn sàng tự động nhận file lưu vào Google Drive của bạn.';
+            resultEl.innerHTML = '✅ <strong>Kết nối thành công!</strong> Google Apps Script đã sẵn sàng kết nối vào Google Drive nguyentruongtonuithanh@gmail.com.';
             showToast('Kiểm tra kết nối Google Apps Script thành công! 🎉', 'success');
         } else {
-            resultEl.style.color = '#10b981';
-            resultEl.innerHTML = '✅ <strong>Endpoint phản hồi tốt!</strong> Hãy nhấn "Lưu cấu hình" để sử dụng.';
-            showToast('Đã nhận diện URL Web App! 🎉', 'success');
+            resultEl.style.color = 'var(--warning)';
+            resultEl.innerHTML = '⚠️ <strong>Google Apps Script phản hồi nhưng chưa đúng chuẩn:</strong> ' + escapeHtml(data?.message || 'Chưa nhận diện được dữ liệu');
+            showToast('Endpoint phản hồi nhưng chưa khớp cấu hình!', 'warning');
         }
     } catch (err) {
-        resultEl.style.color = '#10b981';
-        resultEl.innerHTML = '✅ <strong>Đã nhận diện URL Google Apps Script!</strong> Hãy nhấn "Lưu cấu hình" để sử dụng.';
-        showToast('Đã nhận diện URL Web App! 🚀', 'info');
+        resultEl.style.color = 'var(--danger)';
+        resultEl.innerHTML = '❌ <strong>Chưa thể kết nối tới Google Apps Script này!</strong><br><small style="color:var(--text-muted); font-size:0.82rem; line-height:1.4; display:block; margin-top:4px;">Nguyên nhân thường gặp: Khi Triển khai (Deploy) trên script.google.com, mục <em>"Ai có quyền truy cập (Who has access)"</em> chưa chọn <strong>"Bất kỳ ai (Anyone)"</strong>, hoặc chưa cấp quyền truy cập Drive.</small>';
+        showToast('Kết nối thất bại! Vui lòng kiểm tra lại quyền truy cập script.', 'error');
     }
 }
 
