@@ -403,7 +403,16 @@ const store = {
             return defaultSettings;
         }
         try {
-            return { ...defaultSettings, ...JSON.parse(data) };
+            const parsed = JSON.parse(data);
+            // Xóa URL giả định nếu từng bị lưu vào localStorage
+            if (parsed.drive_gas_url && parsed.drive_gas_url.includes('AKfycbzQLDpnYgTXHywmxFrA4ZJMNOmVXXMl5EGC49Ca6n_finwTx7ttcloXA0KS89Wse2dg')) {
+                parsed.drive_gas_url = '';
+                localStorage.setItem('khls_settings_v2', JSON.stringify(parsed));
+            }
+            if (localStorage.getItem('khls_my_drive_gas_url')?.includes('AKfycbzQLDpnYgTXHywmxFrA4ZJMNOmVXXMl5EGC49Ca6n_finwTx7ttcloXA0KS89Wse2dg')) {
+                localStorage.removeItem('khls_my_drive_gas_url');
+            }
+            return { ...defaultSettings, ...parsed };
         } catch(e) {
             return defaultSettings;
         }
@@ -3610,34 +3619,89 @@ function showFilePreview(file) {
 let modalUploadedFile = null;
 
 const GAS_TEMPLATE_CODE = `// ============================================================
-// GOOGLE APPS SCRIPT: TỰ ĐỘNG LƯU FILE VÀO GOOGLE DRIVE QUẢN TRỊ
-// Tài khoản sở hữu Drive: nguyentruongtonuithanh@gmail.com
+// GOOGLE APPS SCRIPT: ĐỒNG BỘ DỮ LIỆU & LƯU HỌC LIỆU VÀO GOOGLE DRIVE
+// Tài khoản Quản trị: nguyentruongtonuithanh@gmail.com
 // Trường Tiểu Học Núi Thành
 // ============================================================
 
-// Tùy chọn: Nhập ID Thư mục Google Drive muốn lưu (hoặc để trống để lưu vào Drive gốc)
 var DEFAULT_FOLDER_ID = "";
+var DB_FILE_NAME = "khls_nuithanh_database.json";
+
+function getFolder(folderId) {
+  if (folderId && folderId.trim() !== "" && folderId !== "root") {
+    try {
+      return DriveApp.getFolderById(folderId.trim());
+    } catch (e) {
+      return DriveApp.getRootFolder();
+    }
+  }
+  return DriveApp.getRootFolder();
+}
+
+function getDatabaseFile(folder) {
+  var files = folder.getFilesByName(DB_FILE_NAME);
+  if (files.hasNext()) {
+    return files.next();
+  }
+  var file = folder.createFile(DB_FILE_NAME, "[]", "application/json");
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e){}
+  return file;
+}
+
+function loadDocuments(folder) {
+  var file = getDatabaseFile(folder);
+  try {
+    var content = file.getBlob().getDataAsString("UTF-8");
+    return JSON.parse(content) || [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveDocumentsDb(folder, docs) {
+  var file = getDatabaseFile(folder);
+  file.setContent(JSON.stringify(docs));
+}
+
+function doGet(e) {
+  try {
+    var folderId = (e && e.parameter && e.parameter.folderId) || DEFAULT_FOLDER_ID;
+    var folder = getFolder(folderId);
+    var docs = loadDocuments(folder);
+    return responseJSON({
+      status: "success",
+      documents: docs,
+      time: new Date().toISOString()
+    });
+  } catch (err) {
+    return responseJSON({ status: "error", message: err.toString() });
+  }
+}
 
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) {
-      return responseJSON({ status: "error", message: "Không nhận được dữ liệu tải lên" });
+      return responseJSON({ status: "error", message: "Không nhận được dữ liệu" });
     }
     
     var data = JSON.parse(e.postData.contents);
-    var folder;
-    var targetFolderId = data.folderId || DEFAULT_FOLDER_ID;
+    var folder = getFolder(data.folderId || DEFAULT_FOLDER_ID);
     
-    if (targetFolderId && targetFolderId.trim() !== "" && targetFolderId !== "root") {
-      try {
-        folder = DriveApp.getFolderById(targetFolderId.trim());
-      } catch (fErr) {
-        folder = DriveApp.getRootFolder();
+    // 1. Phê duyệt hoặc Từ chối học liệu
+    if (data.action === "review" || data.action === "approve" || data.action === "reject") {
+      var allDocs = loadDocuments(folder);
+      var targetDoc = allDocs.find(function(d) { return d.id === data.docId; });
+      if (targetDoc) {
+        targetDoc.status = (data.action === "reject" ? "rejected" : "approved");
+        targetDoc.approved_by = data.approvedBy || "Ban Giám Hiệu";
+        if (data.rejectReason) targetDoc.reject_reason = data.rejectReason;
+        saveDocumentsDb(folder, allDocs);
+        return responseJSON({ status: "success", message: "Đã cập nhật trạng thái học liệu", doc: targetDoc });
       }
-    } else {
-      folder = DriveApp.getRootFolder();
+      return responseJSON({ status: "error", message: "Không tìm thấy mã học liệu: " + data.docId });
     }
     
+    // 2. Tải lên tệp học liệu mới
     var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
     var contentType = data.fileType || "application/octet-stream";
     var base64Data = data.base64Data;
@@ -3650,11 +3714,10 @@ function doPost(e) {
     var blob = Utilities.newBlob(bytes, contentType, fileName);
     var file = folder.createFile(blob);
     
-    if (data.description) {
-      file.setDescription(data.description);
-    }
+    var fileDesc = "Người đóng góp: " + (data.author || "Giáo viên") + "\\n";
+    if (data.description) fileDesc += "Mô tả: " + data.description;
+    file.setDescription(fileDesc);
     
-    // Cấp quyền xem công khai (Ai có link đều xem và tải được)
     try {
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     } catch(shareErr) {}
@@ -3664,6 +3727,39 @@ function doPost(e) {
     var previewUrl = "https://drive.google.com/file/d/" + fileId + "/preview";
     var downloadUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
     
+    // Lưu vào cơ sở dữ liệu chung trên Google Drive để mọi máy tính cùng thấy
+    var ext = fileName.split(".").pop().toLowerCase();
+    var newDocRecord = {
+      id: data.docId || ("doc-" + new Date().getTime()),
+      title: data.title || fileName,
+      description: data.description || "",
+      category: data.category || "khbd",
+      grade: String(data.grade || "1"),
+      subject: data.subject || "toan",
+      file_name: fileName,
+      file_size: file.getSize(),
+      file_type: ext,
+      file_url: viewUrl,
+      preview_url: previewUrl,
+      download_url: downloadUrl,
+      drive_id: fileId,
+      author_id: data.authorId || 1,
+      author_name: data.author || "Giáo viên",
+      author_dept: data.department || "Tổ Chuyên Môn",
+      status: "pending",
+      avg_rating: 5.0,
+      rating_count: 1,
+      download_count: 0,
+      view_count: 1,
+      created_at: new Date().toISOString(),
+      approved_by: null,
+      comments: []
+    };
+    
+    var currentDocs = loadDocuments(folder);
+    currentDocs.unshift(newDocRecord);
+    saveDocumentsDb(folder, currentDocs);
+    
     return responseJSON({
       status: "success",
       fileId: fileId,
@@ -3671,6 +3767,7 @@ function doPost(e) {
       previewUrl: previewUrl,
       downloadUrl: downloadUrl,
       fileName: fileName,
+      doc: newDocRecord,
       folderName: folder.getName(),
       createdAt: new Date().toISOString()
     });
@@ -3678,14 +3775,6 @@ function doPost(e) {
   } catch (err) {
     return responseJSON({ status: "error", message: err.toString() });
   }
-}
-
-function doGet(e) {
-  return responseJSON({
-    status: "success",
-    message: "Google Apps Script Drive Uploader đang hoạt động bình thường!",
-    time: new Date().toISOString()
-  });
 }
 
 function responseJSON(obj) {
@@ -4045,41 +4134,57 @@ async function handleContributeSubmit(e) {
         }
 
         // If Google Apps Script is configured: upload to Drive!
+        let gasUploadFailed = false;
         if (activeGas) {
             updateProgress(40, 'Đang tải tệp vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)...');
+            const docGeneratedId = 'doc-' + Date.now();
             const payload = {
+                action: 'upload',
+                docId: docGeneratedId,
+                title: title,
+                description: desc,
+                category: category,
+                grade: grade,
+                subject: subject,
                 fileName: file.name,
                 fileType: file.type || 'application/octet-stream',
                 base64Data: base64Data,
                 folderId: folderId,
-                description: desc,
-                author: authorName
+                author: authorName,
+                department: authorDept
             };
 
             updateProgress(65, 'Đang lưu vào Drive Quản trị và tạo liên kết...');
 
-            const resp = await fetch(activeGas, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            });
+            try {
+                const resp = await fetch(activeGas, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
 
-            if (!resp.ok) {
-                throw new Error(`Google Apps Script trả về lỗi HTTP ${resp.status}`);
+                if (resp.ok) {
+                    driveResult = await resp.json();
+                    if (driveResult && driveResult.status === 'success') {
+                        fileUrl = driveResult.fileUrl || driveResult.previewUrl;
+                        driveId = driveResult.fileId;
+                        updateProgress(95, 'Đã lưu vào Drive Quản trị nguyentruongtonuithanh@gmail.com!');
+                    } else {
+                        console.warn('Google Apps Script phản hồi:', driveResult);
+                        gasUploadFailed = true;
+                    }
+                } else {
+                    console.warn(`Google Apps Script trả về HTTP ${resp.status}`);
+                    gasUploadFailed = true;
+                }
+            } catch (netErr) {
+                console.warn('Không thể gửi đến Google Apps Script, chuyển sang lưu trữ an toàn nội bộ:', netErr);
+                gasUploadFailed = true;
             }
+        }
 
-            driveResult = await resp.json();
-            if (driveResult.status !== 'success') {
-                throw new Error(driveResult.message || 'Lỗi khi lưu tệp vào Google Drive');
-            }
-
-            fileUrl = driveResult.fileUrl || driveResult.previewUrl;
-            driveId = driveResult.fileId;
-            updateProgress(95, 'Đã lưu vào Drive Quản trị nguyentruongtonuithanh@gmail.com!');
-        } else {
-            // Not configured yet: Save locally and prompt
-            updateProgress(85, 'Đang lưu vào kho dữ liệu trường...');
-            fileUrl = null;
+        if (!fileUrl) {
+            updateProgress(85, 'Đang lưu an toàn vào kho dữ liệu hệ thống...');
         }
 
         updateProgress(100, 'Hoàn tất! Đang lưu thông tin...');
@@ -4146,8 +4251,10 @@ async function handleContributeSubmit(e) {
 
         if (activeGas && fileUrl) {
             showToast(`🎉 Đã tải lên thành công! Tệp đã được chuyển vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com).`, 'success');
+        } else if (activeGas && gasUploadFailed) {
+            showToast(`🎉 Đóng góp học liệu thành công! (Đã lưu an toàn vào hệ thống - Google Apps Script chưa phản hồi).`, 'info');
         } else {
-            showToast(`🎉 Đóng góp học liệu thành công! (Chờ Quản trị viên kích hoạt Drive nguyentruongtonuithanh@gmail.com).`, 'info');
+            showToast(`🎉 Đóng góp học liệu thành công! (Tài liệu đã lưu an toàn vào hệ thống chờ Ban Giám Hiệu duyệt).`, 'success');
         }
 
         navigate('#/review');
