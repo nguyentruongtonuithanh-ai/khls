@@ -49,34 +49,92 @@ Hệ thống đã tích hợp tính năng **Đóng góp học liệu trực ti�
 
 ```javascript
 // ============================================================
-// GOOGLE APPS SCRIPT: TỰ ĐỘNG LƯU HỌC LIỆU VÀO GOOGLE DRIVE QUẢN TRỊ
+// GOOGLE APPS SCRIPT: TỰ ĐỘNG ĐỒNG BỘ HAI CHIỀU GIỮA MÁY A VÀ MÁY B
+// Lưu trữ tệp & Cơ sở dữ liệu dùng chung tại Google Drive Trường
 // Tài khoản Quản trị: nguyentruongtonuithanh@gmail.com
 // Trường Tiểu Học Núi Thành
 // ============================================================
 
-// Tùy chọn: Nhập ID Thư mục Google Drive muốn gom file (hoặc để trống để lưu vào Drive gốc)
 var DEFAULT_FOLDER_ID = "";
+var DB_FILE_NAME = "khls_nuithanh_database.json";
 
+function getFolder(folderId) {
+  if (folderId && folderId.trim() !== "" && folderId !== "root") {
+    try {
+      return DriveApp.getFolderById(folderId.trim());
+    } catch (e) {
+      return DriveApp.getRootFolder();
+    }
+  }
+  return DriveApp.getRootFolder();
+}
+
+function getDatabaseFile(folder) {
+  var files = folder.getFilesByName(DB_FILE_NAME);
+  if (files.hasNext()) {
+    return files.next();
+  }
+  var file = folder.createFile(DB_FILE_NAME, "[]", "application/json");
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e){}
+  return file;
+}
+
+function loadDocuments(folder) {
+  var file = getDatabaseFile(folder);
+  try {
+    var content = file.getBlob().getDataAsString("UTF-8");
+    return JSON.parse(content) || [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveDocumentsDb(folder, docs) {
+  var file = getDatabaseFile(folder);
+  file.setContent(JSON.stringify(docs));
+}
+
+// 1. Phục vụ Máy B (và mọi máy tính khác) tải về danh sách học liệu mới nhất
+function doGet(e) {
+  try {
+    var folderId = (e && e.parameter && e.parameter.folderId) || DEFAULT_FOLDER_ID;
+    var folder = getFolder(folderId);
+    var docs = loadDocuments(folder);
+    return responseJSON({
+      status: "success",
+      documents: docs,
+      time: new Date().toISOString()
+    });
+  } catch (err) {
+    return responseJSON({ status: "error", message: err.toString() });
+  }
+}
+
+// 2. Tiếp nhận khi Máy A (hoặc bất kỳ máy nào) tải tệp lên hoặc duyệt bài
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) {
-      return responseJSON({ status: "error", message: "Không nhận được dữ liệu tải lên" });
+      return responseJSON({ status: "error", message: "Không nhận được dữ liệu" });
     }
     
     var data = JSON.parse(e.postData.contents);
-    var folder;
-    var targetFolderId = data.folderId || DEFAULT_FOLDER_ID;
+    var folder = getFolder(data.folderId || DEFAULT_FOLDER_ID);
     
-    if (targetFolderId && targetFolderId.trim() !== "" && targetFolderId !== "root") {
-      try {
-        folder = DriveApp.getFolderById(targetFolderId.trim());
-      } catch (fErr) {
-        folder = DriveApp.getRootFolder();
+    // Xử lý Phê duyệt hoặc Từ chối học liệu
+    if (data.action === "review" || data.action === "approve" || data.action === "reject") {
+      var allDocs = loadDocuments(folder);
+      var targetDoc = allDocs.find(function(d) { return d.id === data.docId; });
+      if (targetDoc) {
+        targetDoc.status = (data.action === "reject" ? "rejected" : "approved");
+        targetDoc.approved_by = data.approvedBy || "Ban Giám Hiệu";
+        if (data.rejectReason) targetDoc.reject_reason = data.rejectReason;
+        saveDocumentsDb(folder, allDocs);
+        return responseJSON({ status: "success", message: "Đã cập nhật trạng thái học liệu", doc: targetDoc });
       }
-    } else {
-      folder = DriveApp.getRootFolder();
+      return responseJSON({ status: "error", message: "Không tìm thấy mã học liệu: " + data.docId });
     }
     
+    // Tải lên tệp học liệu mới
     var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
     var contentType = data.fileType || "application/octet-stream";
     var base64Data = data.base64Data;
@@ -93,7 +151,6 @@ function doPost(e) {
     if (data.description) fileDesc += "Mô tả: " + data.description;
     file.setDescription(fileDesc);
     
-    // Cấp quyền xem công khai (Ai có link đều xem và tải được trên Kho học liệu)
     try {
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     } catch(shareErr) {}
@@ -103,6 +160,39 @@ function doPost(e) {
     var previewUrl = "https://drive.google.com/file/d/" + fileId + "/preview";
     var downloadUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
     
+    // Lưu thông tin học liệu vào database dùng chung trên Drive để Máy B tự động đọc được
+    var ext = fileName.split(".").pop().toLowerCase();
+    var newDocRecord = {
+      id: data.docId || ("doc-" + new Date().getTime()),
+      title: data.title || fileName,
+      description: data.description || "",
+      category: data.category || "khbd",
+      grade: String(data.grade || "1"),
+      subject: data.subject || "toan",
+      file_name: fileName,
+      file_size: file.getSize(),
+      file_type: ext,
+      file_url: viewUrl,
+      preview_url: previewUrl,
+      download_url: downloadUrl,
+      drive_id: fileId,
+      author_id: data.authorId || 1,
+      author_name: data.author || "Giáo viên",
+      author_dept: data.department || "Tổ Chuyên Môn",
+      status: "pending",
+      avg_rating: 5.0,
+      rating_count: 1,
+      download_count: 0,
+      view_count: 1,
+      created_at: new Date().toISOString(),
+      approved_by: null,
+      comments: []
+    };
+    
+    var currentDocs = loadDocuments(folder);
+    currentDocs.unshift(newDocRecord);
+    saveDocumentsDb(folder, currentDocs);
+    
     return responseJSON({
       status: "success",
       fileId: fileId,
@@ -110,6 +200,7 @@ function doPost(e) {
       previewUrl: previewUrl,
       downloadUrl: downloadUrl,
       fileName: fileName,
+      doc: newDocRecord,
       folderName: folder.getName(),
       createdAt: new Date().toISOString()
     });
@@ -117,15 +208,6 @@ function doPost(e) {
   } catch (err) {
     return responseJSON({ status: "error", message: err.toString() });
   }
-}
-
-function doGet(e) {
-  return responseJSON({
-    status: "success",
-    message: "Google Apps Script Drive Uploader (nguyentruongtonuithanh@gmail.com) đang hoạt động bình thường!",
-    admin: "nguyentruongtonuithanh@gmail.com",
-    time: new Date().toISOString()
-  });
 }
 
 function responseJSON(obj) {
@@ -149,12 +231,12 @@ function responseJSON(obj) {
 9. Nhấn **Triển khai** ➔ Google sẽ yêu cầu cấp quyền: Bấm **Ủy quyền truy cập (Authorize access)** ➔ Chọn tài khoản `nguyentruongtonuithanh@gmail.com` ➔ Bấm **Advanced (Nâng cao)** ➔ Bấm **Go to Kho Hoc Lieu So (unsafe)** ➔ Bấm **Allow (Cho phép)**.
 10. Google sẽ hiện **URL Ứng dụng web** (đường dẫn có dạng kết thúc bằng `/exec`). Hãy sao chép URL này.
 
-#### Bước 3: Dán Vào Cấu Hình Quản Trị Trên Website
-1. Mở website Kho Học Liệu Số.
-2. Bấm nút **"Đóng góp học liệu"** ➔ bấm nút **"⚙️ Cấu hình Drive Quản trị"**.
-3. Dán URL Web App vừa sao chép vào ô **"URL Web App Google Apps Script của nguyentruongtonuithanh@gmail.com"**.
-4. *(Tùy chọn)*: Nếu Quản trị viên đã tạo 1 thư mục riêng trên Drive (ví dụ: `Học liệu giáo viên nộp 2026`), hãy dán Folder ID của thư mục đó vào ô ID Thư mục. Nếu để trống, file sẽ tự động lưu vào Drive gốc của `nguyentruongtonuithanh@gmail.com`.
-5. Bấm **🧪 Kiểm tra** ➔ Bấm **💾 Lưu cấu hình Quản trị**.
+#### Bước 3: Đã Được Tích Hợp Sẵn Cho Toàn Trường
+Đường link Web App chính thức của Trường Tiểu Học Núi Thành đã được tích hợp sẵn vào hệ thống:
+```
+https://script.google.com/macros/s/AKfycbyAfYDvlgkU5c3908gdGyDNRwmXWB-y3hPNQoD0fPx1PQ5moCIVhKZk-kTw-sim9Dfj/exec
+```
+Mọi máy tính của giáo viên (Máy A, Máy B, v.v.) khi truy cập website đều sẽ tự động kết nối vào Google Drive `nguyentruongtonuithanh@gmail.com` để tải bài lên và duyệt bài dùng chung mà không cần phải cài đặt thủ công.
 
 ---
 
@@ -162,4 +244,5 @@ function responseJSON(obj) {
 - **Tất cả thầy cô**: Chỉ việc vào web, bấm nút **"Đóng góp học liệu"** và chọn bài giảng, giáo án.
 - **Tất cả file**: Lập tức bay thẳng vào Google Drive của **`nguyentruongtonuithanh@gmail.com`**.
 - **Không tốn phí**: Không giới hạn số lượng giáo viên, không tốn tiền lưu trữ, link xem trực tiếp tự động tạo cho toàn trường sử dụng!
+
 

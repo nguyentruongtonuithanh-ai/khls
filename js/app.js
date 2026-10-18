@@ -393,7 +393,7 @@ const store = {
         const defaultSettings = {
             drive_account: 'nguyentruongtonuithanh@gmail.com',
             drive_folder_url: 'https://drive.google.com/drive/folders/1KHO_HOC_LIEU_SO_NUITHANH',
-            drive_gas_url: '',
+            drive_gas_url: 'https://script.google.com/macros/s/AKfycbyAfYDvlgkU5c3908gdGyDNRwmXWB-y3hPNQoD0fPx1PQ5moCIVhKZk-kTw-sim9Dfj/exec',
             school_name: 'Trường Tiểu Học Núi Thành',
             school_email: 'nguyentruongtonuithanh@gmail.com'
         };
@@ -404,13 +404,13 @@ const store = {
         }
         try {
             const parsed = JSON.parse(data);
-            // Xóa URL giả định nếu từng bị lưu vào localStorage
-            if (parsed.drive_gas_url && parsed.drive_gas_url.includes('AKfycbzQLDpnYgTXHywmxFrA4ZJMNOmVXXMl5EGC49Ca6n_finwTx7ttcloXA0KS89Wse2dg')) {
-                parsed.drive_gas_url = '';
+            // Cập nhật URL Web App chính thức của trường nếu chưa có hoặc đang trống
+            if (!parsed.drive_gas_url || parsed.drive_gas_url.trim() === '') {
+                parsed.drive_gas_url = defaultSettings.drive_gas_url;
                 localStorage.setItem('khls_settings_v2', JSON.stringify(parsed));
             }
-            if (localStorage.getItem('khls_my_drive_gas_url')?.includes('AKfycbzQLDpnYgTXHywmxFrA4ZJMNOmVXXMl5EGC49Ca6n_finwTx7ttcloXA0KS89Wse2dg')) {
-                localStorage.removeItem('khls_my_drive_gas_url');
+            if (!localStorage.getItem('khls_my_drive_gas_url')) {
+                localStorage.setItem('khls_my_drive_gas_url', defaultSettings.drive_gas_url);
             }
             return { ...defaultSettings, ...parsed };
         } catch(e) {
