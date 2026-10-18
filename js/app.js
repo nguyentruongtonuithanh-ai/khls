@@ -509,7 +509,8 @@ const state = {
     pendingContributeAfterLogin: false,
     theme: localStorage.getItem('khls-theme') || 'dark',
     viewMode: 'grid', // 'grid' or 'list'
-    activeSlideIndex: 0
+    activeSlideIndex: 0,
+    reviewDeptFilter: 'all'
 };
 
 // ======================== APP INITIALIZATION ========================
@@ -524,6 +525,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePendingBadge();
     animateCounters();
     syncDriveLinks();
+    // Tự động kiểm tra và đồng bộ học liệu mới từ Google Drive
+    setTimeout(() => {
+        syncDocumentsFromDrive(false);
+    }, 1200);
 });
 
 // ======================== THEME ========================
@@ -591,6 +596,13 @@ function handleRoute() {
         renderDetailPage(docId);
     } else if (page === 'review') {
         renderReviewPage();
+        const docParam = queryParams.get('doc');
+        if (docParam) {
+            setTimeout(() => {
+                highlightReviewDocFromLink(window.location.hash);
+            }, 150);
+        }
+        syncDocumentsFromDrive(false);
     } else if (page === 'profile') {
         renderProfilePage();
     } else if (page === 'dashboard') {
@@ -2255,68 +2267,157 @@ function closeReportModal() {
 
 // ======================== PAGE: REVIEW (TỔ TRƯỞNG & ADMIN) ========================
 
+function setReviewDeptFilter(dept) {
+    state.reviewDeptFilter = dept;
+    renderReviewPage();
+}
+
+function highlightReviewDocFromLink(link, text = '') {
+    let targetCard = null;
+    if (link && link.includes('doc=')) {
+        const docId = link.split('doc=')[1].split('&')[0];
+        targetCard = document.getElementById(`review-card-${docId}`);
+    }
+    if (!targetCard && text) {
+        const cards = document.querySelectorAll('.review-item-card');
+        for (const card of cards) {
+            const h3 = card.querySelector('h3');
+            if (h3 && text.includes(h3.textContent.trim())) {
+                targetCard = card;
+                break;
+            }
+        }
+    }
+    if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetCard.classList.add('highlighted-card');
+        setTimeout(() => {
+            targetCard.classList.remove('highlighted-card');
+        }, 3500);
+    }
+}
+
 function renderReviewPage() {
     const grid = document.getElementById('review-docs-grid');
     if (!grid) return;
 
+    const filterContainer = document.getElementById('review-dept-filters');
     const allDocs = store.getDocuments();
-    let pendingDocs = allDocs.filter(d => d.status === 'pending');
+    const allPendingDocs = allDocs.filter(d => d.status === 'pending');
 
-    // Filter by department if teacher is department leader
-    if (state.user && state.user.role === 'leader' && state.user.department) {
-        pendingDocs = pendingDocs.filter(d => d.author_dept === state.user.department || state.user.department === 'Tổ 1');
+    const departmentsList = [
+        'Tất cả',
+        'Tổ 1',
+        'Tổ 2',
+        'Tổ 3',
+        'Tổ 4',
+        'Tổ 5',
+        'Tổ Tin học - Ngoại ngữ',
+        'Tổ Âm nhạc - Mỹ thuật'
+    ];
+
+    // Render Department Filter Tabs
+    if (filterContainer) {
+        filterContainer.innerHTML = departmentsList.map(dept => {
+            const isAll = dept === 'Tất cả';
+            const count = isAll ? allPendingDocs.length : allPendingDocs.filter(d => (d.author_dept || '').trim() === dept).length;
+            const activeClass = (state.reviewDeptFilter === (isAll ? 'all' : dept)) ? 'active' : '';
+            return `
+                <button type="button" class="review-filter-pill ${activeClass}" onclick="setReviewDeptFilter('${isAll ? 'all' : dept}')">
+                    <span>${dept}</span>
+                    <span class="pill-badge">${count}</span>
+                </button>
+            `;
+        }).join('');
+    }
+
+    // Filter pending docs by department if selected (default 'all' shows everything!)
+    let pendingDocs = allPendingDocs;
+    if (state.reviewDeptFilter && state.reviewDeptFilter !== 'all') {
+        pendingDocs = pendingDocs.filter(d => (d.author_dept || '').trim() === state.reviewDeptFilter);
     }
 
     if (pendingDocs.length === 0) {
+        grid.className = 'review-list';
         grid.innerHTML = `
-            <div class="empty-state">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                <h3>Tuyệt vời! Không có tài liệu nào đang chờ duyệt</h3>
-                <p>Tất cả học liệu gửi lên đã được kiểm tra và xuất bản công khai lên kho chung.</p>
+            <div class="empty-state" style="padding: 40px 20px; text-align: center; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
+                <div style="font-size: 3.5rem; margin-bottom: 12px;">🎉</div>
+                <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 8px;">Không có tài liệu nào chờ duyệt trong mục này</h3>
+                <p style="color: var(--text-secondary); max-width: 540px; margin: 0 auto 20px; line-height: 1.6;">
+                    ${state.reviewDeptFilter !== 'all' ? `Tổ <strong>${state.reviewDeptFilter}</strong> hiện không có bài nào cần duyệt.` : 'Hiện tại không có học liệu nào đang chờ duyệt trong bộ nhớ máy.'}
+                    <br>Nếu Thầy/Cô vừa đóng góp học liệu từ máy tính khác hoặc mới tải lên, vui lòng bấm nút đồng bộ dưới đây để nạp từ Google Drive:
+                </p>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-primary" onclick="syncDocumentsFromDrive(true)">
+                        🔄 Đồng bộ ngay từ Google Drive
+                    </button>
+                    ${state.reviewDeptFilter !== 'all' ? `
+                        <button type="button" class="btn btn-secondary" onclick="setReviewDeptFilter('all')">
+                            📂 Xem tất cả các tổ (${allPendingDocs.length})
+                        </button>
+                    ` : ''}
+                </div>
             </div>
         `;
         return;
     }
 
     grid.className = 'review-list';
-    grid.innerHTML = pendingDocs.map(doc => `
-        <div class="review-item-card" id="review-card-${doc.id}">
-            <div class="review-card-header">
-                <div style="flex: 1; min-width: 260px;">
-                    <span class="doc-badge-pill">Khối ${doc.grade} • ${getSubjectName(doc.subject)}</span>
-                    <h3 style="margin-top:8px; font-size:1.25rem; line-height:1.4;">${doc.title}</h3>
-                    <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">
-                        👤 Tác giả: <strong>${doc.author_name}</strong> (${doc.author_dept || 'Tổ Chuyên Môn'}) • 📅 Gửi lúc: ${timeAgo(doc.created_at)}
+    grid.innerHTML = pendingDocs.map(doc => {
+        const driveId = extractGoogleDriveId(doc.file_url) || doc.drive_id;
+        const isAuthorMe = state.user && (state.user.id === doc.author_id || state.user.fullname === doc.author_name);
+        return `
+            <div class="review-item-card" id="review-card-${doc.id}">
+                <div class="review-card-header">
+                    <div style="flex: 1; min-width: 260px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                            <span class="doc-badge-pill">Khối ${doc.grade} • ${getSubjectName(doc.subject)}</span>
+                            ${doc.category ? `<span class="badge" style="background:var(--primary-soft); color:var(--primary); font-size:0.75rem;">${getCategoryName(doc.category)}</span>` : ''}
+                            ${driveId ? `<span class="badge-drive" title="Đã lưu trữ an toàn trên Google Drive nguyentruongtonuithanh@gmail.com">☁️ Google Drive</span>` : ''}
+                            ${isAuthorMe ? `<span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700; font-size:0.75rem;">👤 Bài của bạn</span>` : ''}
+                        </div>
+                        <h3 style="margin-top:4px; font-size:1.25rem; line-height:1.4; color:var(--text-primary);">${escapeHtml(doc.title)}</h3>
+                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:6px;">
+                            👤 Tác giả: <strong>${escapeHtml(doc.author_name)}</strong> (<span style="color:var(--primary); font-weight:600;">${escapeHtml(doc.author_dept || 'Tổ Chuyên Môn')}</span>) • 📅 Gửi lúc: ${timeAgo(doc.created_at)}
+                        </div>
+                    </div>
+                    <div class="badge-status-pending">
+                        ⏳ Đang chờ duyệt
                     </div>
                 </div>
-                <div class="badge-status-pending">
-                    ⏳ Đang chờ duyệt
+                <p class="review-card-desc">${escapeHtml(doc.description || 'Chưa có mô tả nội dung chi tiết.')}</p>
+                <div>
+                    <div class="review-file-box">
+                        <span style="font-size:1.2rem;">${getFileTypeIcon(doc.file_name)}</span>
+                        <span>Tệp đính kèm: <strong>${escapeHtml(doc.file_name)}</strong> (${formatFileSize(doc.file_size)})</span>
+                        ${doc.file_url ? `<a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener" style="margin-left:auto; font-size:0.8rem; color:var(--primary); text-decoration:underline;">Mở link file ↗</a>` : ''}
+                    </div>
+                </div>
+                <div class="review-actions-bar">
+                    <button class="btn btn-preview" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">👁️ Xem trực tuyến</button>
+                    ${doc.file_url ? `
+                        <a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Mở trực tiếp trên Google Drive">
+                            ☁️ Mở trên Drive ↗
+                        </a>
+                    ` : `
+                        <button class="btn btn-secondary" onclick="openDocumentInNewTab('${doc.id}')" title="Mở file lên xem trong tab mới">↗️ Mở tab mới</button>
+                    `}
+                    <button class="btn btn-download-action" onclick="downloadDocument('${doc.id}')" title="Tải file về máy">⬇️ Tải file về</button>
+                    <button class="btn btn-reject" onclick="rejectDocument('${doc.id}')">❌ Yêu cầu sửa</button>
+                    <button class="btn btn-approve" onclick="approveDocument('${doc.id}')">✅ Phê duyệt &amp; Công khai</button>
                 </div>
             </div>
-            <p class="review-card-desc">${doc.description || 'Chưa có mô tả nội dung.'}</p>
-            <div>
-                <div class="review-file-box">
-                    <span>📄 Tệp đính kèm: <strong>${doc.file_name}</strong> (${formatFileSize(doc.file_size)})</span>
-                </div>
-            </div>
-            <div class="review-actions-bar">
-                <button class="btn btn-preview" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">👁️ Xem trực tuyến</button>
-                <button class="btn btn-secondary" onclick="openDocumentInNewTab('${doc.id}')" title="Mở file lên xem trong tab mới toàn màn hình">↗️ Mở tab mới</button>
-                <button class="btn btn-download-action" onclick="downloadDocument('${doc.id}')" title="Tải file về máy">⬇️ Tải file về</button>
-                <button class="btn btn-reject" onclick="rejectDocument('${doc.id}')">❌ Từ chối / Yêu cầu sửa</button>
-                <button class="btn btn-approve" onclick="approveDocument('${doc.id}')">✅ Phê duyệt & Công khai</button>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
-function approveDocument(docId) {
+async function approveDocument(docId) {
     const docs = store.getDocuments();
     const doc = docs.find(d => d.id === docId);
     if (!doc) return;
 
     doc.status = 'approved';
-    const approver = state.user ? `${state.user.fullname} (${state.user.role === 'admin' ? 'BGH' : state.user.department})` : 'Tổ trưởng Chuyên môn';
+    const approver = state.user ? `${state.user.fullname} (${state.user.role === 'admin' ? 'BGH' : (state.user.department || 'Tổ chuyên môn')})` : 'Tổ trưởng Chuyên môn';
     doc.approved_by = approver;
     store.saveDocuments(docs);
 
@@ -2345,9 +2446,27 @@ function approveDocument(docId) {
     showToast(`Đã duyệt thành công tài liệu: "${doc.title}"! 🎉`, 'success');
     updatePendingBadge();
     renderReviewPage();
+
+    // Đồng bộ trạng thái duyệt lên Google Apps Script Web App nếu có
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const settings = store.getSettings();
+    const activeGas = myGas || settings.drive_gas_url;
+    if (activeGas) {
+        try {
+            fetch(activeGas, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'approve',
+                    docId: doc.id,
+                    approvedBy: approver
+                })
+            }).catch(e => console.warn('Không thể gửi trạng thái duyệt lên Google Drive:', e));
+        } catch (e) {}
+    }
 }
 
-function rejectDocument(docId) {
+async function rejectDocument(docId) {
     const reason = prompt('Nhập lý do hoặc góp ý để giáo viên điều chỉnh lại tài liệu:', 'Cần bổ sung thêm phần dặn dò và phiếu bài tập theo chuẩn yêu cầu.');
     if (reason === null) return;
 
@@ -2357,9 +2476,27 @@ function rejectDocument(docId) {
         doc.status = 'rejected';
         doc.reject_reason = reason;
         store.saveDocuments(docs);
-        showToast('Đã gửi phản hồi từ chối tài liệu đến giáo viên', 'warning');
+        showToast('Đã gửi phản hồi từ chối / yêu cầu sửa học liệu đến giáo viên', 'warning');
         updatePendingBadge();
         renderReviewPage();
+
+        // Đồng bộ trạng thái từ chối lên Google Apps Script Web App nếu có
+        const myGas = localStorage.getItem('khls_my_drive_gas_url');
+        const settings = store.getSettings();
+        const activeGas = myGas || settings.drive_gas_url;
+        if (activeGas) {
+            try {
+                fetch(activeGas, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'reject',
+                        docId: doc.id,
+                        rejectReason: reason
+                    })
+                }).catch(e => console.warn('Không thể gửi trạng thái từ chối lên Google Apps Script:', e));
+            } catch (e) {}
+        }
     }
 }
 
@@ -2478,7 +2615,18 @@ function handleNotificationClick(notifId) {
         renderNotificationList();
         closeNotificationDropdown();
         if (notif.link) {
-            navigate(notif.link);
+            if (notif.link.startsWith('#/review')) {
+                state.reviewDeptFilter = 'all'; // Đảm bảo hiển thị tất cả các tổ
+                if (state.currentPage === 'review') {
+                    renderReviewPage();
+                }
+                navigate(notif.link);
+                setTimeout(() => {
+                    highlightReviewDocFromLink(notif.link, notif.text);
+                }, 150);
+            } else {
+                navigate(notif.link);
+            }
         }
     }
 }
@@ -3198,7 +3346,7 @@ function initUploadForm() {
             time: 'Vừa xong',
             icon: '📋',
             type: 'review',
-            link: '#/review',
+            link: `#/review?doc=${newDoc.id}`,
             unread: true
         });
         store.saveNotifications(notifs);
@@ -3215,7 +3363,12 @@ function initUploadForm() {
 
         updatePendingBadge();
         showToast('🎉 Gửi học liệu thành công! Đã lưu trọn vẹn nội dung file.', 'success');
-        navigate('#/review');
+        state.reviewDeptFilter = 'all';
+        navigate(`#/review?doc=${newDoc.id}`);
+        renderReviewPage();
+        setTimeout(() => {
+            highlightReviewDocFromLink(`#/review?doc=${newDoc.id}`, newDoc.title);
+        }, 150);
     });
 }
 
@@ -4093,6 +4246,115 @@ async function testMyDriveGasConnection() {
     }
 }
 
+async function syncDocumentsFromDrive(isManual = false) {
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const settings = store.getSettings();
+    const activeGas = myGas || settings.drive_gas_url;
+    if (!activeGas) {
+        if (isManual) {
+            showToast('Chưa cấu hình liên kết Google Apps Script Web App để đồng bộ!', 'warning');
+            openDriveSetupModal();
+        }
+        return false;
+    }
+
+    const syncBtn = document.getElementById('btn-sync-review');
+    if (syncBtn && isManual) {
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = '⏳ Đang đồng bộ...';
+    }
+
+    try {
+        const folderId = localStorage.getItem('khls_my_drive_folder_id') || '';
+        const url = activeGas + (activeGas.includes('?') ? '&' : '?') + 'folderId=' + encodeURIComponent(folderId) + '&t=' + Date.now();
+        const resp = await fetch(url, { method: 'GET' });
+        if (!resp.ok) {
+            if (isManual) showToast(`Không thể kết nối đến Google Drive (HTTP ${resp.status})`, 'error');
+            return false;
+        }
+
+        const data = await resp.json();
+        if (data && data.status === 'success' && Array.isArray(data.documents)) {
+            const localDocs = store.getDocuments();
+            let hasChanges = false;
+            let newDocsCount = 0;
+
+            data.documents.forEach(cloudDoc => {
+                const existingIdx = localDocs.findIndex(d => 
+                    d.id === cloudDoc.id || 
+                    (d.drive_id && cloudDoc.drive_id && d.drive_id === cloudDoc.drive_id) ||
+                    (d.file_name === cloudDoc.file_name && d.file_size === cloudDoc.file_size)
+                );
+
+                if (existingIdx >= 0) {
+                    if (cloudDoc.status && localDocs[existingIdx].status !== cloudDoc.status) {
+                        localDocs[existingIdx].status = cloudDoc.status;
+                        localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
+                        hasChanges = true;
+                    }
+                    if (cloudDoc.file_url && !localDocs[existingIdx].file_url) {
+                        localDocs[existingIdx].file_url = cloudDoc.file_url;
+                        hasChanges = true;
+                    }
+                } else {
+                    localDocs.unshift(cloudDoc);
+                    hasChanges = true;
+                    newDocsCount++;
+
+                    if (cloudDoc.status === 'pending') {
+                        const notifs = store.getNotifications();
+                        const existsNotif = notifs.some(n => n.link && n.link.includes(cloudDoc.id));
+                        if (!existsNotif) {
+                            notifs.unshift({
+                                id: 'notif-cloud-' + cloudDoc.id,
+                                title: 'Học liệu mới chờ duyệt (từ Google Drive)',
+                                text: `${cloudDoc.author_name || 'Giáo viên'} vừa nộp: ${cloudDoc.title}`,
+                                time: 'Mới cập nhật',
+                                icon: '☁️',
+                                type: 'review',
+                                link: '#/review?doc=' + cloudDoc.id,
+                                unread: true
+                            });
+                            store.saveNotifications(notifs);
+                        }
+                    }
+                }
+            });
+
+            if (hasChanges) {
+                store.saveDocuments(localDocs);
+                updatePendingBadge();
+                if (state.currentPage === 'review') {
+                    renderReviewPage();
+                } else if (state.currentPage === 'home') {
+                    renderHomePage();
+                }
+            }
+
+            if (isManual) {
+                showToast(`✅ Đồng bộ thành công! Google Drive có ${data.documents.length} học liệu (Mới nạp thêm: ${newDocsCount}).`, 'success');
+            }
+            return true;
+        } else if (isManual) {
+            showToast('Google Drive chưa có học liệu nào được lưu trong cơ sở dữ liệu chung.', 'info');
+        }
+    } catch (err) {
+        console.warn('Lỗi đồng bộ dữ liệu từ Google Drive:', err);
+        if (isManual) {
+            showToast('Không thể kết nối đến Google Apps Script. Vui lòng kiểm tra lại quyền truy cập hoặc cấu hình URL Web App.', 'error');
+        }
+    } finally {
+        if (syncBtn && isManual) {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                <span>🔄 Đồng bộ từ Google Drive</span>
+            `;
+        }
+    }
+    return false;
+}
+
 function saveMyDriveSettings() {
     const gasInput = document.getElementById('my-drive-gas-url');
     const folderInput = document.getElementById('my-drive-folder-id');
@@ -4114,6 +4376,9 @@ function saveMyDriveSettings() {
     updateDriveStatusUI();
     closeDriveSetupModal();
     showToast('Đã lưu cấu hình Google Drive Quản trị (nguyentruongtonuithanh@gmail.com) thành công! ☁️', 'success');
+
+    // Tự động kéo dữ liệu về ngay sau khi cấu hình
+    syncDocumentsFromDrive(false);
 }
 
 function useSchoolDrive() {
@@ -4332,7 +4597,7 @@ async function handleContributeSubmit(e) {
             time: 'Vừa xong',
             icon: '📋',
             type: 'review',
-            link: '#/review',
+            link: `#/review?doc=${newDoc.id}`,
             unread: true
         });
         store.saveNotifications(notifs);
@@ -4348,11 +4613,12 @@ async function handleContributeSubmit(e) {
             showToast(`🎉 Đóng góp học liệu thành công! (Tài liệu đã lưu an toàn vào hệ thống chờ Ban Giám Hiệu duyệt).`, 'success');
         }
 
-        if (state.currentPage === 'review') {
-            renderReviewPage();
-        } else {
-            navigate('#/review');
-        }
+        state.reviewDeptFilter = 'all'; // Đảm bảo mở ra là thấy ngay tất cả bài chờ duyệt
+        navigate(`#/review?doc=${newDoc.id}`);
+        renderReviewPage();
+        setTimeout(() => {
+            highlightReviewDocFromLink(`#/review?doc=${newDoc.id}`, newDoc.title);
+        }, 150);
 
     } catch (err) {
         console.error('Lỗi khi tải lên Google Drive:', err);

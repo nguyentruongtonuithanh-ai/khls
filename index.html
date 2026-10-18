@@ -514,17 +514,32 @@
             </div>
         </div>
 
-        <!-- ========== TRANG KIỂM DUYỆT (Tổ trưởng) ========== -->
+        <!-- ========== TRANG KIỂM DUYỆT (Tổ trưởng & Admin) ========== -->
         <div class="page" id="page-review">
             <div class="container">
-                <div class="page-header">
-                    <div class="breadcrumb">
-                        <a href="#/">Trang chủ</a>
-                        <span class="breadcrumb-sep">›</span>
-                        <span>Kiểm duyệt tài liệu</span>
+                <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                    <div>
+                        <div class="breadcrumb">
+                            <a href="#/">Trang chủ</a>
+                            <span class="breadcrumb-sep">›</span>
+                            <span>Kiểm duyệt tài liệu</span>
+                        </div>
+                        <h1 class="page-title">📋 Tài liệu chờ duyệt &amp; Xuất bản</h1>
+                        <p class="page-desc">Danh sách bài giảng, kế hoạch bài dạy do giáo viên đóng góp lưu trữ trên Google Drive nguyentruongtonuithanh@gmail.com</p>
                     </div>
-                    <h1 class="page-title">📋 Tài liệu chờ duyệt</h1>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary" onclick="syncDocumentsFromDrive(true)" id="btn-sync-review" style="display:inline-flex; align-items:center; gap:6px; font-weight:600;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            <span>🔄 Đồng bộ từ Google Drive</span>
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Thanh lọc theo Tổ chuyên môn -->
+                <div class="review-dept-filters" id="review-dept-filters" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:12px; margin-bottom:16px;">
+                    <!-- Render động các tab: Tất cả, Tổ 1, Tổ 2, Tổ 3, Tổ 4, Tổ 5... -->
+                </div>
+
                 <div class="review-list" id="review-docs-grid">
                     <div class="empty-state">
                         <p>Không có tài liệu nào chờ duyệt</p>
@@ -961,6 +976,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=4.0"></script>
+    <script src="js/app.js?v=4.1"></script>
 </body>
 </html>
