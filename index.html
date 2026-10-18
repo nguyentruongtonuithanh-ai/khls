@@ -39,6 +39,12 @@
                 <span>Đóng góp học liệu</span>
             </button>
 
+            <a href="#/review" class="btn btn-sm btn-outline" id="btn-header-review" title="Xem và phê duyệt các tài liệu mới nộp" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.85rem; border-radius:var(--radius-md); border-color:rgba(99,102,241,0.35);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>Duyệt học liệu</span>
+                <span class="badge" id="header-review-badge" style="background:#ef4444; color:#fff; font-size:0.72rem; padding:1px 6px; border-radius:10px; font-weight:700; display:none;">0</span>
+            </a>
+
             <div class="notification-wrapper" id="notification-wrapper" style="position: relative; display: none;">
                 <button class="icon-btn notification-btn" id="notification-btn" aria-label="Thông báo" title="Thông báo">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -76,6 +82,11 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
                     <div class="dropdown-menu" id="user-dropdown">
+                        <a href="#/review" class="dropdown-item" id="menu-review" style="font-weight:600;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            <span>Duyệt học liệu</span>
+                            <span class="badge" id="menu-review-badge" style="margin-left:auto; background:#ef4444; color:#fff; font-size:0.75rem; padding:2px 7px; border-radius:10px; font-weight:700; display:none;">0</span>
+                        </a>
                         <a href="#/profile" class="dropdown-item">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             Hồ sơ cá nhân
@@ -101,7 +112,17 @@
 
     <!-- ============ SIDEBAR ============ -->
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
+        <!-- Quick Nav Section -->
+        <div class="sidebar-quick-nav" style="padding: 0.85rem 0.85rem 0.65rem; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 0.5rem;">
+            <a href="#/" class="tree-link" style="font-weight:600; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 8px;">
+                <span>🏠</span> <span>Trang chủ</span>
+            </a>
+            <a href="#/review" class="tree-link" id="sidebar-review-link" style="font-weight:600; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 8px;">
+                <span>📋</span> <span>Duyệt học liệu</span>
+                <span class="badge" id="sidebar-review-badge" style="margin-left:auto; background:#ef4444; color:#fff; font-size:0.75rem; padding:1px 7px; border-radius:10px; font-weight:700; display:none;">0</span>
+            </a>
+        </div>
+        <div class="sidebar-header" style="padding-top: 0.4rem;">
             <h3>📂 Danh mục học liệu</h3>
         </div>
         <nav class="sidebar-nav" id="sidebar-nav">
@@ -940,6 +961,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=3.9"></script>
+    <script src="js/app.js?v=4.0"></script>
 </body>
 </html>

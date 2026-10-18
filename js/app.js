@@ -470,7 +470,17 @@ const store = {
         }
     },
     saveDocuments(docs) {
-        localStorage.setItem('khls_docs_v2', JSON.stringify(docs));
+        try {
+            localStorage.setItem('khls_docs_v2', JSON.stringify(docs));
+        } catch (storageErr) {
+            console.warn('LocalStorage quota exceeded in saveDocuments, stripping heavy base64 data...', storageErr);
+            docs.forEach(d => { d.file_data_url = null; });
+            try {
+                localStorage.setItem('khls_docs_v2', JSON.stringify(docs));
+            } catch (storageErr2) {
+                console.error('Cannot save even after stripping file_data_url:', storageErr2);
+            }
+        }
     },
     getReports() {
         const data = localStorage.getItem('khls_reports_v2');
@@ -559,6 +569,7 @@ function handleRoute() {
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
     updateSidebarActive();
+    updatePendingBadge();
 
     // Route dispatcher
     if (page === 'home') {
@@ -2360,16 +2371,40 @@ function updatePendingBadge() {
     const notifs = store.getNotifications();
     const unreadCount = notifs.filter(n => n.unread).length;
 
+    const allDocs = store.getDocuments();
+    const pendingCount = allDocs.filter(d => d.status === 'pending').length;
+
     if (badge) {
-        badge.textContent = unreadCount;
-        if (unreadCount > 0) {
+        const displayCount = unreadCount > 0 ? unreadCount : pendingCount;
+        badge.textContent = displayCount;
+        if (displayCount > 0) {
             badge.style.display = 'flex';
-            if (notifBtn) notifBtn.setAttribute('title', `Bạn có ${unreadCount} thông báo mới`);
+            if (notifBtn) notifBtn.setAttribute('title', `Bạn có ${displayCount} thông báo / học liệu chờ duyệt`);
         } else {
             badge.style.display = 'none';
             if (notifBtn) notifBtn.setAttribute('title', 'Thông báo');
         }
     }
+
+    const headerReviewBadge = document.getElementById('header-review-badge');
+    if (headerReviewBadge) {
+        headerReviewBadge.textContent = pendingCount;
+        headerReviewBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    }
+
+    const sidebarReviewBadge = document.getElementById('sidebar-review-badge');
+    if (sidebarReviewBadge) {
+        sidebarReviewBadge.textContent = pendingCount;
+        sidebarReviewBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    }
+
+    const menuReviewBadge = document.getElementById('menu-review-badge');
+    if (menuReviewBadge) {
+        menuReviewBadge.textContent = pendingCount;
+        menuReviewBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    }
+
+    renderNotificationList();
 }
 
 function renderNotificationList() {
@@ -3826,9 +3861,55 @@ function openContributeModal(preselectedFile = null) {
     modal.classList.add('active');
 }
 
+function resetContributeForm() {
+    const form = document.getElementById('contribute-form');
+    if (form) form.reset();
+
+    const titleInput = document.getElementById('modal-upload-title');
+    if (titleInput) titleInput.value = '';
+
+    const descInput = document.getElementById('modal-upload-desc');
+    if (descInput) descInput.value = '';
+
+    const catSelect = document.getElementById('modal-upload-category');
+    if (catSelect) catSelect.value = '';
+
+    const gradeSelect = document.getElementById('modal-upload-grade');
+    if (gradeSelect) gradeSelect.value = '';
+
+    const subjectSelect = document.getElementById('modal-upload-subject');
+    if (subjectSelect) subjectSelect.value = '';
+
+    const fileInput = document.getElementById('modal-upload-file');
+    if (fileInput) fileInput.value = '';
+
+    modalUploadedFile = null;
+
+    const preview = document.getElementById('modal-file-preview');
+    const dropzone = document.getElementById('modal-dropzone');
+    if (preview) preview.style.display = 'none';
+    if (dropzone) dropzone.style.display = 'block';
+
+    const progressContainer = document.getElementById('modal-upload-progress-container');
+    if (progressContainer) progressContainer.style.display = 'none';
+
+    const progressBar = document.getElementById('modal-progress-bar');
+    if (progressBar) progressBar.style.width = '0%';
+
+    const submitBtn = document.getElementById('modal-btn-submit');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>🚀 Tải lên &amp; Lưu vào Google Drive</span>
+        `;
+    }
+}
+
 function closeContributeModal() {
     const modal = document.getElementById('contribute-modal');
     if (modal) modal.classList.remove('active');
+    resetContributeForm();
 }
 
 function handleModalFileSelection(file) {
@@ -4164,9 +4245,19 @@ async function handleContributeSubmit(e) {
                 });
 
                 if (resp.ok) {
-                    driveResult = await resp.json();
-                    if (driveResult && driveResult.status === 'success') {
-                        fileUrl = driveResult.fileUrl || driveResult.previewUrl;
+                    try {
+                        const rawText = await resp.text();
+                        try {
+                            driveResult = JSON.parse(rawText);
+                        } catch (parseErr) {
+                            console.warn('Google Apps Script raw text:', rawText);
+                        }
+                    } catch (readErr) {
+                        console.warn('Lỗi đọc phản hồi Google Apps Script:', readErr);
+                    }
+
+                    if (driveResult && (driveResult.status === 'success' || driveResult.fileId)) {
+                        fileUrl = driveResult.fileUrl || driveResult.previewUrl || (driveResult.fileId ? `https://drive.google.com/file/d/${driveResult.fileId}/view?usp=sharing` : null);
                         driveId = driveResult.fileId;
                         updateProgress(95, 'Đã lưu vào Drive Quản trị nguyentruongtonuithanh@gmail.com!');
                     } else {
@@ -4236,7 +4327,7 @@ async function handleContributeSubmit(e) {
         const notifs = store.getNotifications();
         notifs.unshift({
             id: 'notif-' + Date.now(),
-            title: 'Học liệu mới nộp lên Drive',
+            title: 'Học liệu mới nộp chờ duyệt',
             text: `${authorName} vừa đóng góp: ${title}`,
             time: 'Vừa xong',
             icon: '📋',
@@ -4252,12 +4343,16 @@ async function handleContributeSubmit(e) {
         if (activeGas && fileUrl) {
             showToast(`🎉 Đã tải lên thành công! Tệp đã được chuyển vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com).`, 'success');
         } else if (activeGas && gasUploadFailed) {
-            showToast(`🎉 Đóng góp học liệu thành công! (Đã lưu an toàn vào hệ thống - Google Apps Script chưa phản hồi).`, 'info');
+            showToast(`🎉 Đóng góp học liệu thành công! (Đã lưu an toàn vào hệ thống).`, 'info');
         } else {
             showToast(`🎉 Đóng góp học liệu thành công! (Tài liệu đã lưu an toàn vào hệ thống chờ Ban Giám Hiệu duyệt).`, 'success');
         }
 
-        navigate('#/review');
+        if (state.currentPage === 'review') {
+            renderReviewPage();
+        } else {
+            navigate('#/review');
+        }
 
     } catch (err) {
         console.error('Lỗi khi tải lên Google Drive:', err);
