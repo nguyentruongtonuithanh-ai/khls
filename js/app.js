@@ -3546,7 +3546,6 @@ Hồ Xuân Hương, huong.hx@nuithanh.edu.vn, teacher, Tổ Thể chất`;
     const dropzone = document.getElementById('upload-dropzone');
     const fileInput = document.getElementById('upload-file');
     if (dropzone && fileInput) {
-        dropzone.addEventListener('click', () => fileInput.click());
         dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
         dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
         dropzone.addEventListener('drop', (e) => {
@@ -3556,6 +3555,9 @@ Hồ Xuân Hương, huong.hx@nuithanh.edu.vn, teacher, Tổ Thể chất`;
                 fileInput.files = e.dataTransfer.files;
                 showFilePreview(e.dataTransfer.files[0]);
             }
+        });
+        fileInput.addEventListener('click', () => {
+            fileInput.value = '';
         });
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) showFilePreview(fileInput.files[0]);
@@ -4187,12 +4189,6 @@ function initContributeModal() {
     const changeBtn = document.getElementById('modal-file-change');
 
     if (dropzone && modalFileInput) {
-        dropzone.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            modalFileInput.value = '';
-            modalFileInput.click();
-        });
         dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
         dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
         dropzone.addEventListener('drop', (e) => {
@@ -4201,6 +4197,9 @@ function initContributeModal() {
             if (e.dataTransfer.files.length > 0) {
                 handleModalFileSelection(e.dataTransfer.files[0]);
             }
+        });
+        modalFileInput.addEventListener('click', () => {
+            modalFileInput.value = '';
         });
         modalFileInput.addEventListener('change', () => {
             if (modalFileInput.files.length > 0) handleModalFileSelection(modalFileInput.files[0]);
@@ -4212,15 +4211,6 @@ function initContributeModal() {
             if (globalFileInput.files.length > 0) {
                 openContributeModal(globalFileInput.files[0]);
             }
-        });
-    }
-
-    if (changeBtn && modalFileInput) {
-        changeBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            modalFileInput.value = '';
-            modalFileInput.click();
         });
     }
 
