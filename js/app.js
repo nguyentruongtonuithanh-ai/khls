@@ -3574,6 +3574,24 @@ Hồ Xuân Hương, huong.hx@nuithanh.edu.vn, teacher, Tổ Thể chất`;
 }
 
 function showFilePreview(file) {
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+        showToast('⚠️ Dung lượng tệp vượt quá giới hạn 50MB. Vui lòng chọn tệp nhỏ hơn.', 'error');
+        const fileInput = document.getElementById('upload-file');
+        if (fileInput) fileInput.value = '';
+        return;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const allowedExtensions = ['doc', 'docx', 'ppt', 'pptx', 'pdf'];
+    if (!allowedExtensions.includes(ext)) {
+        showToast(`⚠️ Tệp không đúng định dạng (.${ext})! Hệ thống chỉ cho phép tải lên các tệp: .doc, .docx, .ppt, .pptx, .pdf.`, 'error');
+        const fileInput = document.getElementById('upload-file');
+        if (fileInput) fileInput.value = '';
+        return;
+    }
+
     processUploadedFile(file);
     const preview = document.getElementById('upload-file-preview');
     const nameEl = document.getElementById('upload-file-name');
@@ -3724,6 +3742,24 @@ function closeContributeModal() {
 
 function handleModalFileSelection(file) {
     if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+        showToast('⚠️ Dung lượng tệp vượt quá giới hạn 50MB. Vui lòng chọn tệp nhỏ hơn.', 'error');
+        const modalFileInput = document.getElementById('modal-upload-file');
+        if (modalFileInput) modalFileInput.value = '';
+        return;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const allowedExtensions = ['doc', 'docx', 'ppt', 'pptx', 'pdf'];
+    if (!allowedExtensions.includes(ext)) {
+        showToast(`⚠️ Tệp không đúng định dạng (.${ext})! Hệ thống chỉ cho phép tải lên các tệp: .doc, .docx, .ppt, .pptx, .pdf.`, 'error');
+        modalUploadedFile = null;
+        const modalFileInput = document.getElementById('modal-upload-file');
+        if (modalFileInput) modalFileInput.value = '';
+        return;
+    }
+
     modalUploadedFile = file;
 
     const preview = document.getElementById('modal-file-preview');
@@ -4151,7 +4187,12 @@ function initContributeModal() {
     const changeBtn = document.getElementById('modal-file-change');
 
     if (dropzone && modalFileInput) {
-        dropzone.addEventListener('click', () => modalFileInput.click());
+        dropzone.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            modalFileInput.value = '';
+            modalFileInput.click();
+        });
         dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
         dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
         dropzone.addEventListener('drop', (e) => {
@@ -4175,7 +4216,12 @@ function initContributeModal() {
     }
 
     if (changeBtn && modalFileInput) {
-        changeBtn.addEventListener('click', () => modalFileInput.click());
+        changeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            modalFileInput.value = '';
+            modalFileInput.click();
+        });
     }
 
     document.getElementById('contribute-form')?.addEventListener('submit', handleContributeSubmit);

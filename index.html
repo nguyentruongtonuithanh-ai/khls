@@ -387,8 +387,8 @@
                         <div class="upload-dropzone" id="upload-dropzone">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                             <p class="dropzone-text">Kéo thả file vào đây hoặc <span class="dropzone-link">chọn file</span></p>
-                            <p class="dropzone-hint">Hỗ trợ: DOC, DOCX, PPT, PPTX, PDF, MP4, ZIP (Tối đa 50MB)</p>
-                            <input type="file" id="upload-file" hidden accept=".doc,.docx,.ppt,.pptx,.pdf,.mp4,.zip,.rar,.xls,.xlsx">
+                            <p class="dropzone-hint">Chỉ hỗ trợ: .doc, .docx, .ppt, .pptx, .pdf (Tối đa 50MB)</p>
+                            <input type="file" id="upload-file" hidden accept=".doc,.docx,.ppt,.pptx,.pdf">
                         </div>
                         <div class="upload-file-preview" id="upload-file-preview" style="display:none;">
                             <div class="file-preview-info">
@@ -723,17 +723,17 @@
                 <div class="form-group">
                     <label class="form-label" style="font-weight:600; display:flex; justify-content:space-between; align-items:center;">
                         <span>Tệp học liệu đính kèm <span class="required">*</span></span>
-                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">Word, PPT, PDF, Excel, Video, ZIP</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">Word (.doc, .docx), PowerPoint (.ppt, .pptx), PDF (.pdf)</span>
                     </label>
 
                     <div class="upload-dropzone" id="modal-dropzone" style="cursor:pointer; border: 2px dashed var(--primary); background: var(--bg-surface); padding: 1.5rem; text-align: center; border-radius: var(--radius-md); transition: all 0.2s ease;">
-                        <div style="width:48px; height:48px; border-radius:50%; background:var(--primary-soft); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; margin-bottom:8px;">
+                        <div style="width:48px; height:48px; border-radius:50%; background:var(--primary-soft); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; margin-bottom:8px; pointer-events:none;">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </div>
-                        <p class="dropzone-text" style="margin:4px 0; font-weight:600;">Kéo thả file vào đây hoặc <span style="color:var(--primary); text-decoration:underline;">chọn từ máy tính</span></p>
-                        <p class="dropzone-hint" style="margin:0; font-size:0.8rem; color:var(--text-muted);">Tối đa 50MB mỗi tệp • Tự động nhận diện môn &amp; khối lớp</p>
-                        <input type="file" id="modal-upload-file" hidden accept=".doc,.docx,.ppt,.pptx,.pdf,.mp4,.zip,.rar,.xls,.xlsx,.txt,.png,.jpg">
+                        <p class="dropzone-text" style="margin:4px 0; font-weight:600; pointer-events:none;">Kéo thả file vào đây hoặc <span style="color:var(--primary); text-decoration:underline;">chọn từ máy tính</span></p>
+                        <p class="dropzone-hint" style="margin:0; font-size:0.8rem; color:var(--text-muted); pointer-events:none;">Chỉ chấp nhận tệp: .doc, .docx, .ppt, .pptx, .pdf (Tối đa 50MB)</p>
                     </div>
+                    <input type="file" id="modal-upload-file" style="display:none;" accept=".doc,.docx,.ppt,.pptx,.pdf">
 
                     <div class="upload-file-preview" id="modal-file-preview" style="display:none; margin-top:8px;">
                         <div class="file-preview-info" style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
@@ -940,6 +940,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=3.5"></script>
+    <script src="js/app.js?v=3.7"></script>
 </body>
 </html>
