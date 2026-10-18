@@ -2508,37 +2508,15 @@ function updatePendingBadge() {
     const notifs = store.getNotifications();
     const unreadCount = notifs.filter(n => n.unread).length;
 
-    const allDocs = store.getDocuments();
-    const pendingCount = allDocs.filter(d => d.status === 'pending').length;
-
     if (badge) {
-        const displayCount = unreadCount > 0 ? unreadCount : pendingCount;
-        badge.textContent = displayCount;
-        if (displayCount > 0) {
+        badge.textContent = unreadCount;
+        if (unreadCount > 0) {
             badge.style.display = 'flex';
-            if (notifBtn) notifBtn.setAttribute('title', `Bạn có ${displayCount} thông báo / học liệu chờ duyệt`);
+            if (notifBtn) notifBtn.setAttribute('title', `Bạn có ${unreadCount} thông báo mới`);
         } else {
             badge.style.display = 'none';
             if (notifBtn) notifBtn.setAttribute('title', 'Thông báo');
         }
-    }
-
-    const headerReviewBadge = document.getElementById('header-review-badge');
-    if (headerReviewBadge) {
-        headerReviewBadge.textContent = pendingCount;
-        headerReviewBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
-    }
-
-    const sidebarReviewBadge = document.getElementById('sidebar-review-badge');
-    if (sidebarReviewBadge) {
-        sidebarReviewBadge.textContent = pendingCount;
-        sidebarReviewBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
-    }
-
-    const menuReviewBadge = document.getElementById('menu-review-badge');
-    if (menuReviewBadge) {
-        menuReviewBadge.textContent = pendingCount;
-        menuReviewBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
     }
 
     renderNotificationList();
