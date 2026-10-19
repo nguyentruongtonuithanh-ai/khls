@@ -123,7 +123,11 @@ function doPost(e) {
     // Xử lý Phê duyệt hoặc Từ chối học liệu
     if (data.action === "review" || data.action === "approve" || data.action === "reject") {
       var allDocs = loadDocuments(folder);
-      var targetDoc = allDocs.find(function(d) { return d.id === data.docId; });
+      var targetDoc = allDocs.find(function(d) {
+        return d.id === data.docId || 
+               (data.driveId && d.drive_id === data.driveId) || 
+               (data.fileName && d.file_name === data.fileName);
+      });
       if (targetDoc) {
         targetDoc.status = (data.action === "reject" ? "rejected" : "approved");
         targetDoc.approved_by = data.approvedBy || "Ban Giám Hiệu";

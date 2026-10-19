@@ -404,13 +404,15 @@ const store = {
         }
         try {
             const parsed = JSON.parse(data);
-            // Cập nhật URL Web App chính thức của trường nếu chưa có hoặc đang trống
-            if (!parsed.drive_gas_url || parsed.drive_gas_url.trim() === '') {
-                parsed.drive_gas_url = defaultSettings.drive_gas_url;
+            // Cập nhật URL Web App chính thức của trường nếu chưa có hoặc đang dùng URL cũ
+            const officialGasUrl = defaultSettings.drive_gas_url;
+            if (!parsed.drive_gas_url || !parsed.drive_gas_url.includes('AKfycbyAfYDvlgkU5c3908gdGyDNRwmXWB-y3hPNQoD0fPx1PQ5moCIVhKZk-kTw-sim9Dfj')) {
+                parsed.drive_gas_url = officialGasUrl;
                 localStorage.setItem('khls_settings_v2', JSON.stringify(parsed));
             }
-            if (!localStorage.getItem('khls_my_drive_gas_url')) {
-                localStorage.setItem('khls_my_drive_gas_url', defaultSettings.drive_gas_url);
+            const existingMyGas = localStorage.getItem('khls_my_drive_gas_url');
+            if (!existingMyGas || !existingMyGas.includes('AKfycbyAfYDvlgkU5c3908gdGyDNRwmXWB-y3hPNQoD0fPx1PQ5moCIVhKZk-kTw-sim9Dfj')) {
+                localStorage.setItem('khls_my_drive_gas_url', officialGasUrl);
             }
             return { ...defaultSettings, ...parsed };
         } catch(e) {
@@ -510,7 +512,9 @@ const state = {
     theme: localStorage.getItem('khls-theme') || 'dark',
     viewMode: 'grid', // 'grid' or 'list'
     activeSlideIndex: 0,
-    reviewDeptFilter: 'all'
+    reviewDeptFilter: 'all',
+    currentBrowse: null,
+    currentDocId: null
 };
 
 // ======================== APP INITIALIZATION ========================
@@ -590,10 +594,14 @@ function handleRoute() {
         const grade = segments[2] || '';
         const subject = segments[3] || '';
         const query = queryParams.get('q') || '';
+        state.currentBrowse = { cat, grade, subject, query };
         renderBrowsePage(cat, grade, subject, query);
+        syncDocumentsFromDrive(false);
     } else if (page === 'detail') {
         const docId = segments[1];
+        state.currentDocId = docId;
         renderDetailPage(docId);
+        syncDocumentsFromDrive(false);
     } else if (page === 'review') {
         renderReviewPage();
         const docParam = queryParams.get('doc');
@@ -2403,21 +2411,62 @@ function renderReviewPage() {
                         <button class="btn btn-secondary" onclick="openDocumentInNewTab('${doc.id}')" title="Mở file lên xem trong tab mới">↗️ Mở tab mới</button>
                     `}
                     <button class="btn btn-download-action" onclick="downloadDocument('${doc.id}')" title="Tải file về máy">⬇️ Tải file về</button>
-                    <button class="btn btn-reject" onclick="rejectDocument('${doc.id}')">❌ Yêu cầu sửa</button>
-                    <button class="btn btn-approve" onclick="approveDocument('${doc.id}')">✅ Phê duyệt &amp; Công khai</button>
+                    <button class="btn btn-reject" onclick="rejectDocument('${doc.id}', this)">❌ Yêu cầu sửa</button>
+                    <button class="btn btn-approve" onclick="approveDocument('${doc.id}', this)">✅ Phê duyệt &amp; Công khai</button>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-async function approveDocument(docId) {
+async function approveDocument(docId, btnElement = null) {
     const docs = store.getDocuments();
     const doc = docs.find(d => d.id === docId);
     if (!doc) return;
 
-    doc.status = 'approved';
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.innerHTML = '⏳ Đang đồng bộ lên Drive...';
+    }
+
     const approver = state.user ? `${state.user.fullname} (${state.user.role === 'admin' ? 'BGH' : (state.user.department || 'Tổ chuyên môn')})` : 'Tổ trưởng Chuyên môn';
+
+    // Đồng bộ trạng thái duyệt lên Google Apps Script Web App
+    const settings = store.getSettings();
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const activeGas = myGas || settings.drive_gas_url;
+    let driveSyncSuccess = false;
+
+    if (activeGas) {
+        try {
+            const resp = await fetch(activeGas, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'approve',
+                    docId: doc.id,
+                    driveId: doc.drive_id || '',
+                    fileName: doc.file_name || '',
+                    approvedBy: approver
+                })
+            });
+            if (resp.ok) {
+                const resData = await resp.json().catch(() => null);
+                if (resData && resData.status === 'success') {
+                    driveSyncSuccess = true;
+                    if (resData.doc && resData.doc.id) {
+                        doc.id = resData.doc.id;
+                    }
+                } else {
+                    console.warn('Google Drive approve response:', resData);
+                }
+            }
+        } catch (e) {
+            console.warn('Lỗi kết nối khi gửi duyệt lên Google Drive:', e);
+        }
+    }
+
+    doc.status = 'approved';
     doc.approved_by = approver;
     store.saveDocuments(docs);
 
@@ -2443,61 +2492,58 @@ async function approveDocument(docId) {
     });
     store.saveNotifications(notifs);
 
-    showToast(`Đã duyệt thành công tài liệu: "${doc.title}"! 🎉`, 'success');
+    if (driveSyncSuccess) {
+        showToast(`✅ Đã phê duyệt và đồng bộ lên Google Drive toàn trường thành công! 🎉`, 'success');
+    } else {
+        showToast(`Đã duyệt thành công tài liệu: "${doc.title}"! 🎉`, 'success');
+    }
+
     updatePendingBadge();
     renderReviewPage();
-
-    // Đồng bộ trạng thái duyệt lên Google Apps Script Web App nếu có
-    const myGas = localStorage.getItem('khls_my_drive_gas_url');
-    const settings = store.getSettings();
-    const activeGas = myGas || settings.drive_gas_url;
-    if (activeGas) {
-        try {
-            fetch(activeGas, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'approve',
-                    docId: doc.id,
-                    approvedBy: approver
-                })
-            }).catch(e => console.warn('Không thể gửi trạng thái duyệt lên Google Drive:', e));
-        } catch (e) {}
-    }
 }
 
-async function rejectDocument(docId) {
+async function rejectDocument(docId, btnElement = null) {
     const reason = prompt('Nhập lý do hoặc góp ý để giáo viên điều chỉnh lại tài liệu:', 'Cần bổ sung thêm phần dặn dò và phiếu bài tập theo chuẩn yêu cầu.');
     if (reason === null) return;
 
     const docs = store.getDocuments();
     const doc = docs.find(d => d.id === docId);
-    if (doc) {
-        doc.status = 'rejected';
-        doc.reject_reason = reason;
-        store.saveDocuments(docs);
-        showToast('Đã gửi phản hồi từ chối / yêu cầu sửa học liệu đến giáo viên', 'warning');
-        updatePendingBadge();
-        renderReviewPage();
+    if (!doc) return;
 
-        // Đồng bộ trạng thái từ chối lên Google Apps Script Web App nếu có
-        const myGas = localStorage.getItem('khls_my_drive_gas_url');
-        const settings = store.getSettings();
-        const activeGas = myGas || settings.drive_gas_url;
-        if (activeGas) {
-            try {
-                fetch(activeGas, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'reject',
-                        docId: doc.id,
-                        rejectReason: reason
-                    })
-                }).catch(e => console.warn('Không thể gửi trạng thái từ chối lên Google Apps Script:', e));
-            } catch (e) {}
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.innerHTML = '⏳ Đang gửi phản hồi...';
+    }
+
+    const settings = store.getSettings();
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const activeGas = myGas || settings.drive_gas_url;
+
+    if (activeGas) {
+        try {
+            await fetch(activeGas, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'reject',
+                    docId: doc.id,
+                    driveId: doc.drive_id || '',
+                    fileName: doc.file_name || '',
+                    rejectReason: reason,
+                    approvedBy: state.user ? state.user.fullname : 'Tổ trưởng Chuyên môn'
+                })
+            });
+        } catch (e) {
+            console.warn('Lỗi kết nối từ chối lên Google Drive:', e);
         }
     }
+
+    doc.status = 'rejected';
+    doc.reject_reason = reason;
+    store.saveDocuments(docs);
+    showToast('Đã gửi phản hồi từ chối / yêu cầu sửa học liệu đến giáo viên', 'warning');
+    updatePendingBadge();
+    renderReviewPage();
 }
 
 // ======================== NOTIFICATIONS DROPDOWN ========================
@@ -4237,9 +4283,16 @@ async function syncDocumentsFromDrive(isManual = false) {
     }
 
     const syncBtn = document.getElementById('btn-sync-review');
-    if (syncBtn && isManual) {
-        syncBtn.disabled = true;
-        syncBtn.innerHTML = '⏳ Đang đồng bộ...';
+    const syncBrowseBtn = document.getElementById('btn-sync-browse');
+    if (isManual) {
+        if (syncBtn) {
+            syncBtn.disabled = true;
+            syncBtn.innerHTML = '⏳ Đang đồng bộ...';
+        }
+        if (syncBrowseBtn) {
+            syncBrowseBtn.disabled = true;
+            syncBrowseBtn.innerHTML = '⏳ Đang tải...';
+        }
     }
 
     try {
@@ -4265,11 +4318,38 @@ async function syncDocumentsFromDrive(isManual = false) {
                 );
 
                 if (existingIdx >= 0) {
-                    if (cloudDoc.status && localDocs[existingIdx].status !== cloudDoc.status) {
-                        localDocs[existingIdx].status = cloudDoc.status;
-                        localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
+                    // 1. Luôn đồng bộ ID từ Cloud về Local để 2 bên khớp tuyệt đối
+                    if (cloudDoc.id && localDocs[existingIdx].id !== cloudDoc.id) {
+                        localDocs[existingIdx].id = cloudDoc.id;
                         hasChanges = true;
                     }
+
+                    // 2. Đồng bộ trạng thái duyệt hai chiều:
+                    if (cloudDoc.status && localDocs[existingIdx].status !== cloudDoc.status) {
+                        // NẾU trên máy này bài đã được duyệt (approved) nhưng trên Drive vẫn còn pending
+                        // => Máy này sẽ đẩy duyệt lên Drive ngay lập tức để đồng bộ cho toàn trường!
+                        if (localDocs[existingIdx].status === 'approved' && cloudDoc.status === 'pending') {
+                            if (activeGas) {
+                                fetch(activeGas, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                    body: JSON.stringify({
+                                        action: 'approve',
+                                        docId: cloudDoc.id,
+                                        driveId: cloudDoc.drive_id || localDocs[existingIdx].drive_id || '',
+                                        fileName: cloudDoc.file_name || localDocs[existingIdx].file_name || '',
+                                        approvedBy: localDocs[existingIdx].approved_by || 'Ban Giám Hiệu'
+                                    })
+                                }).catch(e => console.warn('Tự động đẩy duyệt lên Drive thất bại:', e));
+                            }
+                        } else {
+                            // Nhận trạng thái duyệt mới nhất từ Cloud (ví dụ Máy B nhận bài đã duyệt từ Máy A)
+                            localDocs[existingIdx].status = cloudDoc.status;
+                            localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
+                            hasChanges = true;
+                        }
+                    }
+
                     if (cloudDoc.file_url && !localDocs[existingIdx].file_url) {
                         localDocs[existingIdx].file_url = cloudDoc.file_url;
                         hasChanges = true;
@@ -4304,8 +4384,16 @@ async function syncDocumentsFromDrive(isManual = false) {
                 updatePendingBadge();
                 if (state.currentPage === 'review') {
                     renderReviewPage();
+                } else if (state.currentPage === 'browse') {
+                    if (state.currentBrowse) {
+                        renderBrowsePage(state.currentBrowse.cat, state.currentBrowse.grade, state.currentBrowse.subject, state.currentBrowse.query);
+                    } else {
+                        renderBrowsePage();
+                    }
                 } else if (state.currentPage === 'home') {
                     renderHomePage();
+                } else if (state.currentPage === 'detail' && state.currentDocId) {
+                    renderDetailPage(state.currentDocId);
                 }
             }
 
@@ -4322,12 +4410,21 @@ async function syncDocumentsFromDrive(isManual = false) {
             showToast('Không thể kết nối đến Google Apps Script. Vui lòng kiểm tra lại quyền truy cập hoặc cấu hình URL Web App.', 'error');
         }
     } finally {
-        if (syncBtn && isManual) {
-            syncBtn.disabled = false;
-            syncBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                <span>🔄 Đồng bộ từ Google Drive</span>
-            `;
+        if (isManual) {
+            if (syncBtn) {
+                syncBtn.disabled = false;
+                syncBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    <span>🔄 Đồng bộ từ Google Drive</span>
+                `;
+            }
+            if (syncBrowseBtn) {
+                syncBrowseBtn.disabled = false;
+                syncBrowseBtn.innerHTML = `
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    <span>🔄 Đồng bộ Drive</span>
+                `;
+            }
         }
     }
     return false;
@@ -4459,9 +4556,9 @@ async function handleContributeSubmit(e) {
 
         // If Google Apps Script is configured: upload to Drive!
         let gasUploadFailed = false;
+        const docGeneratedId = 'doc-' + Date.now();
         if (activeGas) {
             updateProgress(40, 'Đang tải tệp vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)...');
-            const docGeneratedId = 'doc-' + Date.now();
             const payload = {
                 action: 'upload',
                 docId: docGeneratedId,
@@ -4531,7 +4628,7 @@ async function handleContributeSubmit(e) {
         };
 
         const newDoc = {
-            id: 'doc-' + Date.now(),
+            id: (driveResult && driveResult.doc && driveResult.doc.id) ? driveResult.doc.id : docGeneratedId,
             title: title,
             description: desc,
             category: category,
