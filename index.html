@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=3.4">
+    <link rel="stylesheet" href="css/style.css?v=4.4">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -917,10 +917,10 @@
             </button>
             <div class="modal-header" style="text-align: left; margin-bottom: var(--space-lg);">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                    <h2 class="modal-title" id="edit-subject-modal-title" style="margin-bottom: 2px;">📚 Thêm thư mục Môn học / Lĩnh vực</h2>
+                    <h2 class="modal-title" id="edit-subject-modal-title" style="margin-bottom: 2px;">📁 Thêm thư mục Môn học</h2>
                     <span id="edit-subject-badge" class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-family: monospace; font-size: 0.82rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">toan</span>
                 </div>
-                <p class="modal-desc" id="edit-subject-modal-desc" style="margin-bottom: 0;">Thư mục cấp 3 nằm bên trong các khối lớp</p>
+                <p class="modal-desc" id="edit-subject-modal-desc" style="margin-bottom: 0;">Thư mục cấp 3 phân loại tài liệu theo từng môn học trong khối</p>
             </div>
             <form class="modal-body" id="edit-subject-form" style="display: flex; flex-direction: column; gap: 14px;">
                 <input type="hidden" id="edit-subject-original-id">
@@ -933,14 +933,18 @@
 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label class="form-label" for="edit-subject-name">Tên môn học <span class="required">*</span></label>
-                    <input type="text" class="form-input" id="edit-subject-name" placeholder="VD: Toán, STEM, Hoạt động trải nghiệm..." required>
+                    <input type="text" class="form-input" id="edit-subject-name" placeholder="VD: Toán, Tiếng Việt, Tin học, STEM..." required>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="edit-subject-icon">Biểu tượng (Icon / Emoji)</label>
-                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <input type="text" class="form-input" id="edit-subject-icon" placeholder="📖" style="width: 70px; text-align: center; font-size: 1.3rem; padding: 4px 8px;">
-                        <div id="subject-emoji-picker" style="display: flex; gap: 4px; flex-wrap: wrap;"></div>
+                    <label class="form-label">Biểu tượng thư mục</label>
+                    <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-surface); padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                        <span style="font-size: 1.5rem;">📁</span>
+                        <div>
+                            <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-primary);">Thư mục màu vàng tiêu chuẩn</div>
+                            <div style="font-size: 0.76rem; color: var(--text-muted);">Đồng bộ biểu tượng thư mục màu vàng cho tất cả các môn học theo quy chuẩn</div>
+                        </div>
+                        <input type="hidden" id="edit-subject-icon" value="📁">
                     </div>
                 </div>
 
@@ -1222,6 +1226,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=4.3"></script>
+    <script src="js/app.js?v=4.4"></script>
 </body>
 </html>
