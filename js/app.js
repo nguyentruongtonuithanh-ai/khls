@@ -5,7 +5,7 @@
 
 // ======================== DATA & CONSTANTS ========================
 
-const CATEGORIES = [
+const INITIAL_CATEGORIES = [
     { id: 'khbd', name: 'Kế hoạch bài dạy', icon: '📋', desc: 'Kế hoạch bài dạy' },
     { id: 'baigiang', name: 'Bài giảng điện tử', icon: '💻', desc: 'Slide, PowerPoint' },
     { id: 'dethi', name: 'Đề thi', icon: '📝', desc: 'Đề kiểm tra định kỳ' },
@@ -16,6 +16,8 @@ const CATEGORIES = [
     { id: 'thuvien', name: 'Thư viện số', icon: '📖', desc: 'Sách, tài liệu mở' },
     { id: 'khac', name: 'Tài liệu khác', icon: '📁', desc: 'Tài nguyên bổ trợ' }
 ];
+
+let CATEGORIES = [...INITIAL_CATEGORIES];
 
 const GRADES = [
     { id: '1', name: 'Khối 1' },
@@ -501,6 +503,26 @@ const store = {
     },
     saveNotifications(notifs) {
         localStorage.setItem('khls_notifs_v2', JSON.stringify(notifs));
+    },
+    getCategories() {
+        const data = localStorage.getItem('khls_categories_v2');
+        if (!data) {
+            localStorage.setItem('khls_categories_v2', JSON.stringify(INITIAL_CATEGORIES));
+            CATEGORIES = [...INITIAL_CATEGORIES];
+            return CATEGORIES;
+        }
+        try {
+            const parsed = JSON.parse(data);
+            CATEGORIES = parsed;
+            return parsed;
+        } catch(e) {
+            CATEGORIES = [...INITIAL_CATEGORIES];
+            return CATEGORIES;
+        }
+    },
+    saveCategories(categories) {
+        localStorage.setItem('khls_categories_v2', JSON.stringify(categories));
+        CATEGORIES = categories;
     }
 };
 
@@ -520,10 +542,12 @@ const state = {
 // ======================== APP INITIALIZATION ========================
 
 document.addEventListener('DOMContentLoaded', () => {
+    CATEGORIES = store.getCategories();
     initTheme();
     restoreSession();
     renderSidebar();
     renderCategories();
+    syncCategorySelects();
     initRouter();
     initEventListeners();
     updatePendingBadge();
@@ -727,6 +751,26 @@ function renderCategories() {
             </a>
         `;
     }).join('');
+}
+
+function syncCategorySelects() {
+    const cats = store.getCategories();
+    const selects = [
+        document.getElementById('upload-category'),
+        document.getElementById('modal-upload-category')
+    ];
+
+    selects.forEach(sel => {
+        if (!sel) return;
+        const currentVal = sel.value;
+        sel.innerHTML = `
+            <option value="">-- Chọn loại --</option>
+            ${cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+        `;
+        if (currentVal && cats.some(c => c.id === currentVal)) {
+            sel.value = currentVal;
+        }
+    });
 }
 
 // ======================== PAGE: HOME ========================
@@ -2907,10 +2951,20 @@ function renderAdminPage(activeTab = 'users') {
             </div>
         `;
     } else if (activeTab === 'categories') {
+        const categories = store.getCategories();
+        const docs = store.getDocuments();
+
         panel.innerHTML = `
-            <div style="margin-bottom:var(--space-md);">
-                <h3>Quản lý Cây Thư mục & Danh mục Học liệu</h3>
-                <p style="font-size:0.85rem; color:var(--text-muted);">Tạo, sửa, xóa các nhánh danh mục theo mô hình cấu trúc trường học</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-md); flex-wrap:wrap; gap:10px;">
+                <div>
+                    <h3>Quản lý Cây Thư mục & Danh mục Học liệu</h3>
+                    <p style="font-size:0.85rem; color:var(--text-muted);">Tạo, sửa, xóa các nhánh danh mục theo mô hình cấu trúc trường học</p>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-primary" onclick="openEditCategoryModal(null)">
+                        ➕ Thêm thư mục mới
+                    </button>
+                </div>
             </div>
             <div class="admin-table-container">
                 <table class="admin-table">
@@ -2920,21 +2974,33 @@ function renderAdminPage(activeTab = 'users') {
                             <th>Biểu tượng</th>
                             <th>Tên danh mục</th>
                             <th>Mô tả</th>
+                            <th>Số tài liệu</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${CATEGORIES.map(c => `
-                            <tr>
-                                <td><code>${c.id}</code></td>
-                                <td style="font-size:1.3rem;">${c.icon}</td>
-                                <td><strong>${c.name}</strong></td>
-                                <td>${c.desc}</td>
-                                <td>
-                                    <button class="btn btn-secondary btn-sm" onclick="showToast('Chức năng sửa danh mục đã sẵn sàng', 'info')">✏️ Sửa</button>
-                                </td>
-                            </tr>
-                        `).join('')}
+                        ${categories.map(c => {
+                            const count = docs.filter(d => d.category === c.id).length;
+                            return `
+                                <tr>
+                                    <td><code>${c.id}</code></td>
+                                    <td style="font-size:1.4rem;">${c.icon || '📁'}</td>
+                                    <td><strong>${c.name}</strong></td>
+                                    <td>${c.desc || '—'}</td>
+                                    <td>
+                                        <span class="badge" style="background:var(--primary-soft); color:var(--primary); font-weight:600;">
+                                            ${count} tài liệu
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex; gap:6px;">
+                                            <button class="btn btn-secondary btn-sm" onclick="openEditCategoryModal('${c.id}')" title="Sửa thư mục">✏️ Sửa</button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${c.id}')" title="Xóa thư mục">🗑️ Xóa</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -3326,11 +3392,212 @@ function changeUserRole(userId) {
     openEditUserModal(userId);
 }
 
+// ======================== CATEGORY MANAGEMENT (QUẢN LÝ THƯ MỤC / DANH MỤC) ========================
+
+function openEditCategoryModal(catId) {
+    const modal = document.getElementById('edit-category-modal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('edit-category-modal-title');
+    const badgeEl = document.getElementById('edit-category-badge');
+    const descEl = document.getElementById('edit-category-modal-desc');
+    const origIdInput = document.getElementById('edit-category-original-id');
+    const idInput = document.getElementById('edit-category-id');
+    const nameInput = document.getElementById('edit-category-name');
+    const iconInput = document.getElementById('edit-category-icon');
+    const descInput = document.getElementById('edit-category-desc');
+    const deleteBtn = document.getElementById('btn-delete-category');
+    const emojiPicker = document.getElementById('emoji-quick-picker');
+
+    const sampleEmojis = ['📋', '💻', '📝', '📄', '🎮', '🎬', '📚', '📖', '🔬', '🎨', '📐', '💡', '🏆', '📁', '🌟'];
+    if (emojiPicker) {
+        emojiPicker.innerHTML = sampleEmojis.map(em => `
+            <button type="button" class="btn btn-sm btn-secondary" style="padding: 2px 7px; font-size: 1.1rem; line-height: 1; cursor: pointer;" onclick="document.getElementById('edit-category-icon').value = '${em}'">
+                ${em}
+            </button>
+        `).join('');
+    }
+
+    if (catId) {
+        const cats = store.getCategories();
+        const cat = cats.find(c => c.id === catId);
+        if (!cat) {
+            showToast('Không tìm thấy danh mục!', 'error');
+            return;
+        }
+
+        origIdInput.value = cat.id;
+        idInput.value = cat.id;
+        nameInput.value = cat.name || '';
+        iconInput.value = cat.icon || '📁';
+        descInput.value = cat.desc || '';
+
+        if (titleEl) titleEl.textContent = '📁 Sửa danh mục học liệu';
+        if (badgeEl) {
+            badgeEl.textContent = cat.id;
+            badgeEl.style.display = 'inline-block';
+        }
+        if (descEl) descEl.textContent = `Chỉnh sửa thông tin danh mục: ${cat.name}`;
+
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.onclick = () => deleteCategory(cat.id);
+        }
+    } else {
+        // Thêm mới danh mục
+        origIdInput.value = '';
+        idInput.value = '';
+        nameInput.value = '';
+        iconInput.value = '📁';
+        descInput.value = '';
+
+        if (titleEl) titleEl.textContent = '➕ Thêm thư mục / danh mục mới';
+        if (badgeEl) badgeEl.style.display = 'none';
+        if (descEl) descEl.textContent = 'Nhập thông tin để tạo thêm nhánh thư mục học liệu mới';
+
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+    setTimeout(() => {
+        if (nameInput) nameInput.focus();
+    }, 100);
+}
+
+function closeEditCategoryModal() {
+    const modal = document.getElementById('edit-category-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleSaveCategory(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    const origId = document.getElementById('edit-category-original-id').value.trim();
+    let id = document.getElementById('edit-category-id').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const name = document.getElementById('edit-category-name').value.trim();
+    const icon = document.getElementById('edit-category-icon').value.trim() || '📁';
+    const desc = document.getElementById('edit-category-desc').value.trim() || name;
+
+    if (!id) {
+        showToast('Vui lòng nhập mã danh mục (chữ cái viết liền không dấu, VD: stem, khbd...)!', 'error');
+        document.getElementById('edit-category-id').focus();
+        return;
+    }
+    if (!name) {
+        showToast('Vui lòng nhập tên danh mục / thư mục!', 'error');
+        document.getElementById('edit-category-name').focus();
+        return;
+    }
+
+    const cats = store.getCategories();
+
+    if (origId) {
+        // Cập nhật danh mục hiện có
+        const index = cats.findIndex(c => c.id === origId);
+        if (index === -1) {
+            showToast('Không tìm thấy danh mục cần sửa!', 'error');
+            return;
+        }
+
+        if (id !== origId && cats.some(c => c.id === id)) {
+            showToast(`Mã danh mục "${id}" đã tồn tại. Vui lòng chọn mã khác!`, 'error');
+            document.getElementById('edit-category-id').focus();
+            return;
+        }
+
+        // Cập nhật mã trong danh sách học liệu nếu mã thay đổi
+        if (id !== origId) {
+            const docs = store.getDocuments();
+            let docsModified = false;
+            docs.forEach(d => {
+                if (d.category === origId) {
+                    d.category = id;
+                    docsModified = true;
+                }
+            });
+            if (docsModified) {
+                store.saveDocuments(docs);
+            }
+        }
+
+        cats[index] = { id, name, icon, desc };
+        store.saveCategories(cats);
+
+        closeEditCategoryModal();
+        showToast(`Đã cập nhật danh mục "${name}" thành công! 🎉`, 'success');
+    } else {
+        // Thêm danh mục mới
+        if (cats.some(c => c.id === id)) {
+            showToast(`Mã danh mục "${id}" đã tồn tại. Vui lòng chọn mã khác!`, 'error');
+            document.getElementById('edit-category-id').focus();
+            return;
+        }
+
+        cats.push({ id, name, icon, desc });
+        store.saveCategories(cats);
+
+        closeEditCategoryModal();
+        showToast(`Đã thêm mới danh mục "${name}" thành công! 🎉`, 'success');
+    }
+
+    // Làm mới lại toàn bộ các nơi hiển thị danh mục
+    renderSidebar();
+    renderCategories();
+    syncCategorySelects();
+    renderAdminPage('categories');
+}
+
+function deleteCategory(catId) {
+    const cats = store.getCategories();
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
+
+    if (cats.length <= 1) {
+        showToast('Hệ thống cần tối thiểu 1 danh mục để phân loại tài liệu!', 'error');
+        return;
+    }
+
+    const docs = store.getDocuments();
+    const docCount = docs.filter(d => d.category === catId).length;
+
+    let confirmMsg = `Thầy/Cô có chắc chắn muốn xóa thư mục / danh mục "${cat.name}" (${cat.id})?`;
+    if (docCount > 0) {
+        confirmMsg += `\n\n⚠️ Lưu ý: Hiện đang có ${docCount} tài liệu thuộc danh mục này. Khi xóa, các tài liệu sẽ tự động chuyển sang danh mục "Tài liệu khác".`;
+    }
+
+    if (confirm(confirmMsg)) {
+        if (docCount > 0) {
+            let fallbackCat = cats.find(c => c.id === 'khac');
+            if (!fallbackCat || fallbackCat.id === catId) {
+                fallbackCat = cats.find(c => c.id !== catId) || { id: 'khac' };
+            }
+            docs.forEach(d => {
+                if (d.category === catId) {
+                    d.category = fallbackCat.id;
+                }
+            });
+            store.saveDocuments(docs);
+        }
+
+        const filtered = cats.filter(c => c.id !== catId);
+        store.saveCategories(filtered);
+
+        closeEditCategoryModal();
+        showToast(`Đã xóa thành công danh mục "${cat.name}"!`, 'info');
+
+        renderSidebar();
+        renderCategories();
+        syncCategorySelects();
+        renderAdminPage('categories');
+    }
+}
+
 function backupSystemData() {
     const backup = {
         users: store.getUsers(),
         documents: store.getDocuments(),
         reports: store.getReports(),
+        categories: store.getCategories(),
         timestamp: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -3357,6 +3624,12 @@ function restoreSystemPrompt() {
                 if (data.users && data.documents) {
                     store.saveUsers(data.users);
                     store.saveDocuments(data.documents);
+                    if (data.categories) {
+                        store.saveCategories(data.categories);
+                    }
+                    renderSidebar();
+                    renderCategories();
+                    syncCategorySelects();
                     showToast('Đã phục hồi thành công dữ liệu từ file sao lưu!', 'success');
                     renderAdminPage('system');
                 } else {
@@ -3376,6 +3649,7 @@ function resetToInitialData() {
         localStorage.removeItem('khls_users_v2');
         localStorage.removeItem('khls_docs_v2');
         localStorage.removeItem('khls_reports_v2');
+        localStorage.removeItem('khls_categories_v2');
         showToast('Đã khôi phục dữ liệu mẫu ban đầu!', 'info');
         window.location.reload();
     }
@@ -3818,9 +4092,12 @@ function initEventListeners() {
         }
     });
     document.getElementById('edit-user-form')?.addEventListener('submit', handleSaveUser);
+    document.getElementById('edit-category-modal-close')?.addEventListener('click', closeEditCategoryModal);
+    document.getElementById('btn-cancel-edit-category')?.addEventListener('click', closeEditCategoryModal);
+    document.getElementById('edit-category-form')?.addEventListener('submit', handleSaveCategory);
 
     // Close on overlay click
-    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
+    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'edit-category-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', (e) => {
             if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
         });
