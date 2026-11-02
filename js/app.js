@@ -19,7 +19,7 @@ const INITIAL_CATEGORIES = [
 
 let CATEGORIES = [...INITIAL_CATEGORIES];
 
-const GRADES = [
+const INITIAL_GRADES = [
     { id: '1', name: 'Khối 1' },
     { id: '2', name: 'Khối 2' },
     { id: '3', name: 'Khối 3' },
@@ -27,19 +27,23 @@ const GRADES = [
     { id: '5', name: 'Khối 5' }
 ];
 
-const SUBJECTS = [
-    { id: 'toan', name: 'Toán' },
-    { id: 'tiengviet', name: 'Tiếng Việt' },
-    { id: 'tnxh', name: 'TN & XH' },
-    { id: 'khoahoc', name: 'Khoa học' },
-    { id: 'lsdl', name: 'LS & ĐL' },
-    { id: 'daoduc', name: 'Đạo đức' },
-    { id: 'tinhoc', name: 'Tin học' },
-    { id: 'tienganh', name: 'Tiếng Anh' },
-    { id: 'amnhac', name: 'Âm nhạc' },
-    { id: 'mythuat', name: 'Mỹ thuật' },
-    { id: 'gdtc', name: 'GD Thể chất' }
+let GRADES = [...INITIAL_GRADES];
+
+const INITIAL_SUBJECTS = [
+    { id: 'toan', name: 'Toán', icon: '📐' },
+    { id: 'tiengviet', name: 'Tiếng Việt', icon: '📖' },
+    { id: 'tnxh', name: 'TN & XH', icon: '🌱' },
+    { id: 'khoahoc', name: 'Khoa học', icon: '🔬' },
+    { id: 'lsdl', name: 'LS & ĐL', icon: '🗺️' },
+    { id: 'daoduc', name: 'Đạo đức', icon: '❤️' },
+    { id: 'tinhoc', name: 'Tin học', icon: '💻' },
+    { id: 'tienganh', name: 'Tiếng Anh', icon: '🔤' },
+    { id: 'amnhac', name: 'Âm nhạc', icon: '🎵' },
+    { id: 'mythuat', name: 'Mỹ thuật', icon: '🎨' },
+    { id: 'gdtc', name: 'GD Thể chất', icon: '⚽' }
 ];
+
+let SUBJECTS = [...INITIAL_SUBJECTS];
 
 const INITIAL_USERS = [
     {
@@ -523,6 +527,46 @@ const store = {
     saveCategories(categories) {
         localStorage.setItem('khls_categories_v2', JSON.stringify(categories));
         CATEGORIES = categories;
+    },
+    getGrades() {
+        const data = localStorage.getItem('khls_grades_v2');
+        if (!data) {
+            localStorage.setItem('khls_grades_v2', JSON.stringify(INITIAL_GRADES));
+            GRADES = [...INITIAL_GRADES];
+            return GRADES;
+        }
+        try {
+            const parsed = JSON.parse(data);
+            GRADES = parsed;
+            return parsed;
+        } catch(e) {
+            GRADES = [...INITIAL_GRADES];
+            return GRADES;
+        }
+    },
+    saveGrades(grades) {
+        localStorage.setItem('khls_grades_v2', JSON.stringify(grades));
+        GRADES = grades;
+    },
+    getSubjects() {
+        const data = localStorage.getItem('khls_subjects_v2');
+        if (!data) {
+            localStorage.setItem('khls_subjects_v2', JSON.stringify(INITIAL_SUBJECTS));
+            SUBJECTS = [...INITIAL_SUBJECTS];
+            return SUBJECTS;
+        }
+        try {
+            const parsed = JSON.parse(data);
+            SUBJECTS = parsed;
+            return parsed;
+        } catch(e) {
+            SUBJECTS = [...INITIAL_SUBJECTS];
+            return SUBJECTS;
+        }
+    },
+    saveSubjects(subjects) {
+        localStorage.setItem('khls_subjects_v2', JSON.stringify(subjects));
+        SUBJECTS = subjects;
     }
 };
 
@@ -536,18 +580,21 @@ const state = {
     activeSlideIndex: 0,
     reviewDeptFilter: 'all',
     currentBrowse: null,
-    currentDocId: null
+    currentDocId: null,
+    categorySubTab: 'categories'
 };
 
 // ======================== APP INITIALIZATION ========================
 
 document.addEventListener('DOMContentLoaded', () => {
     CATEGORIES = store.getCategories();
+    GRADES = store.getGrades();
+    SUBJECTS = store.getSubjects();
     initTheme();
     restoreSession();
     renderSidebar();
     renderCategories();
-    syncCategorySelects();
+    syncAllSelects();
     initRouter();
     initEventListeners();
     updatePendingBadge();
@@ -658,27 +705,31 @@ function renderSidebar() {
     const tree = document.getElementById('category-tree');
     if (!tree) return;
 
+    const cats = store.getCategories();
+    const grades = store.getGrades();
+    const subjects = store.getSubjects();
+
     let html = '';
-    CATEGORIES.forEach(cat => {
+    cats.forEach(cat => {
         html += `
             <li class="tree-item" data-category="${cat.id}">
                 <div class="tree-link" onclick="toggleTreeItem(this.parentElement); event.stopPropagation();">
-                    <span class="tree-icon">${cat.icon}</span>
+                    <span class="tree-icon">${cat.icon || '📁'}</span>
                     <span>${cat.name}</span>
                     <svg class="tree-toggle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                 </div>
                 <ul class="sub-tree">
-                    ${GRADES.map(g => `
+                    ${grades.map(g => `
                         <li class="tree-item" data-grade="${g.id}">
                             <div class="tree-link" onclick="toggleTreeItem(this.parentElement); event.stopPropagation();">
                                 <span>📂 ${g.name}</span>
                                 <svg class="tree-toggle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                             </div>
                             <ul class="sub-tree">
-                                ${SUBJECTS.map(s => `
+                                ${subjects.map(s => `
                                     <li>
                                         <a class="tree-link" href="#/browse/${cat.id}/${g.id}/${s.id}" onclick="closeSidebarMobile()">
-                                            ${s.name}
+                                            ${s.icon ? s.icon + ' ' : ''}${s.name}
                                         </a>
                                     </li>
                                 `).join('')}
@@ -771,6 +822,56 @@ function syncCategorySelects() {
             sel.value = currentVal;
         }
     });
+}
+
+function syncGradeSelects() {
+    const grades = store.getGrades();
+    const selects = [
+        document.getElementById('upload-grade'),
+        document.getElementById('modal-upload-grade'),
+        document.getElementById('filter-grade')
+    ];
+
+    selects.forEach(sel => {
+        if (!sel) return;
+        const currentVal = sel.value;
+        const isFilter = sel.id === 'filter-grade';
+        sel.innerHTML = `
+            <option value="">${isFilter ? 'Tất cả khối lớp' : '-- Chọn khối lớp --'}</option>
+            ${grades.map(g => `<option value="${g.id}">${g.name}</option>`).join('')}
+        `;
+        if (currentVal && grades.some(g => String(g.id) === String(currentVal))) {
+            sel.value = currentVal;
+        }
+    });
+}
+
+function syncSubjectSelects() {
+    const subjects = store.getSubjects();
+    const selects = [
+        document.getElementById('upload-subject'),
+        document.getElementById('modal-upload-subject'),
+        document.getElementById('filter-subject')
+    ];
+
+    selects.forEach(sel => {
+        if (!sel) return;
+        const currentVal = sel.value;
+        const isFilter = sel.id === 'filter-subject';
+        sel.innerHTML = `
+            <option value="">${isFilter ? 'Tất cả môn học' : '-- Chọn môn học --'}</option>
+            ${subjects.map(s => `<option value="${s.id}">${s.icon ? s.icon + ' ' : ''}${s.name}</option>`).join('')}
+        `;
+        if (currentVal && subjects.some(s => s.id === currentVal)) {
+            sel.value = currentVal;
+        }
+    });
+}
+
+function syncAllSelects() {
+    syncCategorySelects();
+    syncGradeSelects();
+    syncSubjectSelects();
 }
 
 // ======================== PAGE: HOME ========================
@@ -2952,58 +3053,249 @@ function renderAdminPage(activeTab = 'users') {
         `;
     } else if (activeTab === 'categories') {
         const categories = store.getCategories();
+        const grades = store.getGrades();
+        const subjects = store.getSubjects();
         const docs = store.getDocuments();
+        const subTab = state.categorySubTab || 'categories';
+
+        let contentHtml = '';
+
+        if (subTab === 'categories') {
+            contentHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-md); flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h4 style="margin:0; font-size:1.05rem;">Danh mục Học liệu Chính (Cấp 1)</h4>
+                        <p style="margin:2px 0 0; font-size:0.83rem; color:var(--text-muted);">Các nhánh học liệu phân loại lớn nhất trong trường</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-sm" onclick="openEditCategoryModal(null)">
+                            ➕ Thêm danh mục chính mới
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Mã</th>
+                                <th>Biểu tượng</th>
+                                <th>Tên danh mục</th>
+                                <th>Mô tả</th>
+                                <th>Thư mục bên trong</th>
+                                <th>Số tài liệu</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${categories.map(c => {
+                                const count = docs.filter(d => d.category === c.id).length;
+                                return `
+                                    <tr>
+                                        <td><code>${c.id}</code></td>
+                                        <td style="font-size:1.4rem;">${c.icon || '📁'}</td>
+                                        <td><strong>${c.name}</strong></td>
+                                        <td>${c.desc || '—'}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-secondary" onclick="openSubfoldersModal('${c.id}')" title="Xem và sửa các thư mục bên trong danh mục này" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; color:var(--primary);">
+                                                📂 ${grades.length} khối, ${subjects.length} môn ›
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <span class="badge" style="background:var(--primary-soft); color:var(--primary); font-weight:600;">
+                                                ${count} tài liệu
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div style="display:flex; gap:6px;">
+                                                <button class="btn btn-primary btn-sm" onclick="openSubfoldersModal('${c.id}')" title="Quản lý thư mục con bên trong danh mục này">📂 Thư mục con</button>
+                                                <button class="btn btn-secondary btn-sm" onclick="openEditCategoryModal('${c.id}')" title="Sửa danh mục này">✏️ Sửa</button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${c.id}')" title="Xóa danh mục này">🗑️ Xóa</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (subTab === 'grades') {
+            contentHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-md); flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h4 style="margin:0; font-size:1.05rem;">Thư mục Khối lớp (Cấp 2)</h4>
+                        <p style="margin:2px 0 0; font-size:0.83rem; color:var(--text-muted);">Các thư mục khối lớp phân chia tài liệu từ Khối 1 đến Khối 5 trong mỗi danh mục</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-sm" onclick="openEditGradeModal(null)">
+                            ➕ Thêm khối lớp mới
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Mã khối</th>
+                                <th>Tên khối lớp</th>
+                                <th>Môn học trực thuộc</th>
+                                <th>Số tài liệu hiện có</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${grades.map(g => {
+                                const count = docs.filter(d => String(d.grade) === String(g.id)).length;
+                                return `
+                                    <tr>
+                                        <td><code>${g.id}</code></td>
+                                        <td><strong style="font-size:1rem;">📂 ${g.name}</strong></td>
+                                        <td><span style="color:var(--text-muted); font-size:0.85rem;">${subjects.length} môn học</span></td>
+                                        <td>
+                                            <span class="badge" style="background:var(--primary-soft); color:var(--primary); font-weight:600;">
+                                                ${count} tài liệu
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div style="display:flex; gap:6px;">
+                                                <button class="btn btn-secondary btn-sm" onclick="openEditGradeModal('${g.id}')" title="Sửa khối">✏️ Sửa</button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteGrade('${g.id}')" title="Xóa khối">🗑️ Xóa</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (subTab === 'subjects') {
+            contentHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-md); flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h4 style="margin:0; font-size:1.05rem;">Thư mục Môn học & Lĩnh vực (Cấp 3)</h4>
+                        <p style="margin:2px 0 0; font-size:0.83rem; color:var(--text-muted);">Các thư mục môn học nằm trong từng khối lớp (Toán, Tiếng Việt, Tin học, STEM...)</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-sm" onclick="openEditSubjectModal(null)">
+                            ➕ Thêm môn học / lĩnh vực mới
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Mã môn</th>
+                                <th>Biểu tượng</th>
+                                <th>Tên môn học</th>
+                                <th>Số tài liệu</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${subjects.map(s => {
+                                const count = docs.filter(d => d.subject === s.id).length;
+                                return `
+                                    <tr>
+                                        <td><code>${s.id}</code></td>
+                                        <td style="font-size:1.4rem;">${s.icon || '📖'}</td>
+                                        <td><strong>${s.name}</strong></td>
+                                        <td>
+                                            <span class="badge" style="background:var(--primary-soft); color:var(--primary); font-weight:600;">
+                                                ${count} tài liệu
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div style="display:flex; gap:6px;">
+                                                <button class="btn btn-secondary btn-sm" onclick="openEditSubjectModal('${s.id}')" title="Sửa môn">✏️ Sửa</button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteSubject('${s.id}')" title="Xóa môn">🗑️ Xóa</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (subTab === 'tree') {
+            contentHtml = `
+                <div style="margin-bottom:var(--space-md);">
+                    <h4 style="margin:0; font-size:1.05rem;">Sơ đồ Cây Thư mục Phân cấp Trực quan</h4>
+                    <p style="margin:2px 0 0; font-size:0.83rem; color:var(--text-muted);">Cấu trúc phân cấp 3 tầng: Danh mục chính ➔ Khối lớp ➔ Môn học. Bấm vào bất kỳ nhánh nào để sửa hoặc xóa.</p>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    ${categories.map(c => `
+                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span style="font-size:1.5rem;">${c.icon || '📁'}</span>
+                                    <div>
+                                        <strong style="font-size:1.05rem; color:var(--text-primary);">${c.name}</strong>
+                                        <code style="margin-left:6px; font-size:0.8rem;">${c.id}</code>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    <button class="btn btn-primary btn-sm" onclick="openSubfoldersModal('${c.id}')">📂 Quản lý thư mục con</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="openEditCategoryModal('${c.id}')">✏️ Sửa</button>
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px;">
+                                ${grades.map(g => `
+                                    <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                            <strong style="font-size:0.9rem; color:var(--primary);">📂 ${g.name}</strong>
+                                            <div style="display:flex; gap:4px;">
+                                                <button class="btn btn-sm btn-secondary" onclick="openEditGradeModal('${g.id}')" style="padding:1px 6px; font-size:0.75rem;">✏️ Sửa khối</button>
+                                            </div>
+                                        </div>
+                                        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                            ${subjects.map(s => `
+                                                <span style="display:inline-flex; align-items:center; gap:4px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:2px 7px; font-size:0.78rem;">
+                                                    <span>${s.icon || '📄'}</span>
+                                                    <span>${s.name}</span>
+                                                    <a href="javascript:void(0)" onclick="openEditSubjectModal('${s.id}')" style="color:var(--text-muted); text-decoration:none; margin-left:2px;" title="Sửa môn">✏️</a>
+                                                </span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
 
         panel.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-md); flex-wrap:wrap; gap:10px;">
-                <div>
-                    <h3>Quản lý Cây Thư mục & Danh mục Học liệu</h3>
-                    <p style="font-size:0.85rem; color:var(--text-muted);">Tạo, sửa, xóa các nhánh danh mục theo mô hình cấu trúc trường học</p>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn btn-primary" onclick="openEditCategoryModal(null)">
-                        ➕ Thêm thư mục mới
-                    </button>
-                </div>
+            <div style="margin-bottom:var(--space-md);">
+                <h3>Quản lý Cây Thư mục & Danh mục Học liệu</h3>
+                <p style="font-size:0.85rem; color:var(--text-muted);">Tạo, sửa, xóa các nhánh danh mục chính và toàn bộ thư mục con (Khối lớp, Môn học) theo mô hình cấu trúc trường học</p>
             </div>
-            <div class="admin-table-container">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Mã</th>
-                            <th>Biểu tượng</th>
-                            <th>Tên danh mục</th>
-                            <th>Mô tả</th>
-                            <th>Số tài liệu</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${categories.map(c => {
-                            const count = docs.filter(d => d.category === c.id).length;
-                            return `
-                                <tr>
-                                    <td><code>${c.id}</code></td>
-                                    <td style="font-size:1.4rem;">${c.icon || '📁'}</td>
-                                    <td><strong>${c.name}</strong></td>
-                                    <td>${c.desc || '—'}</td>
-                                    <td>
-                                        <span class="badge" style="background:var(--primary-soft); color:var(--primary); font-weight:600;">
-                                            ${count} tài liệu
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div style="display:flex; gap:6px;">
-                                            <button class="btn btn-secondary btn-sm" onclick="openEditCategoryModal('${c.id}')" title="Sửa thư mục">✏️ Sửa</button>
-                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${c.id}')" title="Xóa thư mục">🗑️ Xóa</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
+
+            <!-- SUB-TABS SWITCHER -->
+            <div style="display:flex; gap:8px; margin-bottom:var(--space-lg); flex-wrap:wrap; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+                <button class="btn ${subTab === 'categories' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="setCategorySubTab('categories')">
+                    📂 1. Danh mục chính (${categories.length})
+                </button>
+                <button class="btn ${subTab === 'grades' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="setCategorySubTab('grades')">
+                    🏫 2. Thư mục Khối lớp (${grades.length})
+                </button>
+                <button class="btn ${subTab === 'subjects' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="setCategorySubTab('subjects')">
+                    📚 3. Thư mục Môn học (${subjects.length})
+                </button>
+                <button class="btn ${subTab === 'tree' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="setCategorySubTab('tree')">
+                    🌳 4. Sơ đồ Cây thư mục tổng thể
+                </button>
             </div>
+
+            ${contentHtml}
         `;
     } else if (activeTab === 'drive') {
         const settings = store.getSettings();
@@ -3592,12 +3884,465 @@ function deleteCategory(catId) {
     }
 }
 
+// ======================== SUBFOLDERS & GRADE/SUBJECT MANAGEMENT ========================
+
+let currentSubfolderCatId = null;
+
+function setCategorySubTab(subTab) {
+    state.categorySubTab = subTab;
+    renderAdminPage('categories');
+}
+
+function openSubfoldersModal(catId) {
+    currentSubfolderCatId = catId;
+    const modal = document.getElementById('category-subfolders-modal');
+    if (!modal) return;
+
+    const cats = store.getCategories();
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) {
+        showToast('Không tìm thấy danh mục!', 'error');
+        return;
+    }
+
+    const titleEl = document.getElementById('cat-subfolders-title');
+    const badgeEl = document.getElementById('cat-subfolders-badge');
+    const descEl = document.getElementById('cat-subfolders-desc');
+
+    if (titleEl) titleEl.innerHTML = `📂 Cây thư mục bên trong: <strong>${cat.name}</strong>`;
+    if (badgeEl) badgeEl.textContent = cat.id;
+    if (descEl) descEl.textContent = `Thêm, sửa, xóa các thư mục Khối lớp và Môn học bên trong danh mục "${cat.name}"`;
+
+    renderSubfoldersModalBody(cat);
+
+    modal.classList.add('active');
+}
+
+function closeSubfoldersModal() {
+    const modal = document.getElementById('category-subfolders-modal');
+    if (modal) modal.classList.remove('active');
+    currentSubfolderCatId = null;
+}
+
+function renderSubfoldersModalBody(cat) {
+    const bodyEl = document.getElementById('cat-subfolders-body');
+    if (!bodyEl) return;
+
+    const grades = store.getGrades();
+    const subjects = store.getSubjects();
+    const docs = store.getDocuments().filter(d => d.category === cat.id);
+
+    bodyEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; background:var(--bg-surface); padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-color); flex-wrap:wrap; gap:8px;">
+            <div style="font-size:0.88rem; color:var(--text-secondary);">
+                Danh mục có <strong>${grades.length}</strong> thư mục Khối lớp và <strong>${subjects.length}</strong> thư mục Môn học (${docs.length} học liệu).
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="openEditGradeModal(null)">
+                    ➕ Thêm khối lớp
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="openEditSubjectModal(null)">
+                    ➕ Thêm môn học
+                </button>
+            </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            ${grades.map(g => {
+                const gradeDocs = docs.filter(d => String(d.grade) === String(g.id));
+                return `
+                    <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid var(--border-color); padding-bottom:8px; flex-wrap:wrap; gap:6px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:1.3rem;">📂</span>
+                                <strong style="font-size:1.05rem; color:var(--text-primary);">${g.name}</strong>
+                                <code style="font-size:0.78rem;">Mã: ${g.id}</code>
+                                <span class="badge" style="background:var(--primary-soft); color:var(--primary); font-size:0.75rem;">
+                                    ${gradeDocs.length} tài liệu
+                                </span>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-sm btn-secondary" onclick="openEditGradeModal('${g.id}')">✏️ Sửa khối</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteGrade('${g.id}')">🗑️ Xóa khối</button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                            ${subjects.map(s => {
+                                const subDocs = gradeDocs.filter(d => d.subject === s.id);
+                                return `
+                                    <div style="display:inline-flex; align-items:center; gap:6px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:5px 10px; font-size:0.85rem;">
+                                        <span style="font-size:1rem;">${s.icon || '📄'}</span>
+                                        <strong>${s.name}</strong>
+                                        ${subDocs.length > 0 ? `<span style="font-size:0.72rem; color:var(--primary); font-weight:700;">(${subDocs.length})</span>` : ''}
+                                        <button type="button" onclick="openEditSubjectModal('${s.id}')" title="Sửa tên hoặc biểu tượng môn này" style="background:none; border:none; cursor:pointer; padding:0 2px; color:var(--text-muted); font-size:0.8rem; margin-left:4px;">✏️</button>
+                                        <button type="button" onclick="deleteSubject('${s.id}')" title="Xóa môn này khỏi khối" style="background:none; border:none; cursor:pointer; padding:0 2px; color:var(--danger); font-size:0.8rem;">🗑️</button>
+                                    </div>
+                                `;
+                            }).join('')}
+                            <button class="btn btn-sm btn-secondary" onclick="openEditSubjectModal(null)" style="font-size:0.8rem; padding:4px 8px;">
+                                ➕ Thêm môn mới
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// ======================== GRADE MANAGEMENT ========================
+
+function openEditGradeModal(gradeId) {
+    const modal = document.getElementById('edit-grade-modal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('edit-grade-modal-title');
+    const badgeEl = document.getElementById('edit-grade-badge');
+    const origIdInput = document.getElementById('edit-grade-original-id');
+    const idInput = document.getElementById('edit-grade-id');
+    const nameInput = document.getElementById('edit-grade-name');
+    const deleteBtn = document.getElementById('btn-delete-grade');
+
+    if (gradeId !== null && gradeId !== undefined && gradeId !== '') {
+        const grades = store.getGrades();
+        const g = grades.find(gr => String(gr.id) === String(gradeId));
+        if (!g) {
+            showToast('Không tìm thấy khối lớp!', 'error');
+            return;
+        }
+
+        origIdInput.value = g.id;
+        idInput.value = g.id;
+        nameInput.value = g.name || '';
+
+        if (titleEl) titleEl.textContent = '✏️ Sửa thư mục Khối lớp';
+        if (badgeEl) {
+            badgeEl.textContent = g.id;
+            badgeEl.style.display = 'inline-block';
+        }
+
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.onclick = () => deleteGrade(g.id);
+        }
+    } else {
+        origIdInput.value = '';
+        idInput.value = '';
+        nameInput.value = '';
+
+        if (titleEl) titleEl.textContent = '➕ Thêm thư mục Khối lớp mới';
+        if (badgeEl) badgeEl.style.display = 'none';
+
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+    setTimeout(() => {
+        if (nameInput) nameInput.focus();
+    }, 100);
+}
+
+function closeEditGradeModal() {
+    const modal = document.getElementById('edit-grade-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleSaveGrade(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    const origId = document.getElementById('edit-grade-original-id').value.trim();
+    let id = document.getElementById('edit-grade-id').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const name = document.getElementById('edit-grade-name').value.trim();
+
+    if (!id) {
+        showToast('Vui lòng nhập mã khối lớp (ID)!', 'error');
+        document.getElementById('edit-grade-id').focus();
+        return;
+    }
+    if (!name) {
+        showToast('Vui lòng nhập tên khối lớp!', 'error');
+        document.getElementById('edit-grade-name').focus();
+        return;
+    }
+
+    const grades = store.getGrades();
+
+    if (origId) {
+        const index = grades.findIndex(gr => String(gr.id) === String(origId));
+        if (index === -1) {
+            showToast('Không tìm thấy khối lớp cần sửa!', 'error');
+            return;
+        }
+
+        if (String(id) !== String(origId) && grades.some(gr => String(gr.id) === String(id))) {
+            showToast(`Mã khối "${id}" đã tồn tại. Vui lòng chọn mã khác!`, 'error');
+            document.getElementById('edit-grade-id').focus();
+            return;
+        }
+
+        if (String(id) !== String(origId)) {
+            const docs = store.getDocuments();
+            let docsModified = false;
+            docs.forEach(d => {
+                if (String(d.grade) === String(origId)) {
+                    d.grade = id;
+                    docsModified = true;
+                }
+            });
+            if (docsModified) store.saveDocuments(docs);
+        }
+
+        grades[index] = { id, name };
+        store.saveGrades(grades);
+
+        closeEditGradeModal();
+        showToast(`Đã cập nhật khối: "${name}" thành công! 🎉`, 'success');
+    } else {
+        if (grades.some(gr => String(gr.id) === String(id))) {
+            showToast(`Mã khối "${id}" đã tồn tại. Vui lòng chọn mã khác!`, 'error');
+            document.getElementById('edit-grade-id').focus();
+            return;
+        }
+
+        grades.push({ id, name });
+        store.saveGrades(grades);
+
+        closeEditGradeModal();
+        showToast(`Đã thêm thành công khối: "${name}"! 🎉`, 'success');
+    }
+
+    renderSidebar();
+    syncAllSelects();
+    renderAdminPage('categories');
+    if (currentSubfolderCatId) {
+        const cat = store.getCategories().find(c => c.id === currentSubfolderCatId);
+        if (cat) renderSubfoldersModalBody(cat);
+    }
+}
+
+function deleteGrade(gradeId) {
+    const grades = store.getGrades();
+    const g = grades.find(gr => String(gr.id) === String(gradeId));
+    if (!g) return;
+
+    if (grades.length <= 1) {
+        showToast('Hệ thống cần tối thiểu 1 khối lớp!', 'error');
+        return;
+    }
+
+    const docs = store.getDocuments();
+    const docCount = docs.filter(d => String(d.grade) === String(gradeId)).length;
+
+    let confirmMsg = `Thầy/Cô có chắc chắn muốn xóa thư mục "${g.name}" (${g.id})?`;
+    if (docCount > 0) {
+        confirmMsg += `\n\n⚠️ Lưu ý: Hiện đang có ${docCount} tài liệu thuộc khối này.`;
+    }
+
+    if (confirm(confirmMsg)) {
+        const filtered = grades.filter(gr => String(gr.id) !== String(gradeId));
+        store.saveGrades(filtered);
+
+        closeEditGradeModal();
+        showToast(`Đã xóa thành công khối "${g.name}"!`, 'info');
+
+        renderSidebar();
+        syncAllSelects();
+        renderAdminPage('categories');
+        if (currentSubfolderCatId) {
+            const cat = store.getCategories().find(c => c.id === currentSubfolderCatId);
+            if (cat) renderSubfoldersModalBody(cat);
+        }
+    }
+}
+
+// ======================== SUBJECT MANAGEMENT ========================
+
+function openEditSubjectModal(subjectId) {
+    const modal = document.getElementById('edit-subject-modal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('edit-subject-modal-title');
+    const badgeEl = document.getElementById('edit-subject-badge');
+    const origIdInput = document.getElementById('edit-subject-original-id');
+    const idInput = document.getElementById('edit-subject-id');
+    const nameInput = document.getElementById('edit-subject-name');
+    const iconInput = document.getElementById('edit-subject-icon');
+    const deleteBtn = document.getElementById('btn-delete-subject');
+    const emojiPicker = document.getElementById('subject-emoji-picker');
+
+    const sampleEmojis = ['📐', '📖', '🌱', '🔬', '🗺️', '❤️', '💻', '🔤', '🎵', '🎨', '⚽', '🚀', '💡', '🏆', '📄', '🧩'];
+    if (emojiPicker) {
+        emojiPicker.innerHTML = sampleEmojis.map(em => `
+            <button type="button" class="btn btn-sm btn-secondary" style="padding: 2px 7px; font-size: 1.1rem; line-height: 1; cursor: pointer;" onclick="document.getElementById('edit-subject-icon').value = '${em}'">
+                ${em}
+            </button>
+        `).join('');
+    }
+
+    if (subjectId !== null && subjectId !== undefined && subjectId !== '') {
+        const subjects = store.getSubjects();
+        const s = subjects.find(sub => sub.id === subjectId);
+        if (!s) {
+            showToast('Không tìm thấy môn học!', 'error');
+            return;
+        }
+
+        origIdInput.value = s.id;
+        idInput.value = s.id;
+        nameInput.value = s.name || '';
+        iconInput.value = s.icon || '📖';
+
+        if (titleEl) titleEl.textContent = '✏️ Sửa thư mục Môn học';
+        if (badgeEl) {
+            badgeEl.textContent = s.id;
+            badgeEl.style.display = 'inline-block';
+        }
+
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.onclick = () => deleteSubject(s.id);
+        }
+    } else {
+        origIdInput.value = '';
+        idInput.value = '';
+        nameInput.value = '';
+        iconInput.value = '📖';
+
+        if (titleEl) titleEl.textContent = '➕ Thêm thư mục Môn học mới';
+        if (badgeEl) badgeEl.style.display = 'none';
+
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+    setTimeout(() => {
+        if (nameInput) nameInput.focus();
+    }, 100);
+}
+
+function closeEditSubjectModal() {
+    const modal = document.getElementById('edit-subject-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleSaveSubject(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    const origId = document.getElementById('edit-subject-original-id').value.trim();
+    let id = document.getElementById('edit-subject-id').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const name = document.getElementById('edit-subject-name').value.trim();
+    const icon = document.getElementById('edit-subject-icon').value.trim() || '📖';
+
+    if (!id) {
+        showToast('Vui lòng nhập mã môn học (ID)!', 'error');
+        document.getElementById('edit-subject-id').focus();
+        return;
+    }
+    if (!name) {
+        showToast('Vui lòng nhập tên môn học!', 'error');
+        document.getElementById('edit-subject-name').focus();
+        return;
+    }
+
+    const subjects = store.getSubjects();
+
+    if (origId) {
+        const index = subjects.findIndex(sub => sub.id === origId);
+        if (index === -1) {
+            showToast('Không tìm thấy môn học cần sửa!', 'error');
+            return;
+        }
+
+        if (id !== origId && subjects.some(sub => sub.id === id)) {
+            showToast(`Mã môn "${id}" đã tồn tại. Vui lòng chọn mã khác!`, 'error');
+            document.getElementById('edit-subject-id').focus();
+            return;
+        }
+
+        if (id !== origId) {
+            const docs = store.getDocuments();
+            let docsModified = false;
+            docs.forEach(d => {
+                if (d.subject === origId) {
+                    d.subject = id;
+                    docsModified = true;
+                }
+            });
+            if (docsModified) store.saveDocuments(docs);
+        }
+
+        subjects[index] = { id, name, icon };
+        store.saveSubjects(subjects);
+
+        closeEditSubjectModal();
+        showToast(`Đã cập nhật môn: "${name}" thành công! 🎉`, 'success');
+    } else {
+        if (subjects.some(sub => sub.id === id)) {
+            showToast(`Mã môn "${id}" đã tồn tại. Vui lòng chọn mã khác!`, 'error');
+            document.getElementById('edit-subject-id').focus();
+            return;
+        }
+
+        subjects.push({ id, name, icon });
+        store.saveSubjects(subjects);
+
+        closeEditSubjectModal();
+        showToast(`Đã thêm thành công môn: "${name}"! 🎉`, 'success');
+    }
+
+    renderSidebar();
+    syncAllSelects();
+    renderAdminPage('categories');
+    if (currentSubfolderCatId) {
+        const cat = store.getCategories().find(c => c.id === currentSubfolderCatId);
+        if (cat) renderSubfoldersModalBody(cat);
+    }
+}
+
+function deleteSubject(subjectId) {
+    const subjects = store.getSubjects();
+    const s = subjects.find(sub => sub.id === subjectId);
+    if (!s) return;
+
+    if (subjects.length <= 1) {
+        showToast('Hệ thống cần tối thiểu 1 môn học!', 'error');
+        return;
+    }
+
+    const docs = store.getDocuments();
+    const docCount = docs.filter(d => d.subject === subjectId).length;
+
+    let confirmMsg = `Thầy/Cô có chắc chắn muốn xóa thư mục môn "${s.name}" (${s.id})?`;
+    if (docCount > 0) {
+        confirmMsg += `\n\n⚠️ Lưu ý: Hiện đang có ${docCount} tài liệu thuộc môn này.`;
+    }
+
+    if (confirm(confirmMsg)) {
+        const filtered = subjects.filter(sub => sub.id !== subjectId);
+        store.saveSubjects(filtered);
+
+        closeEditSubjectModal();
+        showToast(`Đã xóa thành công môn "${s.name}"!`, 'info');
+
+        renderSidebar();
+        syncAllSelects();
+        renderAdminPage('categories');
+        if (currentSubfolderCatId) {
+            const cat = store.getCategories().find(c => c.id === currentSubfolderCatId);
+            if (cat) renderSubfoldersModalBody(cat);
+        }
+    }
+}
+
 function backupSystemData() {
     const backup = {
         users: store.getUsers(),
         documents: store.getDocuments(),
         reports: store.getReports(),
         categories: store.getCategories(),
+        grades: store.getGrades(),
+        subjects: store.getSubjects(),
         timestamp: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -3624,12 +4369,12 @@ function restoreSystemPrompt() {
                 if (data.users && data.documents) {
                     store.saveUsers(data.users);
                     store.saveDocuments(data.documents);
-                    if (data.categories) {
-                        store.saveCategories(data.categories);
-                    }
+                    if (data.categories) store.saveCategories(data.categories);
+                    if (data.grades) store.saveGrades(data.grades);
+                    if (data.subjects) store.saveSubjects(data.subjects);
                     renderSidebar();
                     renderCategories();
-                    syncCategorySelects();
+                    syncAllSelects();
                     showToast('Đã phục hồi thành công dữ liệu từ file sao lưu!', 'success');
                     renderAdminPage('system');
                 } else {
@@ -3650,6 +4395,8 @@ function resetToInitialData() {
         localStorage.removeItem('khls_docs_v2');
         localStorage.removeItem('khls_reports_v2');
         localStorage.removeItem('khls_categories_v2');
+        localStorage.removeItem('khls_grades_v2');
+        localStorage.removeItem('khls_subjects_v2');
         showToast('Đã khôi phục dữ liệu mẫu ban đầu!', 'info');
         window.location.reload();
     }
@@ -4096,8 +4843,22 @@ function initEventListeners() {
     document.getElementById('btn-cancel-edit-category')?.addEventListener('click', closeEditCategoryModal);
     document.getElementById('edit-category-form')?.addEventListener('submit', handleSaveCategory);
 
+    // Grade Modal
+    document.getElementById('edit-grade-modal-close')?.addEventListener('click', closeEditGradeModal);
+    document.getElementById('btn-cancel-edit-grade')?.addEventListener('click', closeEditGradeModal);
+    document.getElementById('edit-grade-form')?.addEventListener('submit', handleSaveGrade);
+
+    // Subject Modal
+    document.getElementById('edit-subject-modal-close')?.addEventListener('click', closeEditSubjectModal);
+    document.getElementById('btn-cancel-edit-subject')?.addEventListener('click', closeEditSubjectModal);
+    document.getElementById('edit-subject-form')?.addEventListener('submit', handleSaveSubject);
+
+    // Subfolders Modal
+    document.getElementById('category-subfolders-modal-close')?.addEventListener('click', closeSubfoldersModal);
+    document.getElementById('btn-close-cat-subfolders')?.addEventListener('click', closeSubfoldersModal);
+
     // Close on overlay click
-    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'edit-category-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
+    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'edit-category-modal', 'edit-grade-modal', 'edit-subject-modal', 'category-subfolders-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', (e) => {
             if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
         });
@@ -5328,8 +6089,15 @@ function getCategoryName(categoryId) {
 }
 
 function getSubjectName(subjectId) {
-    const s = SUBJECTS.find(sub => sub.id === subjectId);
+    const subjects = store.getSubjects();
+    const s = subjects.find(sub => sub.id === subjectId);
     return s ? s.name : subjectId;
+}
+
+function getGradeName(gradeId) {
+    const grades = store.getGrades();
+    const g = grades.find(gr => String(gr.id) === String(gradeId));
+    return g ? g.name : `Khối ${gradeId}`;
 }
 
 function formatFileSize(bytes = 0) {

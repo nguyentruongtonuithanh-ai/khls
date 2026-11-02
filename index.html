@@ -869,6 +869,119 @@
         </div>
     </div>
 
+    <!-- ============ EDIT GRADE MODAL (SỬA / THÊM KHỐI LỚP) ============ -->
+    <div class="modal-overlay" id="edit-grade-modal">
+        <div class="modal" style="max-width: 480px; width: 92%;">
+            <button class="modal-close" id="edit-grade-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header" style="text-align: left; margin-bottom: var(--space-lg);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <h2 class="modal-title" id="edit-grade-modal-title" style="margin-bottom: 2px;">🏫 Thêm thư mục Khối lớp</h2>
+                    <span id="edit-grade-badge" class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-family: monospace; font-size: 0.82rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">1</span>
+                </div>
+                <p class="modal-desc" id="edit-grade-modal-desc" style="margin-bottom: 0;">Thư mục cấp 2 phân loại học liệu theo Khối lớp</p>
+            </div>
+            <form class="modal-body" id="edit-grade-form" style="display: flex; flex-direction: column; gap: 14px;">
+                <input type="hidden" id="edit-grade-original-id">
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-grade-id">Mã khối (ID) <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="edit-grade-id" placeholder="VD: 1, 2, 3, 4, 5, 6, mamnon..." required>
+                    <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; display: block;">Mã định danh viết liền không dấu (VD: 1, 2, 3, 4, 5...)</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-grade-name">Tên hiển thị khối lớp <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="edit-grade-name" placeholder="VD: Khối 1, Lớp Lá, Khối 6..." required>
+                </div>
+
+                <div class="modal-actions" style="display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="btn-delete-grade" style="display: none;">
+                        🗑️ Xóa khối
+                    </button>
+                    <div style="display: flex; gap: 8px; margin-left: auto;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-edit-grade">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ EDIT SUBJECT MODAL (SỬA / THÊM MÔN HỌC) ============ -->
+    <div class="modal-overlay" id="edit-subject-modal">
+        <div class="modal" style="max-width: 500px; width: 92%;">
+            <button class="modal-close" id="edit-subject-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header" style="text-align: left; margin-bottom: var(--space-lg);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <h2 class="modal-title" id="edit-subject-modal-title" style="margin-bottom: 2px;">📚 Thêm thư mục Môn học / Lĩnh vực</h2>
+                    <span id="edit-subject-badge" class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-family: monospace; font-size: 0.82rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">toan</span>
+                </div>
+                <p class="modal-desc" id="edit-subject-modal-desc" style="margin-bottom: 0;">Thư mục cấp 3 nằm bên trong các khối lớp</p>
+            </div>
+            <form class="modal-body" id="edit-subject-form" style="display: flex; flex-direction: column; gap: 14px;">
+                <input type="hidden" id="edit-subject-original-id">
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-subject-id">Mã môn học (ID) <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="edit-subject-id" placeholder="VD: toan, stem, tienganh..." required>
+                    <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; display: block;">Mã viết liền không dấu, không khoảng trắng</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-subject-name">Tên môn học <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="edit-subject-name" placeholder="VD: Toán, STEM, Hoạt động trải nghiệm..." required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-subject-icon">Biểu tượng (Icon / Emoji)</label>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" class="form-input" id="edit-subject-icon" placeholder="📖" style="width: 70px; text-align: center; font-size: 1.3rem; padding: 4px 8px;">
+                        <div id="subject-emoji-picker" style="display: flex; gap: 4px; flex-wrap: wrap;"></div>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="btn-delete-subject" style="display: none;">
+                        🗑️ Xóa môn
+                    </button>
+                    <div style="display: flex; gap: 8px; margin-left: auto;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-edit-subject">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ CATEGORY SUBFOLDERS MODAL (QUẢN LÝ THƯ MỤC CON BÊN TRONG DANH MỤC) ============ -->
+    <div class="modal-overlay" id="category-subfolders-modal">
+        <div class="modal" style="max-width: 760px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+            <button class="modal-close" id="category-subfolders-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header" style="text-align: left; margin-bottom: var(--space-md); flex-shrink: 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                    <h2 class="modal-title" id="cat-subfolders-title" style="margin: 0; font-size: 1.25rem;">📂 Cây thư mục bên trong danh mục</h2>
+                    <span id="cat-subfolders-badge" class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-family: monospace; font-size: 0.82rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">khbd</span>
+                </div>
+                <p class="modal-desc" id="cat-subfolders-desc" style="margin: 4px 0 0;">Quản lý, thêm, sửa, xóa các nhánh thư mục Khối lớp và Môn học bên trong</p>
+            </div>
+            <div id="cat-subfolders-body" style="overflow-y: auto; flex: 1; padding-right: 4px;">
+                <!-- Nội dung các thư mục con hiển thị tại đây -->
+            </div>
+            <div class="modal-footer" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                <div style="font-size: 0.82rem; color: var(--text-muted);">
+                    💡 Thầy/Cô có thể bấm vào nút ✏️ để sửa tên hoặc 🗑️ để xóa bất kỳ thư mục con nào.
+                </div>
+                <button type="button" class="btn btn-secondary" id="btn-close-cat-subfolders">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ CONTRIBUTE MODAL (ĐÓNG GÓP HỌC LIỆU VÀO GOOGLE DRIVE) ============ -->
     <div class="modal-overlay" id="contribute-modal">
         <div class="modal modal-lg contribute-modal-dialog">
