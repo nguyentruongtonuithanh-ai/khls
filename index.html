@@ -737,6 +737,84 @@
         </div>
     </div>
 
+    <!-- ============ EDIT USER MODAL (SỬA THÔNG TIN GIÁO VIÊN) ============ -->
+    <div class="modal-overlay" id="edit-user-modal">
+        <div class="modal" style="max-width: 540px; width: 92%;">
+            <button class="modal-close" id="edit-user-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header" style="text-align: left; margin-bottom: var(--space-lg);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <h2 class="modal-title" id="edit-user-modal-title" style="margin-bottom: 2px;">✏️ Sửa thông tin tài khoản</h2>
+                    <span id="edit-user-id-badge" class="badge" style="background: rgba(99, 102, 241, 0.15); color: var(--primary); font-family: monospace; font-size: 0.82rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">ID #1</span>
+                </div>
+                <p class="modal-desc" id="edit-user-modal-desc" style="margin-bottom: 0;">Chỉnh sửa tất cả các trường thông tin của giáo viên</p>
+            </div>
+            <form class="modal-body" id="edit-user-form" style="display: flex; flex-direction: column; gap: 14px;">
+                <input type="hidden" id="edit-user-id">
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-user-fullname">Họ và tên <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="edit-user-fullname" placeholder="VD: Lê Hoàng Nam" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-user-username">Tên đăng nhập <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="edit-user-username" placeholder="VD: admin hoặc hoangnam" required autocomplete="username">
+                    <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; display: block;">Dùng để đăng nhập hệ thống (viết liền không dấu)</small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="edit-user-role">Vai trò <span class="required">*</span></label>
+                        <select class="form-input" id="edit-user-role" required>
+                            <option value="teacher">Giáo viên</option>
+                            <option value="leader">Tổ trưởng</option>
+                            <option value="admin">Quản trị viên</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="edit-user-dept">Tổ chuyên môn <span class="required">*</span></label>
+                        <select class="form-input" id="edit-user-dept" required>
+                            <option value="Ban Giám Hiệu">Ban Giám Hiệu</option>
+                            <option value="Tổ 1">Tổ 1</option>
+                            <option value="Tổ 2">Tổ 2</option>
+                            <option value="Tổ 3">Tổ 3</option>
+                            <option value="Tổ 4">Tổ 4</option>
+                            <option value="Tổ 5">Tổ 5</option>
+                            <option value="Tổ Tin học - Ngoại ngữ">Tổ Tin học - Ngoại ngữ</option>
+                            <option value="Tổ Âm nhạc - Mỹ thuật">Tổ Âm nhạc - Mỹ thuật</option>
+                            <option value="Tổ Thể chất">Tổ Thể chất</option>
+                            <option value="__custom__">Khác (Tự nhập...)</option>
+                        </select>
+                        <input type="text" class="form-input" id="edit-user-dept-custom" placeholder="Nhập tên tổ chuyên môn..." style="display: none; margin-top: 6px;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-user-honor">Danh hiệu / Ghi chú chức danh</label>
+                    <input type="text" class="form-input" id="edit-user-honor" placeholder="VD: Hiệu trưởng, Tổ trưởng CM, GV Dạy giỏi...">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="edit-user-password">Mật khẩu mới (Tùy chọn)</label>
+                    <input type="password" class="form-input" id="edit-user-password" placeholder="Để trống nếu giữ nguyên mật khẩu cũ" autocomplete="new-password">
+                </div>
+
+                <div class="modal-actions" style="display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="btn-delete-user" style="display: none;">
+                        🗑️ Xóa tài khoản
+                    </button>
+                    <div style="display: flex; gap: 8px; margin-left: auto;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-edit-user">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ============ CONTRIBUTE MODAL (ĐÓNG GÓP HỌC LIỆU VÀO GOOGLE DRIVE) ============ -->
     <div class="modal-overlay" id="contribute-modal">
         <div class="modal modal-lg contribute-modal-dialog">

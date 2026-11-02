@@ -222,6 +222,31 @@ ul, ol { list-style: none; }
     font-size: 1rem;
 }
 
+.btn-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.82rem;
+    border-radius: var(--radius-sm);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+.btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.btn-outline-danger {
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: var(--danger, #ef4444);
+}
+.btn-outline-danger:hover {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: #ef4444;
+}
+
 .btn-full { width: 100%; justify-content: center; }
 
 .icon-btn {

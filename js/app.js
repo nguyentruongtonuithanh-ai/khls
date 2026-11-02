@@ -2867,7 +2867,7 @@ function renderAdminPage(activeTab = 'users') {
                     <button class="btn btn-primary" onclick="openBatchUserModal()">
                         👥 Tạo tài khoản hàng loạt (CSV)
                     </button>
-                    <button class="btn btn-secondary" onclick="promptAddUser()">
+                    <button class="btn btn-secondary" onclick="openEditUserModal(null)">
                         ➕ Thêm 1 giáo viên
                     </button>
                 </div>
@@ -2898,7 +2898,7 @@ function renderAdminPage(activeTab = 'users') {
                                 </td>
                                 <td>${u.department}</td>
                                 <td>
-                                    <button class="btn btn-secondary btn-sm" onclick="changeUserRole(${u.id})">Đổi vai trò</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="openEditUserModal(${u.id})" title="Sửa thông tin giáo viên">✏️ Sửa</button>
                                 </td>
                             </tr>
                         `).join('')}
@@ -3065,42 +3065,265 @@ function testCurrentDriveUrl() {
     }
 }
 
-function promptAddUser() {
-    const fullname = prompt('Nhập họ và tên giáo viên:');
-    if (!fullname) return;
-    const username = prompt('Nhập tên đăng nhập (viết liền không dấu):', fullname.toLowerCase().replace(/\s+/g, ''));
-    if (!username) return;
-    const dept = prompt('Nhập tổ chuyên môn (VD: Tổ 1, Tổ 2, Tổ 3, Tổ 4, Tổ 5):', 'Tổ 1');
+// ======================== EDIT USER MODAL (SỬA THÔNG TIN GIÁO VIÊN) ========================
+
+function openEditUserModal(userId) {
+    const modal = document.getElementById('edit-user-modal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('edit-user-modal-title');
+    const badgeEl = document.getElementById('edit-user-id-badge');
+    const descEl = document.getElementById('edit-user-modal-desc');
+    const idInput = document.getElementById('edit-user-id');
+    const fullnameInput = document.getElementById('edit-user-fullname');
+    const usernameInput = document.getElementById('edit-user-username');
+    const roleSelect = document.getElementById('edit-user-role');
+    const deptSelect = document.getElementById('edit-user-dept');
+    const deptCustomInput = document.getElementById('edit-user-dept-custom');
+    const honorInput = document.getElementById('edit-user-honor');
+    const passwordInput = document.getElementById('edit-user-password');
+    const deleteBtn = document.getElementById('btn-delete-user');
+
+    if (passwordInput) passwordInput.value = '';
+
+    const standardDepts = [
+        'Ban Giám Hiệu',
+        'Tổ 1',
+        'Tổ 2',
+        'Tổ 3',
+        'Tổ 4',
+        'Tổ 5',
+        'Tổ Tin học - Ngoại ngữ',
+        'Tổ Âm nhạc - Mỹ thuật',
+        'Tổ Thể chất'
+    ];
+
+    if (userId !== null && userId !== undefined && userId !== '') {
+        const users = store.getUsers();
+        const user = users.find(u => u.id === userId || String(u.id) === String(userId));
+        if (!user) {
+            showToast('Không tìm thấy tài khoản giáo viên!', 'error');
+            return;
+        }
+
+        idInput.value = user.id;
+        if (titleEl) titleEl.textContent = '✏️ Sửa thông tin tài khoản';
+        if (badgeEl) {
+            badgeEl.textContent = `ID #${user.id}`;
+            badgeEl.style.display = 'inline-block';
+        }
+        if (descEl) descEl.textContent = `Chỉnh sửa thông tin chi tiết của: ${user.fullname}`;
+
+        fullnameInput.value = user.fullname || '';
+        usernameInput.value = user.username || '';
+        roleSelect.value = user.role || 'teacher';
+        honorInput.value = user.honor || '';
+
+        if (standardDepts.includes(user.department)) {
+            deptSelect.value = user.department;
+            deptCustomInput.style.display = 'none';
+            deptCustomInput.value = '';
+        } else if (user.department) {
+            deptSelect.value = '__custom__';
+            deptCustomInput.style.display = 'block';
+            deptCustomInput.value = user.department;
+        } else {
+            deptSelect.value = 'Tổ 1';
+            deptCustomInput.style.display = 'none';
+            deptCustomInput.value = '';
+        }
+
+        if (deleteBtn) {
+            // Không cho phép xóa admin mặc định ID 1
+            if (user.id === 1 || user.username === 'admin') {
+                deleteBtn.style.display = 'none';
+            } else {
+                deleteBtn.style.display = 'inline-block';
+                deleteBtn.onclick = () => deleteUser(user.id);
+            }
+        }
+    } else {
+        // Chế độ thêm giáo viên mới
+        idInput.value = '';
+        if (titleEl) titleEl.textContent = '➕ Thêm giáo viên mới';
+        if (badgeEl) badgeEl.style.display = 'none';
+        if (descEl) descEl.textContent = 'Nhập thông tin để cấp tài khoản giáo viên mới';
+
+        fullnameInput.value = '';
+        usernameInput.value = '';
+        roleSelect.value = 'teacher';
+        deptSelect.value = 'Tổ 1';
+        deptCustomInput.style.display = 'none';
+        deptCustomInput.value = '';
+        honorInput.value = 'Giáo viên mới';
+
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+    setTimeout(() => fullnameInput && fullnameInput.focus(), 100);
+}
+
+function closeEditUserModal() {
+    const modal = document.getElementById('edit-user-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleSaveUser(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    const idInput = document.getElementById('edit-user-id');
+    const fullnameInput = document.getElementById('edit-user-fullname');
+    const usernameInput = document.getElementById('edit-user-username');
+    const roleSelect = document.getElementById('edit-user-role');
+    const deptSelect = document.getElementById('edit-user-dept');
+    const deptCustomInput = document.getElementById('edit-user-dept-custom');
+    const honorInput = document.getElementById('edit-user-honor');
+    const passwordInput = document.getElementById('edit-user-password');
+
+    let fullname = fullnameInput ? fullnameInput.value.trim() : '';
+    let username = usernameInput ? usernameInput.value.trim().toLowerCase().replace(/\s+/g, '') : '';
+    const role = roleSelect ? roleSelect.value : 'teacher';
+    let dept = deptSelect ? deptSelect.value : 'Tổ 1';
+    if (dept === '__custom__') {
+        dept = deptCustomInput ? deptCustomInput.value.trim() : '';
+        if (!dept) dept = 'Tổ Chuyên Môn';
+    }
+    const honor = honorInput ? honorInput.value.trim() : 'Giáo viên';
+    const password = passwordInput ? passwordInput.value.trim() : '';
+
+    if (!fullname) {
+        showToast('Vui lòng nhập họ và tên giáo viên!', 'error');
+        if (fullnameInput) fullnameInput.focus();
+        return;
+    }
+
+    if (!username) {
+        showToast('Vui lòng nhập tên đăng nhập!', 'error');
+        if (usernameInput) usernameInput.focus();
+        return;
+    }
 
     const users = store.getUsers();
-    users.push({
-        id: Date.now(),
-        username: username,
-        fullname: fullname,
-        role: 'teacher',
-        department: dept || 'Tổ Chuyên Môn',
-        honor: 'Giáo viên mới',
-        avatar_letter: fullname.charAt(0),
-        total_uploads: 0,
-        total_downloads: 0,
-        total_stars: 0
-    });
-    store.saveUsers(users);
-    showToast(`Đã thêm thành công giáo viên: ${fullname}`, 'success');
-    renderAdminPage('users');
+    const userIdVal = idInput ? idInput.value : '';
+
+    if (userIdVal) {
+        // Cập nhật người dùng hiện có
+        const targetId = isNaN(userIdVal) ? userIdVal : Number(userIdVal);
+        const userIndex = users.findIndex(u => u.id === targetId || String(u.id) === String(targetId));
+
+        if (userIndex === -1) {
+            showToast('Không tìm thấy tài khoản để cập nhật!', 'error');
+            return;
+        }
+
+        // Kiểm tra xem tên đăng nhập mới có bị trùng với tài khoản khác không
+        const conflict = users.find(u => (u.id !== targetId && String(u.id) !== String(targetId)) && u.username.toLowerCase() === username);
+        if (conflict) {
+            showToast(`Tên đăng nhập "${username}" đã có người sử dụng. Vui lòng chọn tên khác!`, 'error');
+            if (usernameInput) usernameInput.focus();
+            return;
+        }
+
+        const oldFullname = users[userIndex].fullname;
+        users[userIndex].fullname = fullname;
+        users[userIndex].username = username;
+        users[userIndex].role = role;
+        users[userIndex].department = dept;
+        users[userIndex].honor = honor;
+        users[userIndex].avatar_letter = fullname.charAt(0).toUpperCase();
+        if (password) {
+            users[userIndex].password = password;
+        }
+
+        store.saveUsers(users);
+
+        // Đồng bộ phiên đăng nhập nếu tài khoản đang sửa chính là tài khoản hiện tại
+        if (state.user && (state.user.id === targetId || String(state.user.id) === String(targetId))) {
+            state.user = { ...state.user, ...users[userIndex] };
+            localStorage.setItem('khls-user', JSON.stringify(state.user));
+            updateUserUI();
+        }
+
+        // Cập nhật tên và tổ chuyên môn tác giả trong danh sách học liệu
+        const docs = store.getDocuments();
+        let docsModified = false;
+        docs.forEach(d => {
+            if (d.author_id === targetId || String(d.author_id) === String(targetId) || d.author_name === oldFullname) {
+                d.author_name = fullname;
+                d.author_dept = dept;
+                docsModified = true;
+            }
+        });
+        if (docsModified) {
+            store.saveDocuments(docs);
+        }
+
+        closeEditUserModal();
+        showToast(`Đã lưu thay đổi thông tin giáo viên: ${fullname}! 🎉`, 'success');
+        renderAdminPage('users');
+    } else {
+        // Thêm tài khoản mới
+        const conflict = users.find(u => u.username.toLowerCase() === username);
+        if (conflict) {
+            showToast(`Tên đăng nhập "${username}" đã tồn tại. Vui lòng chọn tên khác!`, 'error');
+            if (usernameInput) usernameInput.focus();
+            return;
+        }
+
+        const newUser = {
+            id: Date.now(),
+            username: username,
+            fullname: fullname,
+            role: role,
+            department: dept,
+            honor: honor || 'Giáo viên mới',
+            avatar_letter: fullname.charAt(0).toUpperCase(),
+            total_uploads: 0,
+            total_downloads: 0,
+            total_stars: 0
+        };
+        if (password) newUser.password = password;
+
+        users.push(newUser);
+        store.saveUsers(users);
+
+        closeEditUserModal();
+        showToast(`Đã thêm thành công giáo viên: ${fullname}! 🎉`, 'success');
+        renderAdminPage('users');
+    }
+}
+
+function deleteUser(userId) {
+    const users = store.getUsers();
+    const user = users.find(u => u.id === userId || String(u.id) === String(userId));
+    if (!user) return;
+
+    if (user.id === 1 || user.username === 'admin') {
+        showToast('Không thể xóa tài khoản Quản trị viên mặc định!', 'error');
+        return;
+    }
+
+    if (state.user && (state.user.id === user.id || String(state.user.id) === String(user.id))) {
+        showToast('Bạn không thể xóa tài khoản đang đăng nhập!', 'error');
+        return;
+    }
+
+    if (confirm(`Thầy/Cô có chắc chắn muốn xóa tài khoản "${user.fullname}" (${user.username})?`)) {
+        const filtered = users.filter(u => u.id !== user.id && String(u.id) !== String(user.id));
+        store.saveUsers(filtered);
+        closeEditUserModal();
+        showToast(`Đã xóa tài khoản "${user.fullname}"!`, 'info');
+        renderAdminPage('users');
+    }
+}
+
+function promptAddUser() {
+    openEditUserModal(null);
 }
 
 function changeUserRole(userId) {
-    const users = store.getUsers();
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-
-    const current = user.role;
-    const nextRole = current === 'teacher' ? 'leader' : current === 'leader' ? 'admin' : 'teacher';
-    user.role = nextRole;
-    store.saveUsers(users);
-    showToast(`Đã cập nhật vai trò của ${user.fullname} thành: ${nextRole.toUpperCase()}`, 'success');
-    renderAdminPage('users');
+    openEditUserModal(userId);
 }
 
 function backupSystemData() {
@@ -3462,6 +3685,11 @@ function handleLogin(e) {
         }
     }
 
+    if (matchedUser && matchedUser.password && matchedUser.password !== password) {
+        showToast('Mật khẩu không chính xác! Vui lòng thử lại.', 'error');
+        return;
+    }
+
     loginAs(matchedUser);
     closeLoginModal();
     showToast(`Chào mừng ${matchedUser.fullname} đã đăng nhập! 🎉`, 'success');
@@ -3577,9 +3805,22 @@ function initEventListeners() {
     document.getElementById('preview-modal-close')?.addEventListener('click', closePreviewModal);
     document.getElementById('report-modal-close')?.addEventListener('click', closeReportModal);
     document.getElementById('batch-user-modal-close')?.addEventListener('click', closeBatchUserModal);
+    document.getElementById('edit-user-modal-close')?.addEventListener('click', closeEditUserModal);
+    document.getElementById('btn-cancel-edit-user')?.addEventListener('click', closeEditUserModal);
+    document.getElementById('edit-user-dept')?.addEventListener('change', (e) => {
+        const customInput = document.getElementById('edit-user-dept-custom');
+        if (!customInput) return;
+        if (e.target.value === '__custom__') {
+            customInput.style.display = 'block';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+        }
+    });
+    document.getElementById('edit-user-form')?.addEventListener('submit', handleSaveUser);
 
     // Close on overlay click
-    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
+    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', (e) => {
             if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
         });
