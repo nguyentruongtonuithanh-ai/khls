@@ -1453,11 +1453,7 @@ body.sidebar-collapsed .footer {
 .select-filter:focus { border-color: var(--primary); }
 
 .view-toggle {
-    display: flex;
-    background: var(--bg-input);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-    overflow: hidden;
+    display: none !important;
 }
 .view-btn {
     display: flex;
