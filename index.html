@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=4.8">
+    <link rel="stylesheet" href="css/style.css?v=4.9">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -252,42 +252,6 @@
                         <span>Duyệt tài liệu</span>
                     </div>
                     <h1 class="page-title" id="browse-title">Tất cả tài liệu</h1>
-                </div>
-                <div class="browse-toolbar">
-                    <div class="filter-group">
-                        <select class="select-filter" id="filter-grade">
-                            <option value="">Tất cả khối</option>
-                            <option value="1">Khối 1</option>
-                            <option value="2">Khối 2</option>
-                            <option value="3">Khối 3</option>
-                            <option value="4">Khối 4</option>
-                            <option value="5">Khối 5</option>
-                        </select>
-                        <select class="select-filter" id="filter-subject">
-                            <option value="">Tất cả môn</option>
-                            <option value="toan">Toán</option>
-                            <option value="tiengviet">Tiếng Việt</option>
-                            <option value="tnxh">TN & XH</option>
-                            <option value="khoahoc">Khoa học</option>
-                            <option value="lsdl">LS & ĐL</option>
-                            <option value="daoduc">Đạo đức</option>
-                            <option value="tinhoc">Tin học</option>
-                            <option value="tienganh">Tiếng Anh</option>
-                            <option value="amnhac">Âm nhạc</option>
-                            <option value="mythuat">Mỹ thuật</option>
-                            <option value="gdtc">GD Thể chất</option>
-                        </select>
-                        <select class="select-filter" id="filter-sort">
-                            <option value="week" selected>Sắp xếp: Tuần (từ trên xuống)</option>
-                            <option value="newest">Mới nhất</option>
-                            <option value="popular">Phổ biến nhất</option>
-                            <option value="rating">Đánh giá cao nhất</option>
-                        </select>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-browse" onclick="syncDocumentsFromDrive(true)" title="Cập nhật học liệu mới nhất từ Google Drive" style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; padding:7px 14px; border-radius:8px; white-space:nowrap;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                            <span>🔄 Đồng bộ Drive</span>
-                        </button>
-                    </div>
                 </div>
                 <div class="browse-docs-container" id="browse-docs-grid">
                     <div class="empty-state">
@@ -1260,6 +1224,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=4.8"></script>
+    <script src="js/app.js?v=4.9"></script>
 </body>
 </html>
