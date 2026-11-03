@@ -3192,7 +3192,9 @@ body.sidebar-collapsed .footer {
 }
 
 .win-details-top-bar,
-.win-details-title-info {
+.win-details-title-info,
+#drive-target-banner,
+.drive-target-banner {
     display: none !important;
 }
 

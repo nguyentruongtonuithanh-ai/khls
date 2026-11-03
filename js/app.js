@@ -6091,9 +6091,9 @@ async function handleContributeSubmit(e) {
     const category = document.getElementById('modal-upload-category').value;
     const grade = document.getElementById('modal-upload-grade').value;
     const subject = document.getElementById('modal-upload-subject').value;
-    const authorName = document.getElementById('modal-upload-author').value.trim() || (state.user ? state.user.fullname : 'Giáo viên');
-    const authorDept = document.getElementById('modal-upload-dept').value || (state.user ? state.user.department : 'Tổ Chuyên Môn');
-    const desc = document.getElementById('modal-upload-desc').value.trim();
+    const authorName = document.getElementById('modal-upload-author')?.value.trim() || (state.user ? state.user.fullname : 'Giáo viên');
+    const authorDept = document.getElementById('modal-upload-dept')?.value || (state.user ? state.user.department : 'Tổ Chuyên Môn');
+    const desc = document.getElementById('modal-upload-desc')?.value.trim() || '';
     const weekVal = document.getElementById('modal-upload-week')?.value;
     const file = modalUploadedFile;
 

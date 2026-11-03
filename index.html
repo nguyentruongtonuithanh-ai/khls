@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=5.0">
+    <link rel="stylesheet" href="css/style.css?v=5.1">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -955,8 +955,7 @@
                         <svg width="28" height="28" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
                     </div>
                     <div>
-                        <h2 class="modal-title" style="margin:0; font-size:1.25rem;">📤 Đóng góp học liệu lên Google Drive Trường</h2>
-                        <p class="modal-desc" style="margin:2px 0 0; font-size:0.83rem;">File tải lên sẽ tự động lưu vào Google Drive Quản trị (<strong>nguyentruongtonuithanh@gmail.com</strong>)</p>
+                        <h2 class="modal-title" style="margin:0; font-size:1.25rem;">📤 Đóng góp học liệu</h2>
                     </div>
                 </div>
             </div>
@@ -990,25 +989,7 @@
                     </div>
                 </div>
 
-                <!-- 2. Thẻ hiển thị Trạng thái Google Drive Quản trị -->
-                <div class="drive-target-banner" id="drive-target-banner" style="background:linear-gradient(135deg, rgba(37,99,235,0.08), rgba(59,130,246,0.14)); border:1px solid rgba(59,130,246,0.3); border-radius:var(--radius-md); padding:10px 14px; margin-bottom:var(--space-md); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <svg width="22" height="22" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
-                        <div>
-                            <div style="font-size:0.88rem; font-weight:700; color:var(--text-primary);">
-                                Nơi lưu trữ: <span id="drive-destination-name" style="color:var(--primary);">Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)</span>
-                            </div>
-                            <div style="font-size:0.77rem; color:var(--text-secondary);" id="drive-destination-status">
-                                🟢 Tự động chuyển thẳng vào tài khoản Drive Quản trị trường
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline btn-sm" id="btn-open-drive-setup" style="font-size:0.78rem; padding:0.3rem 0.75rem; border-radius:var(--radius-sm); font-weight:600;" title="Quản trị viên cài đặt kết nối">
-                        ⚙️ Cấu hình Drive Quản trị
-                    </button>
-                </div>
-
-                <!-- 3. Form thông tin học liệu -->
+                <!-- 2. Form thông tin học liệu -->
                 <div class="form-group">
                     <label class="form-label" for="modal-upload-title">Tiêu đề học liệu <span class="required">*</span></label>
                     <input type="text" class="form-input" id="modal-upload-title" placeholder="VD: Kế hoạch bài dạy Toán lớp 3 - Bảng nhân 7" required>
@@ -1101,33 +1082,7 @@
                     </div>
                 </div>
 
-                <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="form-group">
-                        <label class="form-label" for="modal-upload-author">Tên giáo viên đóng góp</label>
-                        <input type="text" class="form-input" id="modal-upload-author" placeholder="Họ và tên giáo viên">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="modal-upload-dept">Tổ chuyên môn</label>
-                        <select class="form-input" id="modal-upload-dept">
-                            <option value="Tổ 1">Tổ 1</option>
-                            <option value="Tổ 2">Tổ 2</option>
-                            <option value="Tổ 3">Tổ 3</option>
-                            <option value="Tổ 4">Tổ 4</option>
-                            <option value="Tổ 5">Tổ 5</option>
-                            <option value="Tổ Tin học - Ngoại ngữ">Tổ Tin học - Ngoại ngữ</option>
-                            <option value="Tổ Âm nhạc - Mỹ thuật">Tổ Âm nhạc - Mỹ thuật</option>
-                            <option value="Tổ Thể chất">Tổ Thể chất</option>
-                            <option value="Ban Giám Hiệu">Ban Giám Hiệu</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="modal-upload-desc">Mô tả tóm tắt (tùy chọn)</label>
-                    <textarea class="form-input form-textarea" id="modal-upload-desc" rows="2" placeholder="Ghi chú mục tiêu bài học hoặc yêu cầu cần đạt..."></textarea>
-                </div>
-
-                <!-- 4. Thanh tiến trình khi đang tải lên Google Drive Quản trị -->
+                <!-- 3. Thanh tiến trình khi đang tải lên Google Drive Quản trị -->
                 <div id="modal-upload-progress-container" style="display:none; margin: 12px 0; background: var(--bg-surface); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
                     <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.85rem;">
                         <span id="modal-progress-status" style="font-weight:600; color:var(--primary);">Đang tải lên Drive Quản trị...</span>
@@ -1224,6 +1179,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=5.0"></script>
+    <script src="js/app.js?v=5.1"></script>
 </body>
 </html>
