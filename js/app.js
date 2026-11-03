@@ -1277,7 +1277,7 @@ function renderWindowsDetailsTable(docs) {
                                 </td>
                                 <td class="col-btn-view th-center" onclick="event.stopPropagation()">
                                     <button type="button" class="win-btn win-btn-view" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">
-                                        👁️ Xem trước
+                                        👁️ Xem
                                     </button>
                                 </td>
                                 <td class="col-btn-download th-center" onclick="event.stopPropagation()">
