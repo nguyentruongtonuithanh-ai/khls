@@ -146,12 +146,109 @@ const INITIAL_USERS = [
 
 const INITIAL_DOCUMENTS = [
     {
+        id: 'doc-1-w1',
+        title: 'Kế hoạch bài dạy Toán 1 - Tuần 1: Làm quen với các số 1, 2, 3 và bộ đồ dùng học tập',
+        description: 'Giáo án soạn theo CV 2345 bộ Kết nối tri thức. Giúp học sinh nhận biết chữ số 1, 2, 3 qua hình ảnh trực quan.',
+        category: 'khbd',
+        grade: '1',
+        subject: 'toan',
+        week: 1,
+        file_name: 'KHBD_Toan1_Tuan1_LamQuenSo123.docx',
+        file_size: 2150000,
+        file_type: 'docx',
+        file_url: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
+        author_id: 4,
+        author_name: 'Cô Lê Thu Hà',
+        author_dept: 'Tổ 1',
+        status: 'approved',
+        avg_rating: 5.0,
+        rating_count: 8,
+        download_count: 320,
+        view_count: 840,
+        created_at: '2026-09-05T08:00:00Z',
+        approved_by: 'Cô Trần Thị Mai (Tổ trưởng Tổ 1)',
+        comments: []
+    },
+    {
+        id: 'doc-1-w2',
+        title: 'Kế hoạch bài dạy Toán 1 - Tuần 2: Các số 4, 5 và so sánh nhiều hơn - ít hơn',
+        description: 'Soạn chuẩn đổi mới GDPT 2018. Tích hợp hoạt động thảo luận nhóm và trò chơi tiếp sức đếm hình.',
+        category: 'khbd',
+        grade: '1',
+        subject: 'toan',
+        week: 2,
+        file_name: 'KHBD_Toan1_Tuan2_So45_SoSanh.docx',
+        file_size: 2320000,
+        file_type: 'docx',
+        file_url: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
+        author_id: 4,
+        author_name: 'Cô Lê Thu Hà',
+        author_dept: 'Tổ 1',
+        status: 'approved',
+        avg_rating: 4.9,
+        rating_count: 10,
+        download_count: 395,
+        view_count: 910,
+        created_at: '2026-09-12T08:00:00Z',
+        approved_by: 'Cô Trần Thị Mai (Tổ trưởng Tổ 1)',
+        comments: []
+    },
+    {
+        id: 'doc-1-w3',
+        title: 'Kế hoạch bài dạy Toán 1 - Tuần 3: Luyện tập đếm và phân loại số lượng đồ vật trong phạm vi 10',
+        description: 'Bài học củng cố kỹ năng nhận diện số lượng trong phạm vi 5, rèn luyện tư duy quan sát nhanh cho học sinh.',
+        category: 'khbd',
+        grade: '1',
+        subject: 'toan',
+        week: 3,
+        file_name: 'KHBD_Toan1_Tuan3_LuyenTapDem.docx',
+        file_size: 2180000,
+        file_type: 'docx',
+        file_url: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
+        author_id: 4,
+        author_name: 'Cô Lê Thu Hà',
+        author_dept: 'Tổ 1',
+        status: 'approved',
+        avg_rating: 5.0,
+        rating_count: 12,
+        download_count: 410,
+        view_count: 1050,
+        created_at: '2026-09-19T08:00:00Z',
+        approved_by: 'Cô Trần Thị Mai (Tổ trưởng Tổ 1)',
+        comments: []
+    },
+    {
+        id: 'doc-1-w4',
+        title: 'Kế hoạch bài dạy Toán 1 - Tuần 4: Bảng cộng các số trong phạm vi 6',
+        description: 'Hình thành khái niệm phép cộng từ thao tác thêm vào thực tế. Học sinh tự lập bảng cộng với que tính.',
+        category: 'khbd',
+        grade: '1',
+        subject: 'toan',
+        week: 4,
+        file_name: 'KHBD_Toan1_Tuan4_BangCongPhamVi6.docx',
+        file_size: 2400000,
+        file_type: 'docx',
+        file_url: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
+        author_id: 4,
+        author_name: 'Cô Lê Thu Hà',
+        author_dept: 'Tổ 1',
+        status: 'approved',
+        avg_rating: 4.8,
+        rating_count: 9,
+        download_count: 360,
+        view_count: 880,
+        created_at: '2026-09-26T08:00:00Z',
+        approved_by: 'Cô Trần Thị Mai (Tổ trưởng Tổ 1)',
+        comments: []
+    },
+    {
         id: 'doc-1',
-        title: 'Kế hoạch bài dạy Toán 1 - Phép cộng trong phạm vi 10 (Chuẩn CV 2345)',
+        title: 'Kế hoạch bài dạy Toán 1 - Tuần 5: Phép cộng trong phạm vi 10 (Chuẩn CV 2345)',
         description: 'Giáo án soạn theo chương trình GDPT 2018 (bộ Kết nối tri thức). Tích hợp đồ dùng dạy học trực quan và hoạt động nhóm phát triển phẩm chất tư duy.',
         category: 'khbd',
         grade: '1',
         subject: 'toan',
+        week: 5,
         file_name: 'KHBD_Toan1_PhepCong10_LeThuHa.docx',
         file_size: 2450000,
         file_type: 'docx',
@@ -164,7 +261,7 @@ const INITIAL_DOCUMENTS = [
         rating_count: 14,
         download_count: 485,
         view_count: 1230,
-        created_at: '2026-10-10T08:30:00Z',
+        created_at: '2026-10-03T08:00:00Z',
         approved_by: 'Cô Trần Thị Mai (Tổ trưởng Tổ 1)',
         comments: [
             { author: 'Cô Trần Thị Mai', text: 'Kế hoạch bài dạy chỉn chu, mục tiêu rõ ràng và bám sát công văn 2345. Đã duyệt lên kho chung!', date: '2026-10-10T10:15:00Z' },
@@ -172,12 +269,85 @@ const INITIAL_DOCUMENTS = [
         ]
     },
     {
+        id: 'doc-1-w6',
+        title: 'Kế hoạch bài dạy Toán 1 - Tuần 6: Phép trừ trong phạm vi 10 và các bài toán thực tế',
+        description: 'Giáo án soạn theo chương trình GDPT 2018. Hướng dẫn học sinh thao tác bớt đi trực quan.',
+        category: 'khbd',
+        grade: '1',
+        subject: 'toan',
+        week: 6,
+        file_name: 'KHBD_Toan1_Tuan6_PhepTruPhamVi10.docx',
+        file_size: 2510000,
+        file_type: 'docx',
+        file_url: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
+        author_id: 4,
+        author_name: 'Cô Lê Thu Hà',
+        author_dept: 'Tổ 1',
+        status: 'approved',
+        avg_rating: 5.0,
+        rating_count: 11,
+        download_count: 430,
+        view_count: 990,
+        created_at: '2026-10-10T08:00:00Z',
+        approved_by: 'Cô Trần Thị Mai (Tổ trưởng Tổ 1)',
+        comments: []
+    },
+    {
+        id: 'doc-1-w7',
+        title: 'Kế hoạch bài dạy Toán 1 - Tuần 7: Luyện tập chung phép cộng và phép trừ trong phạm vi 10',
+        description: 'Tiết ôn tập củng cố mối quan hệ giữa phép cộng và phép trừ, giúp học sinh tính nhẩm nhanh.',
+        category: 'khbd',
+        grade: '1',
+        subject: 'toan',
+        week: 7,
+        file_name: 'KHBD_Toan1_Tuan7_LuyenTapChung.docx',
+        file_size: 2280000,
+        file_type: 'docx',
+        file_url: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
+        author_id: 4,
+        author_name: 'Cô Lê Thu Hà',
+        author_dept: 'Tổ 1',
+        status: 'approved',
+        avg_rating: 4.9,
+        rating_count: 8,
+        download_count: 310,
+        view_count: 760,
+        created_at: '2026-10-17T08:00:00Z',
+        approved_by: 'Cô Trần Thị Mai (Tổ trưởng Tổ 1)',
+        comments: []
+    },
+    {
+        id: 'doc-1-w8',
+        title: 'Kế hoạch bài dạy Toán 1 - Tuần 8: Nhận biết hình vuông, hình tròn, hình tam giác, hình chữ nhật',
+        description: 'Tổ chức cho học sinh khám phá hình học qua đồ vật quen thuộc trong lớp và xung quanh trường học.',
+        category: 'khbd',
+        grade: '1',
+        subject: 'toan',
+        week: 8,
+        file_name: 'KHBD_Toan1_Tuan8_HinhHocTrucQuan.docx',
+        file_size: 2650000,
+        file_type: 'docx',
+        file_url: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing',
+        author_id: 4,
+        author_name: 'Cô Lê Thu Hà',
+        author_dept: 'Tổ 1',
+        status: 'approved',
+        avg_rating: 5.0,
+        rating_count: 15,
+        download_count: 520,
+        view_count: 1190,
+        created_at: '2026-10-24T08:00:00Z',
+        approved_by: 'Cô Trần Thị Mai (Tổ trưởng Tổ 1)',
+        comments: []
+    },
+    {
         id: 'doc-2',
-        title: 'Bài giảng điện tử PowerPoint Tiếng Việt 2 - Bài 12: Danh sách tổ em',
+        title: 'Bài giảng điện tử PowerPoint Tiếng Việt 2 - Tuần 3 - Bài 12: Danh sách tổ em',
         description: 'Bộ slide PowerPoint hiệu ứng sinh động, có trò chơi đoán ô chữ mở rộng vốn từ, âm thanh vui nhộn giúp học sinh nắm vững cách lập danh sách.',
         category: 'baigiang',
         grade: '2',
         subject: 'tiengviet',
+        week: 3,
         file_name: 'BaiGiang_TV2_DanhSachToEm.pptx',
         file_size: 15400000,
         file_type: 'pptx',
@@ -198,11 +368,12 @@ const INITIAL_DOCUMENTS = [
     },
     {
         id: 'doc-3',
-        title: 'Đề kiểm tra giữa học kỳ 1 môn Toán 3 (Có ma trận đề & đáp án thang điểm)',
+        title: 'Đề kiểm tra giữa học kỳ 1 môn Toán 3 (Tuần 9 - Có ma trận đề & đáp án thang điểm)',
         description: 'Đề thi bám sát thông tư 27 về đánh giá học sinh tiểu học, gồm 4 mức độ nhận thức (Nhận biết, Thông hiểu, Vận dụng, Vận dụng cao).',
         category: 'dethi',
         grade: '3',
         subject: 'toan',
+        week: 9,
         file_name: 'DeThi_GHK1_Toan3_Nuithanh.pdf',
         file_size: 1200000,
         file_type: 'pdf',
@@ -222,11 +393,12 @@ const INITIAL_DOCUMENTS = [
     },
     {
         id: 'doc-4',
-        title: 'Trò chơi tương tác Quizizz - Ôn tập Lịch sử và Địa lý 4',
+        title: 'Trò chơi tương tác Quizizz - Tuần 6: Ôn tập Lịch sử và Địa lý 4',
         description: 'Gói câu hỏi tương tác trắc nghiệm về Thiên nhiên và Con người Việt Nam, kèm đường dẫn nhúng vào tiết dạy học trực tuyến hoặc dạy học số.',
         category: 'trochoi',
         grade: '4',
         subject: 'lsdl',
+        week: 6,
         file_name: 'TroChoi_LSDL4_ThienNhienVietNam.zip',
         file_size: 8500000,
         file_type: 'zip',
@@ -246,11 +418,12 @@ const INITIAL_DOCUMENTS = [
     },
     {
         id: 'doc-5',
-        title: 'Video thí nghiệm Khoa học 5 - Sự biến đổi hóa học của chất',
+        title: 'Video thí nghiệm Khoa học 5 - Tuần 8: Sự biến đổi hóa học của chất',
         description: 'Clip ngắn độ phân giải Full HD ghi lại quá trình thí nghiệm thực tế an toàn trong lớp học, có thuyết minh và phụ đề tiếng Việt dễ hiểu.',
         category: 'video',
         grade: '5',
         subject: 'khoahoc',
+        week: 8,
         file_name: 'Video_KhoaHoc5_SuBienDoiHoaHoc.mp4',
         file_size: 32000000,
         file_type: 'mp4',
@@ -270,11 +443,12 @@ const INITIAL_DOCUMENTS = [
     },
     {
         id: 'doc-6',
-        title: 'Phiếu học tập phân hóa môn Tiếng Anh 3 - Unit 3: Our Friends',
+        title: 'Phiếu học tập phân hóa môn Tiếng Anh 3 - Tuần 4: Unit 3 - Our Friends',
         description: 'Hệ thống phiếu bài tập được chia theo 3 cấp độ: củng cố từ vựng cơ bản, luyện mẫu câu giao tiếp và hoạt động vẽ tranh giới thiệu bạn bè.',
         category: 'phieubaitap',
         grade: '3',
         subject: 'tienganh',
+        week: 4,
         file_name: 'PhieuBT_TiengAnh3_Unit3_Friends.docx',
         file_size: 1800000,
         file_type: 'docx',
@@ -295,11 +469,12 @@ const INITIAL_DOCUMENTS = [
     // Tài liệu chờ duyệt (Dành cho Tổ trưởng / Admin kiểm thử chức năng Phê duyệt)
     {
         id: 'doc-7',
-        title: 'KHBD Tự nhiên và Xã hội 2 - Bài 15: Động vật sống ở đâu?',
+        title: 'KHBD Tự nhiên và Xã hội 2 - Tuần 4 - Bài 15: Động vật sống ở đâu?',
         description: 'Kế hoạch bài dạy ứng dụng mô hình lớp học đảo ngược, học sinh quan sát môi trường sống xung quanh và chia sẻ trong giờ học.',
         category: 'khbd',
         grade: '2',
         subject: 'tnxh',
+        week: 4,
         file_name: 'KHBD_TNXH2_DongVatSongODau.docx',
         file_size: 2100000,
         file_type: 'docx',
@@ -317,11 +492,12 @@ const INITIAL_DOCUMENTS = [
     },
     {
         id: 'doc-8',
-        title: 'Bài giảng điện tử Toán 4 - Hình bình hành và diện tích hình bình hành',
+        title: 'Bài giảng điện tử Toán 4 - Tuần 7: Hình bình hành và diện tích hình bình hành',
         description: 'Slide minh họa trực quan cách cắt ghép hình chữ nhật để tìm công thức tính diện tích hình bình hành, có bài tập củng cố tương tác.',
         category: 'baigiang',
         grade: '4',
         subject: 'toan',
+        week: 7,
         file_name: 'BaiGiang_Toan4_HinhBinhHanh.pptx',
         file_size: 11200000,
         file_type: 'pptx',
@@ -461,15 +637,36 @@ const store = {
             return INITIAL_DOCUMENTS;
         }
         try {
-            const docs = JSON.parse(data);
+            let docs = JSON.parse(data);
+            let updated = false;
+
+            // Bổ sung các bài giáo án theo tuần nếu dữ liệu cũ trong máy chưa có
+            INITIAL_DOCUMENTS.forEach(initDoc => {
+                if (!docs.some(d => d.id === initDoc.id)) {
+                    docs.push(initDoc);
+                    updated = true;
+                }
+            });
+
+            docs.forEach(d => {
+                if (d.week === undefined || d.week === null) {
+                    d.week = getDocWeek(d);
+                    updated = true;
+                }
+            });
+
             const d1 = docs.find(d => d.id === 'doc-1');
             if (d1 && (!d1.file_url || d1.file_url.includes('calibre-ebook'))) {
                 d1.file_url = 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/view?usp=sharing';
-                localStorage.setItem('khls_docs_v2', JSON.stringify(docs));
+                updated = true;
             }
             const d2 = docs.find(d => d.id === 'doc-2');
             if (d2 && !d2.file_url) {
                 d2.file_url = 'https://drive.google.com/file/d/1Yd8_Nuithanh_BaiGiang_TiengViet2/view?usp=sharing';
+                updated = true;
+            }
+
+            if (updated) {
                 localStorage.setItem('khls_docs_v2', JSON.stringify(docs));
             }
             return docs;
@@ -580,7 +777,9 @@ const state = {
     user: null,
     pendingContributeAfterLogin: false,
     theme: localStorage.getItem('khls-theme') || 'dark',
-    viewMode: 'grid', // 'grid' or 'list'
+    viewMode: 'details', // 'details' (mặc định dạng bảng Windows Details) hoặc 'grid'
+    winSortCol: 'week',  // 'week', 'name', 'author', 'date'
+    winSortDir: 'asc',   // 'asc' (từ trên xuống: Tuần 1, Tuần 2...) hoặc 'desc'
     activeSlideIndex: 0,
     reviewDeptFilter: 'all',
     currentBrowse: null,
@@ -961,6 +1160,149 @@ function animateCounters() {
     });
 }
 
+// ======================== WINDOWS DETAILS VIEW HELPERS ========================
+
+function getDocWeek(doc) {
+    if (!doc) return 1;
+    if (doc.week !== undefined && doc.week !== null && doc.week !== '') {
+        const num = parseInt(doc.week, 10);
+        if (!isNaN(num)) return num;
+    }
+    const text = (doc.title || '') + ' ' + (doc.file_name || '') + ' ' + (doc.description || '');
+    const m = text.match(/tu[aầà]n\s*(\d+)/i) || text.match(/\bT(\d{1,2})\b/i);
+    if (m) {
+        return parseInt(m[1], 10);
+    }
+    return 1;
+}
+
+function formatDocDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
+function getFileTypeLabel(filename = '') {
+    const ext = filename.split('.').pop().toLowerCase();
+    const map = {
+        'doc': 'Microsoft Word Document',
+        'docx': 'Microsoft Word Document',
+        'ppt': 'Microsoft PowerPoint Presentation',
+        'pptx': 'Microsoft PowerPoint Presentation',
+        'pdf': 'PDF Document',
+        'xls': 'Microsoft Excel Worksheet',
+        'xlsx': 'Microsoft Excel Worksheet',
+        'mp4': 'Video MP4',
+        'zip': 'Compressed (zipped) Folder'
+    };
+    return map[ext] || 'Tệp tài liệu';
+}
+
+function handleWinTableSort(col) {
+    if (state.winSortCol === col) {
+        state.winSortDir = state.winSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.winSortCol = col;
+        state.winSortDir = 'asc';
+    }
+    const b = state.currentBrowse || {};
+    renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+}
+
+function renderWindowsDetailsTable(docs) {
+    const col = state.winSortCol || 'week';
+    const dir = state.winSortDir || 'asc';
+    const arrow = dir === 'asc' ? '▲' : '▼';
+
+    return `
+        <div class="win-details-wrapper">
+            <div class="win-details-top-bar">
+                <div class="win-details-title-info">
+                    <span style="font-size:1.15rem;">📁</span>
+                    <span>Hiển thị <strong>${docs.length}</strong> giáo án / tài liệu (Chế độ xem chi tiết - Windows Details)</span>
+                </div>
+                <div style="font-size:0.78rem; color:var(--text-muted);">
+                    💡 Nhấp vào tiêu đề cột để đổi chiều sắp xếp
+                </div>
+            </div>
+            <table class="win-details-table">
+                <thead>
+                    <tr class="win-details-header">
+                        <th class="col-name" onclick="handleWinTableSort('name')" title="Bấm để sắp xếp theo Tên tài liệu">
+                            <div class="th-content">
+                                <span>Tên tài liệu</span>
+                                <span class="sort-arrow">${col === 'name' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-week th-center" onclick="handleWinTableSort('week')" title="Bấm để sắp xếp theo Tuần">
+                            <div class="th-content th-center">
+                                <span>Tuần</span>
+                                <span class="sort-arrow">${col === 'week' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-author" onclick="handleWinTableSort('author')" title="Bấm để sắp xếp theo Người soạn">
+                            <div class="th-content">
+                                <span>Người soạn</span>
+                                <span class="sort-arrow">${col === 'author' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-date th-center" onclick="handleWinTableSort('date')" title="Bấm để sắp xếp theo Ngày soạn">
+                            <div class="th-content th-center">
+                                <span>Ngày soạn</span>
+                                <span class="sort-arrow">${col === 'date' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-btn-view th-center">Nút xem</th>
+                        <th class="col-btn-download th-center">Nút tải</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${docs.map(doc => {
+                        const weekNum = getDocWeek(doc);
+                        return `
+                            <tr class="win-details-row" onclick="navigate('#/detail/${doc.id}')" title="Nhấp đúp hoặc bấm vào dòng để xem chi tiết ${escapeHtml(doc.title)}">
+                                <td class="col-name">
+                                    <div class="win-file-cell">
+                                        <span class="win-file-icon ${getFileTypeClass(doc.file_name)}" title="${getFileTypeLabel(doc.file_name)}">
+                                            ${getFileTypeIcon(doc.file_name)}
+                                        </span>
+                                        <span class="win-file-title" title="${escapeHtml(doc.title)}">
+                                            ${escapeHtml(doc.title)}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="col-week th-center">
+                                    <span class="win-week-badge">Tuần ${weekNum}</span>
+                                </td>
+                                <td class="col-author">
+                                    <span class="win-author-text" title="${escapeHtml(doc.author_name || 'Giáo viên')}">${escapeHtml(doc.author_name || 'Giáo viên')}</span>
+                                </td>
+                                <td class="col-date th-center">
+                                    <span class="win-date-text">${formatDocDate(doc.created_at)}</span>
+                                </td>
+                                <td class="col-btn-view th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-view" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">
+                                        👁️ Xem
+                                    </button>
+                                </td>
+                                <td class="col-btn-download th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-download" onclick="handleDownloadDoc('${doc.id}')" title="Tải file về máy">
+                                        ⬇️ Tải
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
 // ======================== PAGE: BROWSE ========================
 
 function renderBrowsePage(cat = '', grade = '', subject = '', query = '') {
@@ -994,7 +1336,7 @@ function renderBrowsePage(cat = '', grade = '', subject = '', query = '') {
 
     // Filter Logic
     if (cat) docs = docs.filter(d => d.category === cat);
-    if (grade) docs = docs.filter(d => d.grade === grade);
+    if (grade) docs = docs.filter(d => String(d.grade) === String(grade));
     if (subject) docs = docs.filter(d => d.subject === subject);
     if (query) {
         const q = query.toLowerCase();
@@ -1005,28 +1347,51 @@ function renderBrowsePage(cat = '', grade = '', subject = '', query = '') {
         );
     }
 
-    // Sort Logic
-    const sortVal = sortSelect ? sortSelect.value : 'newest';
+    // Sắp xếp: Ưu tiên sắp xếp theo Tuần từ trên xuống (1 -> 35)
+    const sortVal = sortSelect ? sortSelect.value : 'week';
+    const col = state.winSortCol || 'week';
+    const dir = state.winSortDir === 'desc' ? -1 : 1;
+
     if (sortVal === 'popular') {
-        docs.sort((a, b) => (b.download_count || 0) - (a.download_count || 0));
+        docs.sort((a, b) => ((b.download_count || 0) - (a.download_count || 0)) * dir);
     } else if (sortVal === 'rating') {
-        docs.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0));
+        docs.sort((a, b) => ((b.avg_rating || 0) - (a.avg_rating || 0)) * dir);
+    } else if (sortVal === 'newest') {
+        docs.sort((a, b) => (new Date(b.created_at) - new Date(a.created_at)) * dir);
+    } else if (col === 'name') {
+        docs.sort((a, b) => a.title.localeCompare(b.title, 'vi') * dir);
+    } else if (col === 'author') {
+        docs.sort((a, b) => (a.author_name || '').localeCompare(b.author_name || '', 'vi') * dir);
+    } else if (col === 'date') {
+        docs.sort((a, b) => (new Date(a.created_at) - new Date(b.created_at)) * dir);
     } else {
-        docs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        // Mặc định: Sắp xếp theo Tuần từ trên xuống (Tuần 1, Tuần 2, Tuần 3...)
+        docs.sort((a, b) => (getDocWeek(a) - getDocWeek(b)) * dir);
     }
+
+    // Cập nhật trạng thái nút chuyển view
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        const v = btn.getAttribute('data-view');
+        btn.classList.toggle('active', v === state.viewMode);
+    });
 
     if (gridEl) {
         if (docs.length === 0) {
+            gridEl.className = 'browse-docs-container';
             gridEl.innerHTML = `
                 <div class="empty-state">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <p>Không tìm thấy tài liệu phù hợp với bộ lọc hiện tại.</p>
-                    <a href="#/upload" class="btn btn-primary" style="margin-top:1rem;">Đóng góp tài liệu đầu tiên</a>
+                    <p>Không tìm thấy giáo án / học liệu phù hợp với bộ lọc hiện tại.</p>
+                    <a href="#/upload" class="btn btn-primary" style="margin-top:1rem;">Đóng góp tài liệu mới</a>
                 </div>
             `;
-        } else {
-            gridEl.className = state.viewMode === 'list' ? 'docs-list' : 'docs-grid';
+        } else if (state.viewMode === 'grid') {
+            gridEl.className = 'docs-grid';
             gridEl.innerHTML = docs.map(renderDocCard).join('');
+        } else {
+            // Chế độ Windows Details (Mặc định cho Giáo án)
+            gridEl.className = 'browse-docs-container';
+            gridEl.innerHTML = renderWindowsDetailsTable(docs);
         }
     }
 }
@@ -4902,18 +5267,20 @@ function initEventListeners() {
         const grade = document.getElementById('filter-grade')?.value || '';
         const subject = document.getElementById('filter-subject')?.value || '';
         const sort = document.getElementById('filter-sort')?.value || '';
-        renderBrowsePage('', grade, subject);
+        const currentCat = state.currentBrowse?.cat || '';
+        const currentQuery = state.currentBrowse?.query || '';
+        renderBrowsePage(currentCat, grade, subject, currentQuery);
     };
     document.getElementById('filter-grade')?.addEventListener('change', handleFilterChange);
     document.getElementById('filter-subject')?.addEventListener('change', handleFilterChange);
     document.getElementById('filter-sort')?.addEventListener('change', handleFilterChange);
 
-    // View toggle (Grid / List)
+    // View toggle (Details / Grid)
     document.querySelectorAll('.view-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            state.viewMode = btn.getAttribute('data-view') || 'grid';
+            state.viewMode = btn.getAttribute('data-view') || 'details';
             handleFilterChange();
         });
     });
@@ -5299,6 +5666,9 @@ function resetContributeForm() {
     const subjectSelect = document.getElementById('modal-upload-subject');
     if (subjectSelect) subjectSelect.value = '';
 
+    const weekSelect = document.getElementById('modal-upload-week');
+    if (weekSelect) weekSelect.value = '';
+
     const fileInput = document.getElementById('modal-upload-file');
     if (fileInput) fileInput.value = '';
 
@@ -5414,6 +5784,15 @@ function handleModalFileSelection(file) {
         else if (lowerName.includes('phieu') || lowerName.includes('bai tap')) catSelect.value = 'phieubaitap';
         else if (lowerName.includes('tro choi') || lowerName.includes('game')) catSelect.value = 'trochoi';
         else if (lowerName.includes('video') || lowerName.includes('clip')) catSelect.value = 'video';
+    }
+
+    // Auto-detect week
+    const weekSelect = document.getElementById('modal-upload-week');
+    if (weekSelect && !weekSelect.value) {
+        const detectedWeek = getDocWeek({ title: cleanName, file_name: file.name });
+        if (detectedWeek) {
+            weekSelect.value = String(detectedWeek);
+        }
     }
 
     showToast(`Đã nhận dạng tệp: ${file.name} 📄`, 'info');
@@ -5724,6 +6103,7 @@ async function handleContributeSubmit(e) {
     const authorName = document.getElementById('modal-upload-author').value.trim() || (state.user ? state.user.fullname : 'Giáo viên');
     const authorDept = document.getElementById('modal-upload-dept').value || (state.user ? state.user.department : 'Tổ Chuyên Môn');
     const desc = document.getElementById('modal-upload-desc').value.trim();
+    const weekVal = document.getElementById('modal-upload-week')?.value;
     const file = modalUploadedFile;
 
     if (!file) {
@@ -5876,6 +6256,7 @@ async function handleContributeSubmit(e) {
             category: category,
             grade: grade,
             subject: subject,
+            week: (weekVal ? parseInt(weekVal, 10) : getDocWeek({ title, file_name: file.name, description: desc })) || 1,
             file_name: file.name,
             file_size: file.size,
             file_type: ext,

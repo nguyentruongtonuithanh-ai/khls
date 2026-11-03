@@ -3187,6 +3187,237 @@ body.sidebar-collapsed .footer {
     }
 }
 
+/* ================================================
+   WINDOWS DETAILS VIEW (XEM DẠNG CHI TIẾT WINDOWS)
+   ================================================ */
+.win-details-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    overflow-x: auto;
+    box-shadow: var(--shadow-sm);
+    margin-top: var(--space-md);
+}
+
+.win-details-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.84rem;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.win-details-title-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.win-details-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.88rem;
+}
+
+.win-details-header {
+    background: var(--bg-surface);
+    border-bottom: 2px solid var(--border-color);
+    user-select: none;
+}
+
+.win-details-header th {
+    padding: 10px 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: left;
+    border-right: 1px solid var(--border-color);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.win-details-header th:last-child {
+    border-right: none;
+}
+
+.win-details-header th:hover {
+    background: var(--bg-hover);
+    color: var(--primary);
+}
+
+.win-details-header th .th-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.win-details-header th.th-center .th-content,
+.win-details-header th.th-center,
+.win-details-row td.col-week,
+.win-details-row td.col-date,
+.win-details-row td.col-btn-view,
+.win-details-row td.col-btn-download {
+    text-align: center;
+    justify-content: center;
+}
+
+.win-details-header .sort-arrow {
+    font-size: 0.72rem;
+    color: var(--primary);
+}
+
+/* Fixed column widths */
+.win-details-table .col-name {
+    width: auto; /* Chiếm toàn bộ không gian còn lại */
+}
+
+.win-details-table .col-week {
+    width: 95px;
+}
+
+.win-details-table .col-author {
+    width: 150px;
+}
+
+.win-details-table .col-date {
+    width: 115px;
+}
+
+.win-details-table .col-btn-view {
+    width: 85px;
+}
+
+.win-details-table .col-btn-download {
+    width: 85px;
+}
+
+.win-details-row {
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.12s ease;
+    cursor: pointer;
+}
+
+.win-details-row:last-child {
+    border-bottom: none;
+}
+
+.win-details-row:hover {
+    background: rgba(99, 102, 241, 0.08); /* Windows Explorer soft hover highlight */
+}
+
+.win-details-row td {
+    padding: 8px 12px;
+    vertical-align: middle;
+}
+
+/* File cell and truncation: tên tài liệu dài quá thì hiển thị ít lại nhường chỗ cho cột khác */
+.win-file-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+}
+
+.win-file-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.win-file-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+.win-details-row:hover .win-file-title {
+    color: var(--primary);
+}
+
+.win-week-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.win-author-text {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+}
+
+.win-date-text {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+/* Windows Action Buttons */
+.win-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.win-btn-view:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.win-btn-download {
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.25);
+}
+
+.win-btn-download:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
 
 
 
