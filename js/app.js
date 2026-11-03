@@ -1220,15 +1220,6 @@ function renderWindowsDetailsTable(docs) {
 
     return `
         <div class="win-details-wrapper">
-            <div class="win-details-top-bar">
-                <div class="win-details-title-info">
-                    <span style="font-size:1.15rem;">📁</span>
-                    <span>Hiển thị <strong>${docs.length}</strong> giáo án / tài liệu (Chế độ xem chi tiết - Windows Details)</span>
-                </div>
-                <div style="font-size:0.78rem; color:var(--text-muted);">
-                    💡 Nhấp vào tiêu đề cột để đổi chiều sắp xếp
-                </div>
-            </div>
             <table class="win-details-table">
                 <thead>
                     <tr class="win-details-header">
