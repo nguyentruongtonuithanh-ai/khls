@@ -1247,8 +1247,8 @@ function renderWindowsDetailsTable(docs) {
                                 <span class="sort-arrow">${col === 'date' ? arrow : ''}</span>
                             </div>
                         </th>
-                        <th class="col-btn-view th-center">Nút xem</th>
-                        <th class="col-btn-download th-center">Nút tải</th>
+                        <th class="col-btn-view th-center">Xem trước</th>
+                        <th class="col-btn-download th-center">Tải về</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1277,12 +1277,12 @@ function renderWindowsDetailsTable(docs) {
                                 </td>
                                 <td class="col-btn-view th-center" onclick="event.stopPropagation()">
                                     <button type="button" class="win-btn win-btn-view" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">
-                                        👁️ Xem
+                                        👁️ Xem trước
                                     </button>
                                 </td>
                                 <td class="col-btn-download th-center" onclick="event.stopPropagation()">
                                     <button type="button" class="win-btn win-btn-download" onclick="handleDownloadDoc('${doc.id}')" title="Tải file về máy">
-                                        ⬇️ Tải
+                                        ⬇️ Tải về
                                     </button>
                                 </td>
                             </tr>
