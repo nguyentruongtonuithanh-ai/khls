@@ -249,6 +249,27 @@ ul, ol { list-style: none; }
     border-color: #ef4444;
 }
 
+.btn-warning {
+    background: #f59e0b;
+    color: #0f172a;
+    font-weight: 600;
+}
+.btn-warning:hover {
+    background: #d97706;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.btn-outline-warning {
+    background: transparent;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: var(--warning, #f59e0b);
+}
+.btn-outline-warning:hover {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #f59e0b;
+}
+
 .btn-full { width: 100%; justify-content: center; }
 
 .icon-btn {

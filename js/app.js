@@ -50,6 +50,7 @@ const INITIAL_USERS = [
         id: 1,
         username: 'admin',
         fullname: 'Lê Hoàng Nam',
+        password: 'admin',
         role: 'admin',
         department: 'Ban Giám Hiệu',
         honor: 'Hiệu trưởng - Quản trị viên',
@@ -62,6 +63,7 @@ const INITIAL_USERS = [
         id: 2,
         username: 'totruong1',
         fullname: 'Trần Thị Mai',
+        password: '123456',
         role: 'leader',
         department: 'Tổ 1',
         honor: 'Tổ trưởng Chuyên môn - GV Dạy Giỏi',
@@ -74,6 +76,7 @@ const INITIAL_USERS = [
         id: 3,
         username: 'totruong3',
         fullname: 'Nguyễn Văn Đức',
+        password: '123456',
         role: 'leader',
         department: 'Tổ 3',
         honor: 'Tổ trưởng Chuyên môn Khối 3',
@@ -86,6 +89,7 @@ const INITIAL_USERS = [
         id: 4,
         username: 'gvha',
         fullname: 'Lê Thu Hà',
+        password: '123456',
         role: 'teacher',
         department: 'Tổ 1',
         honor: 'Top 1 Nhà giáo sáng tạo tháng 9',
@@ -98,6 +102,7 @@ const INITIAL_USERS = [
         id: 5,
         username: 'gvlong',
         fullname: 'Phạm Hoàng Long',
+        password: '123456',
         role: 'teacher',
         department: 'Tổ 5',
         honor: 'Chuyên gia Thiết kế Bài giảng Số',
@@ -110,6 +115,7 @@ const INITIAL_USERS = [
         id: 6,
         username: 'gvlinh',
         fullname: 'Đỗ Mỹ Linh',
+        password: '123456',
         role: 'teacher',
         department: 'Tổ Tin học - Ngoại ngữ',
         honor: 'Giáo viên Tiên phong Chuyển đổi số',
@@ -122,6 +128,7 @@ const INITIAL_USERS = [
         id: 7,
         username: 'gvtuan',
         fullname: 'Vũ Minh Tuấn',
+        password: '123456',
         role: 'teacher',
         department: 'Tổ 4',
         honor: 'Giáo viên Dạy giỏi Cấp trường',
@@ -134,6 +141,7 @@ const INITIAL_USERS = [
         id: 8,
         username: 'gvoanh',
         fullname: 'Hoàng Kim Oanh',
+        password: '123456',
         role: 'teacher',
         department: 'Tổ Âm nhạc - Mỹ thuật',
         honor: 'Bàn tay vàng Sáng tạo Học cụ',
@@ -616,6 +624,10 @@ const store = {
             users.forEach(u => {
                 if (u && u.fullname && /^(Thầy|Cô)\s+/i.test(u.fullname)) {
                     u.fullname = u.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
+                    updated = true;
+                }
+                if (u && !u.password) {
+                    u.password = (u.username === 'admin' || u.role === 'admin') ? 'admin' : '123456';
                     updated = true;
                 }
             });
@@ -3634,7 +3646,10 @@ function renderAdminPage(activeTab = 'users') {
                                 </td>
                                 <td>${u.department}</td>
                                 <td>
-                                    <button class="btn btn-secondary btn-sm" onclick="openEditUserModal(${u.id})" title="Sửa thông tin giáo viên">✏️ Sửa</button>
+                                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                        <button class="btn btn-secondary btn-sm" onclick="openEditUserModal(${u.id})" title="Sửa thông tin giáo viên">✏️ Sửa</button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="openResetPasswordModal(${u.id})" title="Đặt lại mật khẩu cho giáo viên này">🔑 Reset MK</button>
+                                    </div>
                                 </td>
                             </tr>
                         `).join('')}
@@ -4168,6 +4183,197 @@ function promptAddUser() {
 
 function changeUserRole(userId) {
     openEditUserModal(userId);
+}
+
+// ======================== CHANGE PASSWORD & RESET PASSWORD ========================
+
+function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    if (btn) {
+        btn.setAttribute('aria-label', isPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+        btn.setAttribute('title', isPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+        btn.innerHTML = isPassword
+            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        input.focus();
+    }
+}
+
+function openChangePasswordModal() {
+    if (!state.user) {
+        showToast('Vui lòng đăng nhập trước khi đổi mật khẩu!', 'info');
+        openLoginModal();
+        return;
+    }
+    const modal = document.getElementById('change-password-modal');
+    if (!modal) return;
+
+    const infoEl = document.getElementById('change-pass-user-info');
+    if (infoEl) {
+        infoEl.textContent = `Tài khoản: ${state.user.fullname} (${state.user.username})`;
+    }
+
+    const currentInput = document.getElementById('change-pass-current');
+    const newInput = document.getElementById('change-pass-new');
+    const confirmInput = document.getElementById('change-pass-confirm');
+    if (currentInput) {
+        currentInput.value = '';
+        currentInput.type = 'password';
+    }
+    if (newInput) {
+        newInput.value = '';
+        newInput.type = 'password';
+    }
+    if (confirmInput) {
+        confirmInput.value = '';
+        confirmInput.type = 'password';
+    }
+
+    modal.classList.add('active');
+    setTimeout(() => currentInput && currentInput.focus(), 100);
+}
+
+function closeChangePasswordModal() {
+    const modal = document.getElementById('change-password-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleChangePassword(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!state.user) {
+        showToast('Vui lòng đăng nhập trước khi đổi mật khẩu!', 'error');
+        return;
+    }
+
+    const currentPass = document.getElementById('change-pass-current')?.value;
+    const newPass = document.getElementById('change-pass-new')?.value;
+    const confirmPass = document.getElementById('change-pass-confirm')?.value;
+
+    if (!currentPass || !newPass || !confirmPass) {
+        showToast('Vui lòng nhập đầy đủ các trường thông tin!', 'error');
+        return;
+    }
+
+    const users = store.getUsers();
+    const userIndex = users.findIndex(u => u.id === state.user.id || String(u.id) === String(state.user.id) || u.username === state.user.username);
+    if (userIndex === -1) {
+        showToast('Không tìm thấy tài khoản người dùng!', 'error');
+        return;
+    }
+
+    const currentExpected = users[userIndex].password || ((users[userIndex].username === 'admin' || users[userIndex].role === 'admin') ? 'admin' : '123456');
+    if (currentPass !== currentExpected) {
+        showToast('Mật khẩu hiện tại không chính xác! (Mặc định là 123456)', 'error');
+        document.getElementById('change-pass-current')?.focus();
+        return;
+    }
+
+    if (newPass.length < 4) {
+        showToast('Mật khẩu mới phải có tối thiểu 4 ký tự!', 'error');
+        document.getElementById('change-pass-new')?.focus();
+        return;
+    }
+
+    if (newPass === currentPass) {
+        showToast('Mật khẩu mới không được trùng với mật khẩu cũ!', 'error');
+        document.getElementById('change-pass-new')?.focus();
+        return;
+    }
+
+    if (newPass !== confirmPass) {
+        showToast('Xác nhận mật khẩu mới không trùng khớp!', 'error');
+        document.getElementById('change-pass-confirm')?.focus();
+        return;
+    }
+
+    // Cập nhật mật khẩu mới
+    users[userIndex].password = newPass;
+    store.saveUsers(users);
+
+    state.user.password = newPass;
+    localStorage.setItem('khls-user', JSON.stringify(state.user));
+
+    closeChangePasswordModal();
+    showToast(`✅ Đã đổi mật khẩu thành công cho tài khoản ${state.user.fullname}! 🔑`, 'success');
+}
+
+function openResetPasswordModal(userId) {
+    if (!state.user || state.user.role !== 'admin') {
+        showToast('Chỉ Quản trị viên mới có quyền đặt lại mật khẩu!', 'error');
+        return;
+    }
+
+    const users = store.getUsers();
+    const user = users.find(u => u.id === userId || String(u.id) === String(userId));
+    if (!user) {
+        showToast('Không tìm thấy tài khoản giáo viên!', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('reset-password-modal');
+    if (!modal) return;
+
+    const idInput = document.getElementById('reset-pass-user-id');
+    const nameEl = document.getElementById('reset-pass-fullname');
+    const userEl = document.getElementById('reset-pass-username');
+    const newPassInput = document.getElementById('reset-pass-new');
+
+    if (idInput) idInput.value = user.id;
+    if (nameEl) nameEl.textContent = `${user.fullname} (${user.department})`;
+    if (userEl) userEl.textContent = user.username;
+    if (newPassInput) newPassInput.value = '123456';
+
+    modal.classList.add('active');
+    setTimeout(() => newPassInput && newPassInput.focus(), 100);
+}
+
+function closeResetPasswordModal() {
+    const modal = document.getElementById('reset-password-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleResetPasswordSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!state.user || state.user.role !== 'admin') {
+        showToast('Chỉ Quản trị viên mới có quyền đặt lại mật khẩu!', 'error');
+        return;
+    }
+
+    const userIdVal = document.getElementById('reset-pass-user-id')?.value;
+    const newPass = document.getElementById('reset-pass-new')?.value.trim();
+
+    if (!newPass) {
+        showToast('Vui lòng nhập mật khẩu mới cần cấp lại!', 'error');
+        return;
+    }
+
+    if (newPass.length < 4) {
+        showToast('Mật khẩu mới phải có tối thiểu 4 ký tự!', 'error');
+        return;
+    }
+
+    const users = store.getUsers();
+    const user = users.find(u => u.id === userIdVal || String(u.id) === String(userIdVal) || (!isNaN(userIdVal) && u.id === Number(userIdVal)));
+    if (!user) {
+        showToast('Không tìm thấy tài khoản để reset mật khẩu!', 'error');
+        return;
+    }
+
+    user.password = newPass;
+    store.saveUsers(users);
+
+    // Nếu reset chính tài khoản admin đang đăng nhập
+    if (state.user && (state.user.id === user.id || String(state.user.id) === String(user.id))) {
+        state.user.password = newPass;
+        localStorage.setItem('khls-user', JSON.stringify(state.user));
+    }
+
+    closeResetPasswordModal();
+    showToast(`⚡ Đã đặt lại mật khẩu cho giáo viên "${user.fullname}" thành: "${newPass}"!`, 'success');
+    renderAdminPage('users');
 }
 
 // ======================== CATEGORY MANAGEMENT (QUẢN LÝ THƯ MỤC / DANH MỤC) ========================
@@ -5256,8 +5462,9 @@ function handleLogin(e) {
         }
     }
 
-    if (matchedUser && matchedUser.password && matchedUser.password !== password) {
-        showToast('Mật khẩu không chính xác! Vui lòng thử lại.', 'error');
+    const expectedPass = matchedUser.password || ((matchedUser.username === 'admin' || matchedUser.role === 'admin') ? 'admin' : '123456');
+    if (password !== expectedPass) {
+        showToast('Mật khẩu không chính xác! Vui lòng thử lại hoặc nhờ Quản trị viên reset.', 'error');
         return;
     }
 
@@ -5421,8 +5628,18 @@ function initEventListeners() {
     document.getElementById('category-subfolders-modal-close')?.addEventListener('click', closeSubfoldersModal);
     document.getElementById('btn-close-cat-subfolders')?.addEventListener('click', closeSubfoldersModal);
 
+    // Change Password Modal
+    document.getElementById('change-password-modal-close')?.addEventListener('click', closeChangePasswordModal);
+    document.getElementById('btn-cancel-change-password')?.addEventListener('click', closeChangePasswordModal);
+    document.getElementById('change-password-form')?.addEventListener('submit', handleChangePassword);
+
+    // Reset Password Modal
+    document.getElementById('reset-password-modal-close')?.addEventListener('click', closeResetPasswordModal);
+    document.getElementById('btn-cancel-reset-password')?.addEventListener('click', closeResetPasswordModal);
+    document.getElementById('reset-password-form')?.addEventListener('submit', handleResetPasswordSubmit);
+
     // Close on overlay click
-    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'edit-category-modal', 'edit-grade-modal', 'edit-subject-modal', 'category-subfolders-modal', 'contribute-modal', 'drive-setup-modal', 'edit-doc-modal'].forEach(id => {
+    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'change-password-modal', 'reset-password-modal', 'edit-category-modal', 'edit-grade-modal', 'edit-subject-modal', 'category-subfolders-modal', 'contribute-modal', 'drive-setup-modal', 'edit-doc-modal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', (e) => {
             if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
         });
