@@ -4266,7 +4266,7 @@ function handleChangePassword(e) {
 
     const currentExpected = users[userIndex].password || ((users[userIndex].username === 'admin' || users[userIndex].role === 'admin') ? 'admin' : '123456');
     if (currentPass !== currentExpected) {
-        showToast('Mật khẩu hiện tại không chính xác! (Mặc định là 123456)', 'error');
+        showToast('Mật khẩu hiện tại không chính xác!', 'error');
         document.getElementById('change-pass-current')?.focus();
         return;
     }
