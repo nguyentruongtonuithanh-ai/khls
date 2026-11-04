@@ -716,24 +716,59 @@ const store = {
     saveUsers(users) {
         localStorage.setItem('khls_users_v2', JSON.stringify(users));
     },
+    getDeletedDocIds() {
+        try {
+            const data = localStorage.getItem('khls_deleted_doc_ids_v1');
+            return data ? JSON.parse(data) : [];
+        } catch(e) {
+            return [];
+        }
+    },
+    addDeletedDocId(id) {
+        if (!id) return;
+        try {
+            const ids = this.getDeletedDocIds();
+            const strId = String(id).trim();
+            if (strId && !ids.includes(strId)) {
+                ids.push(strId);
+                localStorage.setItem('khls_deleted_doc_ids_v1', JSON.stringify(ids));
+            }
+        } catch(e) {}
+    },
+    isDocDeleted(id, driveId = null) {
+        try {
+            const ids = this.getDeletedDocIds();
+            if (!ids || ids.length === 0) return false;
+            if (id && ids.includes(String(id).trim())) return true;
+            if (driveId && ids.includes(String(driveId).trim())) return true;
+            return false;
+        } catch(e) {
+            return false;
+        }
+    },
     getDocuments() {
         const data = localStorage.getItem('khls_docs_v2');
+        const deletedIds = this.getDeletedDocIds();
+
         if (!data) {
-            localStorage.setItem('khls_docs_v2', JSON.stringify(INITIAL_DOCUMENTS));
-            return INITIAL_DOCUMENTS;
+            const initialFiltered = INITIAL_DOCUMENTS.filter(d => !deletedIds.includes(String(d.id)));
+            localStorage.setItem('khls_docs_v2', JSON.stringify(initialFiltered));
+            return initialFiltered;
         }
         try {
             let docs = JSON.parse(data);
-            let updated = false;
 
-            // Bổ sung các bài giáo án theo tuần nếu dữ liệu cũ trong máy chưa có
-            INITIAL_DOCUMENTS.forEach(initDoc => {
-                if (!docs.some(d => d.id === initDoc.id)) {
-                    docs.push(initDoc);
-                    updated = true;
+            // 1. Luôn loại bỏ các tài liệu đã nằm trong danh sách đã xóa vĩnh viễn
+            if (deletedIds && deletedIds.length > 0) {
+                const prevLen = docs.length;
+                docs = docs.filter(d => !deletedIds.includes(String(d.id)) && (!d.drive_id || !deletedIds.includes(String(d.drive_id))));
+                if (docs.length !== prevLen) {
+                    localStorage.setItem('khls_docs_v2', JSON.stringify(docs));
                 }
-            });
+            }
 
+            // 2. Gán số tuần nếu chưa có
+            let updated = false;
             docs.forEach(d => {
                 if (d.week === undefined || d.week === null) {
                     d.week = getDocWeek(d);
@@ -757,7 +792,7 @@ const store = {
             }
             return docs;
         } catch (e) {
-            return INITIAL_DOCUMENTS;
+            return INITIAL_DOCUMENTS.filter(d => !deletedIds.includes(String(d.id)));
         }
     },
     saveDocuments(docs) {
@@ -1461,7 +1496,7 @@ function handleDeleteDoc(docId) {
         return;
     }
     const docs = store.getDocuments();
-    const doc = docs.find(d => d.id === docId);
+    const doc = docs.find(d => String(d.id) === String(docId));
     if (!doc) {
         showToast('Không tìm thấy học liệu cần xóa!', 'error');
         return;
@@ -1479,14 +1514,44 @@ function handleDeleteDoc(docId) {
         return;
     }
 
-    const updatedDocs = docs.filter(d => d.id !== docId);
+    // 1. Thêm vào danh sách ID đã xóa vĩnh viễn (bao gồm cả ID và drive_id nếu có)
+    store.addDeletedDocId(doc.id);
+    if (doc.drive_id) {
+        store.addDeletedDocId(doc.drive_id);
+    }
+
+    // 2. Lọc bỏ khỏi danh sách documents và lưu lại
+    const updatedDocs = docs.filter(d => String(d.id) !== String(docId) && (!doc.drive_id || String(d.drive_id) !== String(doc.drive_id)));
     store.saveDocuments(updatedDocs);
 
-    // Gửi tín hiệu xóa lên Google Drive Apps Script nếu có
+    // 3. Xóa thông báo liên quan đến tài liệu này
+    try {
+        const notifs = store.getNotifications();
+        const updatedNotifs = notifs.filter(n => !n.link || !n.link.includes(String(docId)));
+        store.saveNotifications(updatedNotifs);
+    } catch(e) {}
+
+    // 4. Biến mất tức thì trên DOM (Optimistic removal)
+    const rowEl = document.getElementById(`doc-row-${docId}`);
+    if (rowEl) {
+        rowEl.style.transition = 'all 0.25s ease';
+        rowEl.style.opacity = '0';
+        rowEl.style.transform = 'translateX(-20px)';
+        setTimeout(() => rowEl.remove(), 250);
+    }
+    const cardEl = document.getElementById(`doc-card-${docId}`);
+    if (cardEl) {
+        cardEl.style.transition = 'all 0.25s ease';
+        cardEl.style.opacity = '0';
+        cardEl.style.transform = 'scale(0.9)';
+        setTimeout(() => cardEl.remove(), 250);
+    }
+
+    // 5. Gửi tín hiệu xóa lên Google Drive Apps Script nếu có
     const settings = store.getSettings();
     const myGas = localStorage.getItem('khls_my_drive_gas_url');
     const activeGas = myGas || settings.drive_gas_url;
-    if (activeGas && doc.drive_id) {
+    if (activeGas && (doc.drive_id || doc.id)) {
         try {
             fetch(activeGas, {
                 method: 'POST',
@@ -1494,7 +1559,7 @@ function handleDeleteDoc(docId) {
                 body: JSON.stringify({
                     action: 'delete',
                     docId: doc.id,
-                    driveId: doc.drive_id
+                    driveId: doc.drive_id || ''
                 })
             }).catch(e => console.warn('Lỗi đồng bộ xóa Drive:', e));
         } catch(e) {}
@@ -1502,15 +1567,20 @@ function handleDeleteDoc(docId) {
 
     showToast(`Đã xóa học liệu "${doc.title}" thành công! 🗑️`, 'info');
 
-    // Cập nhật lại giao diện
+    // 6. Cập nhật lại toàn bộ giao diện và badge
+    updatePendingBadge();
+    renderCategories();
+    renderSidebar();
+
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
     } else if (state.currentPage === 'review') {
-        updatePendingBadge();
         renderReviewPage();
     } else if (state.currentPage === 'detail') {
         navigate('#/browse');
+    } else if (state.currentPage === 'home') {
+        renderHomePage();
     }
 }
 
@@ -1678,7 +1748,7 @@ function renderWindowsDetailsTable(docs) {
                         const isAdmin = state.user && state.user.role === 'admin';
 
                         return `
-                            <tr class="win-details-row" onclick="navigate('#/detail/${doc.id}')" title="Nhấp đúp hoặc bấm vào dòng để xem chi tiết ${escapeHtml(doc.title)}">
+                            <tr class="win-details-row" id="doc-row-${doc.id}" onclick="navigate('#/detail/${doc.id}')" title="Nhấp đúp hoặc bấm vào dòng để xem chi tiết ${escapeHtml(doc.title)}">
                                 <td class="col-name">
                                     <div class="win-file-cell">
                                         <span class="win-file-icon ${getFileTypeClass(doc.file_name)}" title="${getFileTypeLabel(doc.file_name)}">
@@ -6526,6 +6596,18 @@ function doPost(e) {
       return responseJSON({ status: "error", message: "Không tìm thấy mã học liệu: " + data.docId });
     }
     
+    // 1b. Xóa học liệu khỏi cơ sở dữ liệu trên Drive
+    if (data.action === "delete") {
+      var allDocs = loadDocuments(folder);
+      var newDocs = allDocs.filter(function(d) {
+        var matchId = data.docId && String(d.id) === String(data.docId);
+        var matchDrive = data.driveId && String(d.drive_id) === String(data.driveId);
+        return !matchId && !matchDrive;
+      });
+      saveDocumentsDb(folder, newDocs);
+      return responseJSON({ status: "success", message: "Đã xóa học liệu trên Drive", deletedDocId: data.docId });
+    }
+    
     // 2. Tải lên tệp học liệu mới
     var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
     var contentType = data.fileType || "application/octet-stream";
@@ -6990,9 +7072,20 @@ async function syncDocumentsFromDrive(isManual = false) {
                 }
             }
 
-            // 2. Lọc bỏ bản ghi hệ thống khỏi danh sách bài giảng học liệu
-            const validCloudDocs = data.documents.filter(d => d.id !== '__khls_structure__' && d.title !== '__KHLSSYSTEM_STRUCTURE__');
-            let localDocs = store.getDocuments().filter(d => d.id !== '__khls_structure__' && d.title !== '__KHLSSYSTEM_STRUCTURE__');
+            // 2. Lọc bỏ bản ghi hệ thống và các tài liệu đã bị xóa
+            const deletedIds = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
+            const validCloudDocs = data.documents.filter(d => 
+                d.id !== '__khls_structure__' && 
+                d.title !== '__KHLSSYSTEM_STRUCTURE__' &&
+                !deletedIds.includes(String(d.id)) &&
+                (!d.drive_id || !deletedIds.includes(String(d.drive_id)))
+            );
+            let localDocs = store.getDocuments().filter(d => 
+                d.id !== '__khls_structure__' && 
+                d.title !== '__KHLSSYSTEM_STRUCTURE__' &&
+                !deletedIds.includes(String(d.id)) &&
+                (!d.drive_id || !deletedIds.includes(String(d.drive_id)))
+            );
             let hasChanges = false;
             let newDocsCount = 0;
 
@@ -7551,7 +7644,7 @@ function renderDocCard(doc) {
     const catObj = CATEGORIES.find(c => c.id === doc.category);
     const driveId = extractGoogleDriveId(doc.file_url);
     return `
-        <div class="doc-card" onclick="navigate('#/detail/${doc.id}')">
+        <div class="doc-card" id="doc-card-${doc.id}" onclick="navigate('#/detail/${doc.id}')">
             <div class="doc-card-header">
                 <div class="doc-type-icon ${getFileTypeClass(doc.file_name)}">
                     ${getFileTypeIcon(doc.file_name)}
