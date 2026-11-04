@@ -1213,6 +1213,206 @@ function handleWinTableSort(col) {
     renderBrowsePage(b.cat, b.grade, b.subject, b.query);
 }
 
+// ======================== DOCUMENT PERMISSIONS & ACTIONS ========================
+
+function isDocOwner(doc, user = state.user) {
+    if (!doc || !user) return false;
+    if (doc.author_id && user.id && String(doc.author_id) === String(user.id)) return true;
+    
+    const normalize = (name) => (name || '').replace(/^(Thầy|Cô)\s+/i, '').trim().toLowerCase();
+    const docAuthor = normalize(doc.author_name);
+    const userFull = normalize(user.fullname);
+    
+    if (docAuthor && userFull) {
+        if (docAuthor === userFull) return true;
+        if (docAuthor.includes(userFull) || userFull.includes(docAuthor)) return true;
+    }
+    return false;
+}
+
+function canUserDeleteDoc(doc, user = state.user) {
+    if (!user) return false;
+    // Quyền admin sẽ được xóa tất cả các bài
+    if (user.role === 'admin') return true;
+    // Chủ nhân của bài đăng sẽ được quyền xóa bài đó
+    return isDocOwner(doc, user);
+}
+
+function canUserEditDoc(doc, user = state.user) {
+    if (!user) return false;
+    // Quyền admin có thể chỉnh sửa
+    if (user.role === 'admin') return true;
+    // Chủ nhân của bài đăng sẽ được quyền sửa bài đó
+    return isDocOwner(doc, user);
+}
+
+function handleDeleteDoc(docId) {
+    if (!state.user) {
+        openAuthRequiredModal();
+        return;
+    }
+    const docs = store.getDocuments();
+    const doc = docs.find(d => d.id === docId);
+    if (!doc) {
+        showToast('Không tìm thấy học liệu cần xóa!', 'error');
+        return;
+    }
+
+    if (!canUserDeleteDoc(doc, state.user)) {
+        showToast('Thầy/Cô không có quyền xóa học liệu này! Quyền xóa thuộc về tác giả bài đăng hoặc Quản trị viên.', 'error');
+        return;
+    }
+
+    const isOwn = isDocOwner(doc, state.user);
+    const roleText = (state.user.role === 'admin' && !isOwn) ? ' (với quyền Quản trị viên)' : '';
+
+    if (!confirm(`Thầy/Cô có chắc chắn muốn xóa học liệu "${doc.title}"${roleText}? Hành động này sẽ gỡ bỏ tài liệu khỏi hệ thống.`)) {
+        return;
+    }
+
+    const updatedDocs = docs.filter(d => d.id !== docId);
+    store.saveDocuments(updatedDocs);
+
+    // Gửi tín hiệu xóa lên Google Drive Apps Script nếu có
+    const settings = store.getSettings();
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const activeGas = myGas || settings.drive_gas_url;
+    if (activeGas && doc.drive_id) {
+        try {
+            fetch(activeGas, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'delete',
+                    docId: doc.id,
+                    driveId: doc.drive_id
+                })
+            }).catch(e => console.warn('Lỗi đồng bộ xóa Drive:', e));
+        } catch(e) {}
+    }
+
+    showToast(`Đã xóa học liệu "${doc.title}" thành công! 🗑️`, 'info');
+
+    // Cập nhật lại giao diện
+    if (state.currentPage === 'browse') {
+        const b = state.currentBrowse || {};
+        renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+    } else if (state.currentPage === 'detail') {
+        navigate('#/browse');
+    }
+}
+
+function openEditDocModal(docId) {
+    if (!state.user) {
+        openAuthRequiredModal();
+        return;
+    }
+    const doc = store.getDocuments().find(d => d.id === docId);
+    if (!doc) {
+        showToast('Không tìm thấy học liệu!', 'error');
+        return;
+    }
+    if (!canUserEditDoc(doc, state.user)) {
+        showToast('Thầy/Cô không có quyền sửa học liệu này! Chỉ chủ nhân bài đăng hoặc Quản trị viên mới có quyền sửa.', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('edit-doc-modal');
+    if (!modal) return;
+
+    document.getElementById('edit-doc-id').value = doc.id;
+    document.getElementById('edit-doc-title').value = doc.title || '';
+    document.getElementById('edit-doc-category').value = doc.category || 'khbd';
+    document.getElementById('edit-doc-grade').value = String(doc.grade || '1');
+    document.getElementById('edit-doc-subject').value = doc.subject || 'toan';
+    
+    const weekSelect = document.getElementById('edit-doc-week');
+    if (weekSelect) {
+        weekSelect.value = String(getDocWeek(doc));
+    }
+
+    const authorInput = document.getElementById('edit-doc-author');
+    if (authorInput) authorInput.value = doc.author_name || '';
+
+    const deptInput = document.getElementById('edit-doc-dept');
+    if (deptInput) deptInput.value = doc.author_dept || '';
+
+    const urlInput = document.getElementById('edit-doc-url');
+    if (urlInput) urlInput.value = doc.file_url || '';
+
+    const descInput = document.getElementById('edit-doc-desc');
+    if (descInput) descInput.value = doc.description || '';
+
+    const delBtn = document.getElementById('btn-delete-doc-from-edit-modal');
+    if (delBtn) {
+        const canDel = canUserDeleteDoc(doc, state.user);
+        delBtn.style.display = canDel ? 'inline-flex' : 'none';
+        delBtn.onclick = () => {
+            closeEditDocModal();
+            handleDeleteDoc(doc.id);
+        };
+    }
+
+    modal.classList.add('active');
+}
+
+function closeEditDocModal() {
+    const modal = document.getElementById('edit-doc-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleSaveDoc(e) {
+    e.preventDefault();
+    const docId = document.getElementById('edit-doc-id').value;
+    const docs = store.getDocuments();
+    const doc = docs.find(d => d.id === docId);
+    if (!doc) {
+        showToast('Không tìm thấy học liệu!', 'error');
+        return;
+    }
+
+    if (!canUserEditDoc(doc, state.user)) {
+        showToast('Thầy/Cô không có quyền chỉnh sửa học liệu này!', 'error');
+        return;
+    }
+
+    const title = document.getElementById('edit-doc-title').value.trim();
+    const category = document.getElementById('edit-doc-category').value;
+    const grade = document.getElementById('edit-doc-grade').value;
+    const subject = document.getElementById('edit-doc-subject').value;
+    const weekVal = document.getElementById('edit-doc-week').value;
+    const author = document.getElementById('edit-doc-author').value.trim();
+    const dept = document.getElementById('edit-doc-dept').value.trim();
+    const url = document.getElementById('edit-doc-url').value.trim();
+    const desc = document.getElementById('edit-doc-desc').value.trim();
+
+    if (!title) {
+        showToast('Tiêu đề tài liệu không được để trống!', 'error');
+        return;
+    }
+
+    doc.title = title;
+    doc.category = category;
+    doc.grade = grade;
+    doc.subject = subject;
+    doc.week = parseInt(weekVal, 10) || 1;
+    if (author) doc.author_name = author;
+    if (dept) doc.author_dept = dept;
+    if (url) doc.file_url = url;
+    doc.description = desc;
+
+    store.saveDocuments(docs);
+    closeEditDocModal();
+    showToast(`Đã lưu cập nhật cho học liệu "${title}"! 💾`, 'success');
+
+    if (state.currentPage === 'browse') {
+        const b = state.currentBrowse || {};
+        renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+    } else if (state.currentPage === 'detail') {
+        renderDetailPage(doc.id);
+    }
+}
+
 function renderWindowsDetailsTable(docs) {
     const col = state.winSortCol || 'week';
     const dir = state.winSortDir || 'asc';
@@ -1249,11 +1449,18 @@ function renderWindowsDetailsTable(docs) {
                         </th>
                         <th class="col-btn-view th-center">Xem trước</th>
                         <th class="col-btn-download th-center">Tải về</th>
+                        <th class="col-btn-edit th-center">Sửa</th>
+                        <th class="col-btn-delete th-center">Xóa</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${docs.map(doc => {
                         const weekNum = getDocWeek(doc);
+                        const canEdit = canUserEditDoc(doc);
+                        const canDelete = canUserDeleteDoc(doc);
+                        const isOwner = isDocOwner(doc);
+                        const isAdmin = state.user && state.user.role === 'admin';
+
                         return `
                             <tr class="win-details-row" onclick="navigate('#/detail/${doc.id}')" title="Nhấp đúp hoặc bấm vào dòng để xem chi tiết ${escapeHtml(doc.title)}">
                                 <td class="col-name">
@@ -1284,6 +1491,28 @@ function renderWindowsDetailsTable(docs) {
                                     <button type="button" class="win-btn win-btn-download" onclick="handleDownloadDoc('${doc.id}')" title="Tải file về máy">
                                         ⬇️ Tải về
                                     </button>
+                                </td>
+                                <td class="col-btn-edit th-center" onclick="event.stopPropagation()">
+                                    ${canEdit ? `
+                                        <button type="button" class="win-btn win-btn-edit" onclick="openEditDocModal('${doc.id}')" title="Sửa thông tin bài đăng này">
+                                            ✏️ Sửa
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng mới có quyền sửa bài này">
+                                            ✏️ Sửa
+                                        </button>
+                                    `}
+                                </td>
+                                <td class="col-btn-delete th-center" onclick="event.stopPropagation()">
+                                    ${canDelete ? `
+                                        <button type="button" class="win-btn win-btn-delete" onclick="handleDeleteDoc('${doc.id}')" title="${isAdmin && !isOwner ? 'Xóa bài này (Quyền Quản trị viên)' : 'Xóa bài đăng của bạn'}">
+                                            🗑️ Xóa
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng hoặc Quản trị viên mới được xóa">
+                                            🗑️ Xóa
+                                        </button>
+                                    `}
                                 </td>
                             </tr>
                         `;
@@ -5049,13 +5278,22 @@ function loginAs(user) {
     localStorage.setItem('khls-user', JSON.stringify(user));
     updateUserUI();
     updatePendingBadge();
+    if (state.currentPage === 'browse') {
+        const b = state.currentBrowse || {};
+        renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+    }
 }
 
 function handleLogout() {
     state.user = null;
     localStorage.removeItem('khls-user');
     updateUserUI();
-    navigate('#/');
+    if (state.currentPage === 'browse') {
+        const b = state.currentBrowse || {};
+        renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+    } else {
+        navigate('#/');
+    }
     showToast('Đã đăng xuất khỏi hệ thống', 'info');
     const dropdown = document.getElementById('user-dropdown');
     if (dropdown) dropdown.classList.remove('active');
@@ -5172,12 +5410,17 @@ function initEventListeners() {
     document.getElementById('btn-cancel-edit-subject')?.addEventListener('click', closeEditSubjectModal);
     document.getElementById('edit-subject-form')?.addEventListener('submit', handleSaveSubject);
 
+    // Document Edit Modal
+    document.getElementById('edit-doc-modal-close')?.addEventListener('click', closeEditDocModal);
+    document.getElementById('btn-cancel-edit-doc')?.addEventListener('click', closeEditDocModal);
+    document.getElementById('edit-doc-form')?.addEventListener('submit', handleSaveDoc);
+
     // Subfolders Modal
     document.getElementById('category-subfolders-modal-close')?.addEventListener('click', closeSubfoldersModal);
     document.getElementById('btn-close-cat-subfolders')?.addEventListener('click', closeSubfoldersModal);
 
     // Close on overlay click
-    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'edit-category-modal', 'edit-grade-modal', 'edit-subject-modal', 'category-subfolders-modal', 'contribute-modal', 'drive-setup-modal'].forEach(id => {
+    ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'edit-category-modal', 'edit-grade-modal', 'edit-subject-modal', 'category-subfolders-modal', 'contribute-modal', 'drive-setup-modal', 'edit-doc-modal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', (e) => {
             if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
         });

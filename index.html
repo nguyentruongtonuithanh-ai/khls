@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=5.2">
+    <link rel="stylesheet" href="css/style.css?v=5.3">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -1105,6 +1105,146 @@
         </div>
     </div>
 
+    <!-- ============ EDIT DOCUMENT MODAL (SỬA HỌC LIỆU) ============ -->
+    <div class="modal-overlay" id="edit-doc-modal">
+        <div class="modal" style="max-width: 600px; width: 95%;">
+            <button class="modal-close" id="edit-doc-modal-close" aria-label="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="modal-header" style="text-align: left; margin-bottom: var(--space-md);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.6rem;">✏️</span>
+                    <div>
+                        <h2 class="modal-title" style="margin:0; font-size:1.25rem;">Chỉnh sửa học liệu</h2>
+                        <p class="modal-desc" style="margin:2px 0 0; font-size:0.82rem; color:var(--text-muted);">Cập nhật tiêu đề, tuần học, phân loại và thông tin bài giảng</p>
+                    </div>
+                </div>
+            </div>
+            <form class="modal-body" id="edit-doc-form" style="display:flex; flex-direction:column; gap:12px; max-height:calc(85vh - 120px); overflow-y:auto;">
+                <input type="hidden" id="edit-doc-id">
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" for="edit-doc-title">Tiêu đề học liệu <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="edit-doc-title" required placeholder="VD: Kế hoạch bài dạy Toán 1 - Tuần 1...">
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)); gap:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="edit-doc-category">Loại học liệu <span class="required">*</span></label>
+                        <select class="form-input" id="edit-doc-category" required>
+                            <option value="khbd">Kế hoạch bài dạy</option>
+                            <option value="baigiang">Bài giảng điện tử</option>
+                            <option value="dethi">Đề thi / Kiểm tra</option>
+                            <option value="phieubaitap">Phiếu bài tập</option>
+                            <option value="trochoi">Trò chơi tương tác</option>
+                            <option value="video">Video bài giảng</option>
+                            <option value="taphuan">Tập huấn</option>
+                            <option value="thuvien">Thư viện số</option>
+                            <option value="khac">Tài liệu khác</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="edit-doc-grade">Khối lớp <span class="required">*</span></label>
+                        <select class="form-input" id="edit-doc-grade" required>
+                            <option value="1">Khối 1</option>
+                            <option value="2">Khối 2</option>
+                            <option value="3">Khối 3</option>
+                            <option value="4">Khối 4</option>
+                            <option value="5">Khối 5</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="edit-doc-subject">Môn học <span class="required">*</span></label>
+                        <select class="form-input" id="edit-doc-subject" required>
+                            <option value="toan">Toán</option>
+                            <option value="tiengviet">Tiếng Việt</option>
+                            <option value="tnxh">TN &amp; XH</option>
+                            <option value="khoahoc">Khoa học</option>
+                            <option value="lsdl">LS &amp; ĐL</option>
+                            <option value="daoduc">Đạo đức</option>
+                            <option value="tinhoc">Tin học</option>
+                            <option value="tienganh">Tiếng Anh</option>
+                            <option value="amnhac">Âm nhạc</option>
+                            <option value="mythuat">Mỹ thuật</option>
+                            <option value="gdtc">GD Thể chất</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="edit-doc-week">Tuần học <span class="required">*</span></label>
+                        <select class="form-input" id="edit-doc-week" required>
+                            <option value="1">Tuần 1</option>
+                            <option value="2">Tuần 2</option>
+                            <option value="3">Tuần 3</option>
+                            <option value="4">Tuần 4</option>
+                            <option value="5">Tuần 5</option>
+                            <option value="6">Tuần 6</option>
+                            <option value="7">Tuần 7</option>
+                            <option value="8">Tuần 8</option>
+                            <option value="9">Tuần 9</option>
+                            <option value="10">Tuần 10</option>
+                            <option value="11">Tuần 11</option>
+                            <option value="12">Tuần 12</option>
+                            <option value="13">Tuần 13</option>
+                            <option value="14">Tuần 14</option>
+                            <option value="15">Tuần 15</option>
+                            <option value="16">Tuần 16</option>
+                            <option value="17">Tuần 17</option>
+                            <option value="18">Tuần 18</option>
+                            <option value="19">Tuần 19</option>
+                            <option value="20">Tuần 20</option>
+                            <option value="21">Tuần 21</option>
+                            <option value="22">Tuần 22</option>
+                            <option value="23">Tuần 23</option>
+                            <option value="24">Tuần 24</option>
+                            <option value="25">Tuần 25</option>
+                            <option value="26">Tuần 26</option>
+                            <option value="27">Tuần 27</option>
+                            <option value="28">Tuần 28</option>
+                            <option value="29">Tuần 29</option>
+                            <option value="30">Tuần 30</option>
+                            <option value="31">Tuần 31</option>
+                            <option value="32">Tuần 32</option>
+                            <option value="33">Tuần 33</option>
+                            <option value="34">Tuần 34</option>
+                            <option value="35">Tuần 35</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="edit-doc-author">Người soạn / Tác giả</label>
+                        <input type="text" class="form-input" id="edit-doc-author" placeholder="Họ và tên giáo viên">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label" for="edit-doc-dept">Tổ chuyên môn</label>
+                        <input type="text" class="form-input" id="edit-doc-dept" placeholder="VD: Tổ 1, Tổ 2...">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" for="edit-doc-url">Link tệp / Google Drive URL</label>
+                    <input type="text" class="form-input" id="edit-doc-url" placeholder="https://drive.google.com/file/d/...">
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" for="edit-doc-desc">Mô tả tóm tắt</label>
+                    <textarea class="form-input form-textarea" id="edit-doc-desc" rows="2" placeholder="Ghi chú thêm về học liệu..."></textarea>
+                </div>
+
+                <div class="modal-actions" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:14px; border-top:1px solid var(--border-color);">
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="btn-delete-doc-from-edit-modal">
+                        🗑️ Xóa bài này
+                    </button>
+                    <div style="display:flex; gap:8px; margin-left:auto;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-edit-doc">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ============ DRIVE SETUP MODAL (CẤU HÌNH GOOGLE DRIVE QUẢN TRỊ) ============ -->
     <div class="modal-overlay" id="drive-setup-modal">
         <div class="modal modal-lg">
@@ -1179,6 +1319,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=5.2"></script>
+    <script src="js/app.js?v=5.3"></script>
 </body>
 </html>

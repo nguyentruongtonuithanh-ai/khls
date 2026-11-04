@@ -3200,7 +3200,7 @@ body.sidebar-collapsed .footer {
 
 .win-details-table {
     width: 100%;
-    min-width: 720px;
+    min-width: 820px;
     border-collapse: collapse;
     table-layout: fixed;
     font-size: 0.88rem;
@@ -3245,7 +3245,9 @@ body.sidebar-collapsed .footer {
 .win-details-row td.col-week,
 .win-details-row td.col-date,
 .win-details-row td.col-btn-view,
-.win-details-row td.col-btn-download {
+.win-details-row td.col-btn-download,
+.win-details-row td.col-btn-edit,
+.win-details-row td.col-btn-delete {
     text-align: center;
     justify-content: center;
 }
@@ -3265,19 +3267,27 @@ body.sidebar-collapsed .footer {
 }
 
 .win-details-table .col-author {
-    width: 150px;
+    width: 140px;
 }
 
 .win-details-table .col-date {
-    width: 115px;
+    width: 110px;
 }
 
 .win-details-table .col-btn-view {
-    width: 105px;
+    width: 95px;
 }
 
 .win-details-table .col-btn-download {
-    width: 95px;
+    width: 90px;
+}
+
+.win-details-table .col-btn-edit {
+    width: 75px;
+}
+
+.win-details-table .col-btn-delete {
+    width: 75px;
 }
 
 .win-details-row {
@@ -3394,6 +3404,48 @@ body.sidebar-collapsed .footer {
     color: #ffffff;
     border-color: var(--primary);
     transform: translateY(-1px);
+}
+
+.win-btn-edit {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.win-btn-edit:hover {
+    background: #f59e0b;
+    color: #ffffff;
+    border-color: #f59e0b;
+    transform: translateY(-1px);
+}
+
+.win-btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.win-btn-delete:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+    transform: translateY(-1px);
+}
+
+.win-btn-disabled,
+.win-btn[disabled] {
+    opacity: 0.32;
+    cursor: not-allowed !important;
+    filter: grayscale(1);
+    pointer-events: auto;
+}
+
+.win-btn-disabled:hover,
+.win-btn[disabled]:hover {
+    transform: none !important;
+    background: var(--bg-surface) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border-color) !important;
 }
 
 
