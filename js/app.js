@@ -815,10 +815,31 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePendingBadge();
     animateCounters();
     syncDriveLinks();
-    // Tự động kiểm tra và đồng bộ học liệu mới từ Google Drive
-    setTimeout(() => {
+
+    // 1. Tự động kiểm tra và đồng bộ dữ liệu + cấu trúc thư mục mới nhất từ Google Drive ngay khi tải trang (Zero-touch)
+    syncDocumentsFromDrive(false);
+
+    // 2. Nếu tài khoản hiện tại là Admin, tự động kiểm tra và đồng bộ cấu trúc mới lên Drive
+    if (state.user && state.user.role === 'admin') {
+        setTimeout(() => pushStructureToCloud(false), 800);
+    }
+
+    // 3. Tự động đồng bộ ngầm định kỳ mỗi 20 giây (chỉ chạy khi tab đang mở)
+    setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            syncDocumentsFromDrive(false);
+        }
+    }, 20000);
+
+    // 4. Tự động đồng bộ ngay khi người dùng chuyển lại tab website
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            syncDocumentsFromDrive(false);
+        }
+    });
+    window.addEventListener('focus', () => {
         syncDocumentsFromDrive(false);
-    }, 1200);
+    });
 });
 
 // ======================== THEME ========================
@@ -5568,6 +5589,10 @@ function loginAs(user) {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
     }
+    // Nếu đăng nhập là Admin, tự động đồng bộ cấu trúc mới nhất lên Drive
+    if (user && user.role === 'admin') {
+        setTimeout(() => pushStructureToCloud(false), 500);
+    }
 }
 
 function handleLogout() {
@@ -6458,32 +6483,61 @@ async function syncDocumentsFromDrive(isManual = false) {
         const data = await resp.json();
         if (data && data.status === 'success' && Array.isArray(data.documents)) {
             // 1. Tự động đồng bộ Cấu trúc thư mục (Categories, Grades, Subjects) nếu trên Drive có bản mới từ Admin
-            const structDoc = data.documents.find(d => d.id === '__khls_structure__' || d.title === '__KHLSSYSTEM_STRUCTURE__');
-            if (structDoc && structDoc.description) {
+            const structDocs = data.documents.filter(d => d.id === '__khls_structure__' || d.title === '__KHLSSYSTEM_STRUCTURE__');
+            let cloudStruct = null;
+            let maxTimestamp = 0;
+            structDocs.forEach(d => {
                 try {
-                    const cloudStruct = JSON.parse(structDoc.description);
-                    if (cloudStruct && cloudStruct.timestamp) {
-                        const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
-                        if (cloudStruct.timestamp > localTime) {
-                            if (Array.isArray(cloudStruct.categories) && cloudStruct.categories.length > 0) {
-                                store.saveCategories(cloudStruct.categories);
-                            }
-                            if (Array.isArray(cloudStruct.grades) && cloudStruct.grades.length > 0) {
-                                store.saveGrades(cloudStruct.grades);
-                            }
-                            if (Array.isArray(cloudStruct.subjects) && cloudStruct.subjects.length > 0) {
-                                store.saveSubjects(cloudStruct.subjects);
-                            }
-                            localStorage.setItem('khls_structure_timestamp', String(cloudStruct.timestamp));
-                            renderSidebar();
-                            syncAllSelects();
-                            if (state.currentPage === 'admin' && document.querySelector('.admin-tab.active')?.getAttribute('data-tab') === 'categories') {
-                                renderAdminPage('categories');
-                            }
+                    const parsed = typeof d.description === 'string' ? JSON.parse(d.description) : d.description;
+                    if (parsed && (parsed.timestamp || parsed.categories || parsed.subjects)) {
+                        const t = Number(parsed.timestamp) || 1;
+                        if (t >= maxTimestamp) {
+                            maxTimestamp = t;
+                            cloudStruct = parsed;
                         }
                     }
-                } catch(parseErr) {
-                    console.warn('Lỗi phân tích cấu trúc thư mục từ Drive:', parseErr);
+                } catch(e) {}
+            });
+
+            if (cloudStruct) {
+                const curCats = store.getCategories();
+                const curGrades = store.getGrades();
+                const curSubs = store.getSubjects();
+
+                const isDiff = JSON.stringify(cloudStruct.categories || []) !== JSON.stringify(curCats) ||
+                               JSON.stringify(cloudStruct.grades || []) !== JSON.stringify(curGrades) ||
+                               JSON.stringify(cloudStruct.subjects || []) !== JSON.stringify(curSubs);
+
+                const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
+
+                if (isDiff || maxTimestamp > localTime) {
+                    if (Array.isArray(cloudStruct.categories) && cloudStruct.categories.length > 0) {
+                        store.saveCategories(cloudStruct.categories);
+                        CATEGORIES = cloudStruct.categories;
+                    }
+                    if (Array.isArray(cloudStruct.grades) && cloudStruct.grades.length > 0) {
+                        store.saveGrades(cloudStruct.grades);
+                        GRADES = cloudStruct.grades;
+                    }
+                    if (Array.isArray(cloudStruct.subjects) && cloudStruct.subjects.length > 0) {
+                        store.saveSubjects(cloudStruct.subjects);
+                        SUBJECTS = cloudStruct.subjects;
+                    }
+                    localStorage.setItem('khls_structure_timestamp', String(maxTimestamp || Date.now()));
+
+                    renderSidebar();
+                    syncAllSelects();
+
+                    // Cập nhật lại ngay màn hình hiện tại của giáo viên (không cần tải lại trang)
+                    if (state.currentPage === 'browse') {
+                        const b = state.currentBrowse || {};
+                        renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+                    } else if (state.currentPage === 'home') {
+                        renderHomePage();
+                    } else if (state.currentPage === 'admin') {
+                        const activeTab = document.querySelector('.admin-tab.active')?.getAttribute('data-tab') || 'categories';
+                        renderAdminPage(activeTab);
+                    }
                 }
             }
 
