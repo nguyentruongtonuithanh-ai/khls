@@ -3346,22 +3346,23 @@ optgroup {
 /* Fixed column widths */
 .win-details-table .col-name {
     width: auto; /* Chiếm toàn bộ không gian còn lại */
+    min-width: 200px;
 }
 
 .win-details-table .col-category {
-    width: 175px;
+    width: 165px;
 }
 
 .win-details-table .col-week {
-    width: 90px;
+    width: 80px;
 }
 
 .win-details-table .col-author {
-    width: 140px;
+    width: 135px;
 }
 
 .win-details-table .col-date {
-    width: 105px;
+    width: 100px;
 }
 
 .win-details-table .col-btn-view {
@@ -3369,27 +3370,27 @@ optgroup {
 }
 
 .win-details-table .col-btn-download {
-    width: 90px;
+    width: 95px;
 }
 
 .win-details-table .col-btn-approve {
-    width: 80px;
+    width: 100px;
 }
 
 .win-details-table .col-btn-reject {
-    width: 85px;
+    width: 110px;
 }
 
 .win-details-table .col-btn-edit {
-    width: 75px;
+    width: 80px;
 }
 
 .win-details-table .col-btn-delete {
-    width: 75px;
+    width: 80px;
 }
 
 .win-review-table {
-    min-width: 960px;
+    min-width: 1120px;
 }
 
 .review-list.review-table-container {
@@ -3414,6 +3415,21 @@ optgroup {
 .win-details-row td {
     padding: 8px 12px;
     vertical-align: middle;
+}
+
+.win-details-row td.col-btn-view,
+.win-details-row td.col-btn-download,
+.win-details-row td.col-btn-approve,
+.win-details-row td.col-btn-reject,
+.win-details-row td.col-btn-edit,
+.win-details-row td.col-btn-delete {
+    padding: 8px 6px;
+    white-space: nowrap;
+}
+
+.win-details-row td:last-child,
+.win-details-header th:last-child {
+    padding-right: 14px;
 }
 
 /* File cell and truncation: tên tài liệu dài quá thì hiển thị ít lại nhường chỗ cho cột khác */
@@ -3486,7 +3502,7 @@ optgroup {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 4px 8px;
+    padding: 5px 10px;
     font-size: 0.78rem;
     font-weight: 600;
     border-radius: var(--radius-sm);
@@ -3496,6 +3512,7 @@ optgroup {
     cursor: pointer;
     transition: all 0.15s ease;
     white-space: nowrap;
+    box-sizing: border-box;
 }
 
 .win-btn-view:hover {
@@ -3519,6 +3536,7 @@ optgroup {
 }
 
 .win-btn-approve {
+    min-width: 80px;
     background: rgba(16, 185, 129, 0.12);
     color: #10b981;
     border-color: rgba(16, 185, 129, 0.35);
@@ -3532,6 +3550,7 @@ optgroup {
 }
 
 .win-btn-reject {
+    min-width: 86px;
     background: rgba(244, 63, 94, 0.12);
     color: #f43f5e;
     border-color: rgba(244, 63, 94, 0.35);
