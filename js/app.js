@@ -1832,6 +1832,156 @@ function renderBrowsePage(cat = '', grade = '', subject = '', query = '') {
     }
 }
 
+function toggleDocViewerFullscreen() {
+    const el = document.getElementById('doc-viewer-wrapper');
+    if (!el) return;
+    if (!document.fullscreenElement) {
+        if (el.requestFullscreen) {
+            el.requestFullscreen();
+        } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+}
+
+function renderInPageDocViewer(doc) {
+    if (!doc) return '';
+    const driveId = extractGoogleDriveId(doc.file_url) || doc.drive_id;
+    const isHttpUrl = doc.file_url && (doc.file_url.startsWith('http://') || doc.file_url.startsWith('https://'));
+    const ext = (doc.file_type || '').toLowerCase();
+
+    let viewerBody = '';
+
+    // 1. Google Drive Preview Viewer
+    if (driveId) {
+        viewerBody = `
+            <div class="doc-viewer-frame-inner">
+                <iframe src="https://drive.google.com/file/d/${driveId}/preview" class="doc-viewer-iframe" allowfullscreen></iframe>
+            </div>
+        `;
+    }
+    // 2. Microsoft Office Online Viewer for public online files
+    else if (isHttpUrl && ['docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls'].includes(ext)) {
+        viewerBody = `
+            <div class="doc-viewer-frame-inner">
+                <iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(doc.file_url)}" class="doc-viewer-iframe" allowfullscreen></iframe>
+            </div>
+        `;
+    }
+    // 3. Converted HTML Document
+    else if (doc.file_content_html && doc.file_content_html.trim().length > 0) {
+        viewerBody = `
+            <div class="doc-viewer-frame-inner doc-viewer-html-scroll">
+                <div class="docx-clean-document">
+                    ${doc.file_content_html}
+                </div>
+            </div>
+        `;
+    }
+    // 4. PDF Files
+    else if (ext === 'pdf') {
+        const pdfSrc = doc.file_url || doc.file_data_url;
+        if (pdfSrc) {
+            viewerBody = `
+                <div class="doc-viewer-frame-inner">
+                    <iframe src="${pdfSrc}" class="doc-viewer-iframe" allowfullscreen></iframe>
+                </div>
+            `;
+        }
+    }
+    // 5. Video Files
+    else if (['mp4', 'webm', 'ogg'].includes(ext)) {
+        const videoSrc = doc.file_url || doc.file_data_url;
+        if (videoSrc) {
+            viewerBody = `
+                <div class="doc-viewer-frame-inner" style="display:flex; align-items:center; justify-content:center; background:#000;">
+                    <video src="${videoSrc}" controls style="max-width:100%; max-height:100%; border-radius:var(--radius-md);"></video>
+                </div>
+            `;
+        }
+    }
+    // 6. Converted on the fly from file_data_url (docx with mammoth)
+    else if (doc.file_data_url && ext === 'docx' && window.mammoth) {
+        viewerBody = `
+            <div class="doc-viewer-frame-inner doc-viewer-html-scroll" id="inpage-docx-container">
+                <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+                    <div style="font-size:2rem; margin-bottom:10px;">⏳</div>
+                    <div>Đang tải và hiển thị nội dung tài liệu...</div>
+                </div>
+            </div>
+        `;
+        setTimeout(() => {
+            fetch(doc.file_data_url)
+                .then(r => r.arrayBuffer())
+                .then(ab => window.mammoth.convertToHtml({ arrayBuffer: ab }))
+                .then(res => {
+                    doc.file_content_html = res.value;
+                    try { store.saveDocuments(store.getDocuments()); } catch(e){}
+                    const c = document.getElementById('inpage-docx-container');
+                    if (c) {
+                        c.innerHTML = `<div class="docx-clean-document">${res.value}</div>`;
+                    }
+                })
+                .catch(err => {
+                    console.warn('Inpage convert error:', err);
+                    const c = document.getElementById('inpage-docx-container');
+                    if (c) {
+                        const fallbackText = getAccurateDocumentText(doc);
+                        c.innerHTML = `<div class="docx-clean-document" style="white-space:pre-wrap; font-family:'Times New Roman', Times, serif; font-size:14pt; line-height:1.6; padding:30px;">${escapeHtml(fallbackText)}</div>`;
+                    }
+                });
+        }, 50);
+    }
+
+    // Fallback if none matched
+    if (!viewerBody) {
+        const docText = getAccurateDocumentText(doc);
+        viewerBody = `
+            <div class="doc-viewer-frame-inner doc-viewer-html-scroll">
+                <div class="docx-clean-document" style="white-space:pre-wrap; font-family:'Times New Roman', Times, serif; font-size:14pt; line-height:1.6; padding:36px; background:#ffffff; color:#1e293b; max-width:850px; margin:0 auto; box-shadow:0 2px 10px rgba(0,0,0,0.1); border-radius:4px;">
+${escapeHtml(docText)}
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="doc-viewer-wrapper" id="doc-viewer-wrapper">
+            <div class="doc-viewer-toolbar">
+                <div class="doc-viewer-toolbar-left">
+                    <span class="doc-viewer-file-icon">${getFileTypeIcon(doc.file_name)}</span>
+                    <span class="doc-viewer-file-name" title="${escapeHtml(doc.file_name)}">${escapeHtml(doc.file_name)}</span>
+                    <span class="doc-viewer-size-badge">${formatFileSize(doc.file_size)}</span>
+                </div>
+                <div class="doc-viewer-toolbar-right">
+                    ${driveId ? `
+                        <a href="https://drive.google.com/file/d/${driveId}/view" target="_blank" rel="noopener" class="btn btn-sm btn-outline doc-viewer-btn" title="Mở trên Google Drive">
+                            <svg width="14" height="14" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
+                            <span>Google Drive</span>
+                        </a>
+                    ` : ''}
+                    <button type="button" class="btn btn-sm btn-secondary doc-viewer-btn" onclick="openDocumentInNewTab('${doc.id}')" title="Mở sang tab mới">
+                        <span>↗️ Mở tab mới</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary doc-viewer-btn" onclick="handleDownloadDoc('${doc.id}')" title="Tải tệp tin về máy">
+                        <span>⬇️ Tải về</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary doc-viewer-btn" onclick="toggleDocViewerFullscreen()" title="Toàn màn hình">
+                        <span>⛶ Phóng to</span>
+                    </button>
+                </div>
+            </div>
+            <div class="doc-viewer-body" id="doc-viewer-body">
+                ${viewerBody}
+            </div>
+        </div>
+    `;
+}
+
 // ======================== PAGE: DETAIL ========================
 
 function renderDetailPage(docId) {
@@ -1887,34 +2037,15 @@ function renderDetailPage(docId) {
                         <span>⭐ ${doc.avg_rating ? doc.avg_rating.toFixed(1) : '5.0'} (${doc.rating_count || 0} đánh giá)</span>
                     </div>
 
-                    <!-- Simulated In-Page Preview Hero -->
-                    <div class="preview-hero-box">
-                        <span class="preview-watermark">${getFileTypeIcon(doc.file_name)}</span>
-                        <h3>${doc.file_name}</h3>
-                        <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;">Dung lượng: ${formatFileSize(doc.file_size)}</p>
-                        <div style="margin-top:var(--space-md); display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                            <button class="btn btn-primary" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến ngay trên trang">
-                                👁️ Xem trực tuyến
-                            </button>
-                            ${driveId ? `
-                                <a href="https://drive.google.com/file/d/${driveId}/view" target="_blank" rel="noopener" class="btn btn-outline" style="background:#ffffff; color:#1e293b; border-color:#cbd5e1; font-weight:600; display:inline-flex; align-items:center; gap:6px; text-decoration:none;">
-                                    <svg width="18" height="18" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
-                                    Mở trên Google Drive ↗
-                                </a>
-                            ` : ''}
-                            <button class="btn btn-secondary" onclick="openDocumentInNewTab('${doc.id}')" title="Mở file lên xem toàn màn hình trong tab mới">
-                                ↗️ Mở tab mới
-                            </button>
-                            <button class="btn btn-success btn-download-main" onclick="handleDownloadDoc('${doc.id}')" title="Tải tệp tin về máy">
-                                ⬇️ Tải tài liệu về máy
-                            </button>
-                        </div>
-                    </div>
+                    <!-- In-Page Embedded Document Viewer -->
+                    ${renderInPageDocViewer(doc)}
 
-                    <div class="detail-desc-box">
-                        <h3 style="margin-bottom:var(--space-sm);">📖 Mô tả & Yêu cầu cần đạt</h3>
-                        <p style="color:var(--text-secondary); line-height:1.7;">${doc.description || 'Chưa có mô tả chi tiết cho học liệu này.'}</p>
-                    </div>
+                    ${(doc.description && doc.description.trim() && !doc.description.includes('Chưa có mô tả')) ? `
+                        <div class="detail-desc-box" style="margin-top:var(--space-md);">
+                            <h3 style="margin-bottom:var(--space-sm); font-size:1rem;">📖 Mô tả & Yêu cầu cần đạt</h3>
+                            <p style="color:var(--text-secondary); line-height:1.7;">${escapeHtml(doc.description)}</p>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <!-- Đánh giá & Bình luận -->
