@@ -3348,8 +3348,12 @@ optgroup {
     width: auto; /* Chiếm toàn bộ không gian còn lại */
 }
 
+.win-details-table .col-category {
+    width: 175px;
+}
+
 .win-details-table .col-week {
-    width: 95px;
+    width: 90px;
 }
 
 .win-details-table .col-author {
@@ -3357,11 +3361,11 @@ optgroup {
 }
 
 .win-details-table .col-date {
-    width: 110px;
+    width: 105px;
 }
 
 .win-details-table .col-btn-view {
-    width: 95px;
+    width: 90px;
 }
 
 .win-details-table .col-btn-download {
@@ -3453,6 +3457,11 @@ optgroup {
     font-size: 0.8rem;
     font-weight: 700;
     white-space: nowrap;
+}
+
+.win-category-text {
+    display: block;
+    min-width: 0;
 }
 
 .win-author-text {

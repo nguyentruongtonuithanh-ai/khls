@@ -3120,6 +3120,12 @@ function renderReviewPage() {
 
     if (col === 'name') {
         pendingDocs.sort((a, b) => a.title.localeCompare(b.title, 'vi') * sortDir);
+    } else if (col === 'category') {
+        pendingDocs.sort((a, b) => {
+            const catA = `${getCategoryName(a.category)} ${a.grade || ''} ${getSubjectName(a.subject) || ''}`;
+            const catB = `${getCategoryName(b.category)} ${b.grade || ''} ${getSubjectName(b.subject) || ''}`;
+            return catA.localeCompare(catB, 'vi') * sortDir;
+        });
     } else if (col === 'author') {
         pendingDocs.sort((a, b) => (a.author_name || '').localeCompare(b.author_name || '', 'vi') * sortDir);
     } else if (col === 'date') {
@@ -3139,6 +3145,12 @@ function renderReviewPage() {
                             <div class="th-content">
                                 <span>Tên tài liệu</span>
                                 <span class="sort-arrow">${col === 'name' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-category" onclick="handleReviewTableSort('category')" title="Bấm để sắp xếp theo Mục đăng">
+                            <div class="th-content">
+                                <span>Mục đăng</span>
+                                <span class="sort-arrow">${col === 'category' ? arrow : ''}</span>
                             </div>
                         </th>
                         <th class="col-week th-center" onclick="handleReviewTableSort('week')" title="Bấm để sắp xếp theo Tuần">
@@ -3163,15 +3175,11 @@ function renderReviewPage() {
                         <th class="col-btn-download th-center">Tải về</th>
                         <th class="col-btn-approve th-center">Duyệt</th>
                         <th class="col-btn-reject th-center">Trả lại</th>
-                        <th class="col-btn-edit th-center">Sửa</th>
-                        <th class="col-btn-delete th-center">Xóa</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${pendingDocs.map(doc => {
                         const weekNum = getDocWeek(doc);
-                        const canEdit = canUserEditDoc(doc);
-                        const canDelete = canUserDeleteDoc(doc);
                         const isOwner = isDocOwner(doc);
                         const isAdmin = state.user && state.user.role === 'admin';
                         const driveId = extractGoogleDriveId(doc.file_url) || doc.drive_id;
@@ -3187,6 +3195,18 @@ function renderReviewPage() {
                                             ${escapeHtml(doc.title)}
                                         </span>
                                         ${driveId ? `<span class="badge-drive" style="font-size:0.7rem; padding:1px 6px; margin-left:4px; flex-shrink:0;" title="Đã lưu trữ an toàn trên Google Drive">☁️ Drive</span>` : ''}
+                                    </div>
+                                </td>
+                                <td class="col-category">
+                                    <div class="win-category-text" title="${escapeHtml(getCategoryName(doc.category))}${doc.grade ? ` • Khối ${doc.grade}` : ''}${doc.subject ? ` • ${escapeHtml(getSubjectName(doc.subject))}` : ''}">
+                                        <span style="font-weight:600; color:var(--text-primary); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            ${escapeHtml(getCategoryName(doc.category))}
+                                        </span>
+                                        ${(doc.grade || doc.subject) ? `
+                                            <small style="display:block; font-size:0.75rem; color:var(--primary); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                ${doc.grade ? `Khối ${doc.grade}` : ''}${doc.grade && doc.subject ? ' • ' : ''}${doc.subject ? escapeHtml(getSubjectName(doc.subject)) : ''}
+                                            </small>
+                                        ` : ''}
                                     </div>
                                 </td>
                                 <td class="col-week th-center">
@@ -3220,28 +3240,6 @@ function renderReviewPage() {
                                     <button type="button" class="win-btn win-btn-reject" onclick="rejectDocument('${doc.id}', this)" title="Trả lại &amp; Yêu cầu giáo viên sửa lại">
                                         ❌ Trả lại
                                     </button>
-                                </td>
-                                <td class="col-btn-edit th-center" onclick="event.stopPropagation()">
-                                    ${canEdit ? `
-                                        <button type="button" class="win-btn win-btn-edit" onclick="openEditDocModal('${doc.id}')" title="Sửa thông tin bài đăng này">
-                                            ✏️ Sửa
-                                        </button>
-                                    ` : `
-                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng mới có quyền sửa bài này">
-                                            ✏️ Sửa
-                                        </button>
-                                    `}
-                                </td>
-                                <td class="col-btn-delete th-center" onclick="event.stopPropagation()">
-                                    ${canDelete ? `
-                                        <button type="button" class="win-btn win-btn-delete" onclick="handleDeleteDoc('${doc.id}')" title="${isAdmin && !isOwner ? 'Xóa bài này (Quyền Quản trị viên)' : 'Xóa bài đăng của bạn'}">
-                                            🗑️ Xóa
-                                        </button>
-                                    ` : `
-                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng hoặc Quản trị viên mới được xóa">
-                                            🗑️ Xóa
-                                        </button>
-                                    `}
                                 </td>
                             </tr>
                         `;
