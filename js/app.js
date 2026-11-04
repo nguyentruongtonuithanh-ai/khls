@@ -792,6 +792,8 @@ const state = {
     viewMode: 'details', // 'details' (mặc định dạng bảng Windows Details) hoặc 'grid'
     winSortCol: 'week',  // 'week', 'name', 'author', 'date'
     winSortDir: 'asc',   // 'asc' (từ trên xuống: Tuần 1, Tuần 2...) hoặc 'desc'
+    reviewSortCol: 'week',
+    reviewSortDir: 'asc',
     activeSlideIndex: 0,
     reviewDeptFilter: 'all',
     currentBrowse: null,
@@ -1246,6 +1248,16 @@ function handleWinTableSort(col) {
     renderBrowsePage(b.cat, b.grade, b.subject, b.query);
 }
 
+function handleReviewTableSort(col) {
+    if (state.reviewSortCol === col) {
+        state.reviewSortDir = state.reviewSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.reviewSortCol = col;
+        state.reviewSortDir = 'asc';
+    }
+    renderReviewPage();
+}
+
 // ======================== DOCUMENT PERMISSIONS & ACTIONS ========================
 
 function isDocOwner(doc, user = state.user) {
@@ -1330,6 +1342,9 @@ function handleDeleteDoc(docId) {
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+    } else if (state.currentPage === 'review') {
+        updatePendingBadge();
+        renderReviewPage();
     } else if (state.currentPage === 'detail') {
         navigate('#/browse');
     }
@@ -1443,6 +1458,8 @@ function handleSaveDoc(e) {
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+    } else if (state.currentPage === 'review') {
+        renderReviewPage();
     } else if (state.currentPage === 'detail') {
         renderDetailPage(doc.id);
     }
@@ -3056,9 +3073,9 @@ function highlightReviewDocFromLink(link, text = '') {
         targetCard = document.getElementById(`review-card-${docId}`);
     }
     if (!targetCard && text) {
-        const cards = document.querySelectorAll('.review-item-card');
+        const cards = document.querySelectorAll('.review-details-row, .review-item-card');
         for (const card of cards) {
-            const h3 = card.querySelector('h3');
+            const h3 = card.querySelector('h3, .win-file-title');
             if (h3 && text.includes(h3.textContent.trim())) {
                 targetCard = card;
                 break;
@@ -3139,53 +3156,144 @@ function renderReviewPage() {
         return;
     }
 
-    grid.className = 'review-list';
-    grid.innerHTML = pendingDocs.map(doc => {
-        const driveId = extractGoogleDriveId(doc.file_url) || doc.drive_id;
-        const isAuthorMe = state.user && (state.user.id === doc.author_id || state.user.fullname === doc.author_name);
-        return `
-            <div class="review-item-card" id="review-card-${doc.id}">
-                <div class="review-card-header">
-                    <div style="flex: 1; min-width: 260px;">
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-                            <span class="doc-badge-pill">Khối ${doc.grade} • ${getSubjectName(doc.subject)}</span>
-                            ${doc.category ? `<span class="badge" style="background:var(--primary-soft); color:var(--primary); font-size:0.75rem;">${getCategoryName(doc.category)}</span>` : ''}
-                            ${driveId ? `<span class="badge-drive" title="Đã lưu trữ an toàn trên Google Drive nguyentruongtonuithanh@gmail.com">☁️ Google Drive</span>` : ''}
-                            ${isAuthorMe ? `<span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700; font-size:0.75rem;">👤 Bài của bạn</span>` : ''}
-                        </div>
-                        <h3 style="margin-top:4px; font-size:1.25rem; line-height:1.4; color:var(--text-primary);">${escapeHtml(doc.title)}</h3>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:6px;">
-                            👤 Tác giả: <strong>${escapeHtml(doc.author_name)}</strong> (<span style="color:var(--primary); font-weight:600;">${escapeHtml(doc.author_dept || 'Tổ Chuyên Môn')}</span>) • 📅 Gửi lúc: ${timeAgo(doc.created_at)}
-                        </div>
-                    </div>
-                    <div class="badge-status-pending">
-                        ⏳ Đang chờ duyệt
-                    </div>
-                </div>
-                <p class="review-card-desc">${escapeHtml(doc.description || 'Chưa có mô tả nội dung chi tiết.')}</p>
-                <div>
-                    <div class="review-file-box">
-                        <span style="font-size:1.2rem;">${getFileTypeIcon(doc.file_name)}</span>
-                        <span>Tệp đính kèm: <strong>${escapeHtml(doc.file_name)}</strong> (${formatFileSize(doc.file_size)})</span>
-                        ${doc.file_url ? `<a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener" style="margin-left:auto; font-size:0.8rem; color:var(--primary); text-decoration:underline;">Mở link file ↗</a>` : ''}
-                    </div>
-                </div>
-                <div class="review-actions-bar">
-                    <button class="btn btn-preview" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">👁️ Xem trực tuyến</button>
-                    ${doc.file_url ? `
-                        <a href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Mở trực tiếp trên Google Drive">
-                            ☁️ Mở trên Drive ↗
-                        </a>
-                    ` : `
-                        <button class="btn btn-secondary" onclick="openDocumentInNewTab('${doc.id}')" title="Mở file lên xem trong tab mới">↗️ Mở tab mới</button>
-                    `}
-                    <button class="btn btn-download-action" onclick="downloadDocument('${doc.id}')" title="Tải file về máy">⬇️ Tải file về</button>
-                    <button class="btn btn-reject" onclick="rejectDocument('${doc.id}', this)">❌ Yêu cầu sửa</button>
-                    <button class="btn btn-approve" onclick="approveDocument('${doc.id}', this)">✅ Phê duyệt &amp; Công khai</button>
-                </div>
-            </div>
-        `;
-    }).join('');
+    // Sắp xếp các tài liệu chờ duyệt theo cột được chọn
+    const col = state.reviewSortCol || 'week';
+    const dir = state.reviewSortDir || 'asc';
+    const arrow = dir === 'asc' ? '▲' : '▼';
+    const sortDir = dir === 'desc' ? -1 : 1;
+
+    if (col === 'name') {
+        pendingDocs.sort((a, b) => a.title.localeCompare(b.title, 'vi') * sortDir);
+    } else if (col === 'author') {
+        pendingDocs.sort((a, b) => (a.author_name || '').localeCompare(b.author_name || '', 'vi') * sortDir);
+    } else if (col === 'date') {
+        pendingDocs.sort((a, b) => (new Date(a.created_at) - new Date(b.created_at)) * sortDir);
+    } else {
+        // Mặc định: theo tuần
+        pendingDocs.sort((a, b) => (getDocWeek(a) - getDocWeek(b)) * sortDir);
+    }
+
+    grid.className = 'review-list review-table-container';
+    grid.innerHTML = `
+        <div class="win-details-wrapper">
+            <table class="win-details-table win-review-table">
+                <thead>
+                    <tr class="win-details-header">
+                        <th class="col-name" onclick="handleReviewTableSort('name')" title="Bấm để sắp xếp theo Tên tài liệu">
+                            <div class="th-content">
+                                <span>Tên tài liệu</span>
+                                <span class="sort-arrow">${col === 'name' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-week th-center" onclick="handleReviewTableSort('week')" title="Bấm để sắp xếp theo Tuần">
+                            <div class="th-content th-center">
+                                <span>Tuần</span>
+                                <span class="sort-arrow">${col === 'week' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-author" onclick="handleReviewTableSort('author')" title="Bấm để sắp xếp theo Người soạn">
+                            <div class="th-content">
+                                <span>Người soạn</span>
+                                <span class="sort-arrow">${col === 'author' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-date th-center" onclick="handleReviewTableSort('date')" title="Bấm để sắp xếp theo Ngày gửi">
+                            <div class="th-content th-center">
+                                <span>Ngày gửi</span>
+                                <span class="sort-arrow">${col === 'date' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-btn-view th-center">Xem trước</th>
+                        <th class="col-btn-download th-center">Tải về</th>
+                        <th class="col-btn-approve th-center">Duyệt</th>
+                        <th class="col-btn-reject th-center">Trả lại</th>
+                        <th class="col-btn-edit th-center">Sửa</th>
+                        <th class="col-btn-delete th-center">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${pendingDocs.map(doc => {
+                        const weekNum = getDocWeek(doc);
+                        const canEdit = canUserEditDoc(doc);
+                        const canDelete = canUserDeleteDoc(doc);
+                        const isOwner = isDocOwner(doc);
+                        const isAdmin = state.user && state.user.role === 'admin';
+                        const driveId = extractGoogleDriveId(doc.file_url) || doc.drive_id;
+
+                        return `
+                            <tr class="win-details-row review-details-row" id="review-card-${doc.id}" onclick="navigate('#/detail/${doc.id}')" title="Nhấp vào dòng để xem chi tiết ${escapeHtml(doc.title)}">
+                                <td class="col-name">
+                                    <div class="win-file-cell">
+                                        <span class="win-file-icon ${getFileTypeClass(doc.file_name)}" title="${getFileTypeLabel(doc.file_name)}">
+                                            ${getFileTypeIcon(doc.file_name)}
+                                        </span>
+                                        <span class="win-file-title" title="${escapeHtml(doc.title)}">
+                                            ${escapeHtml(doc.title)}
+                                        </span>
+                                        ${driveId ? `<span class="badge-drive" style="font-size:0.7rem; padding:1px 6px; margin-left:4px; flex-shrink:0;" title="Đã lưu trữ an toàn trên Google Drive">☁️ Drive</span>` : ''}
+                                    </div>
+                                </td>
+                                <td class="col-week th-center">
+                                    <span class="win-week-badge">Tuần ${weekNum}</span>
+                                </td>
+                                <td class="col-author">
+                                    <span class="win-author-text" title="${escapeHtml(doc.author_name || 'Giáo viên')}${doc.author_dept ? ` (${escapeHtml(doc.author_dept)})` : ''}">
+                                        ${escapeHtml(doc.author_name || 'Giáo viên')}
+                                        ${doc.author_dept ? `<small style="display:block; font-size:0.75rem; color:var(--text-muted); line-height:1.2;">${escapeHtml(doc.author_dept)}</small>` : ''}
+                                    </span>
+                                </td>
+                                <td class="col-date th-center">
+                                    <span class="win-date-text">${formatDocDate(doc.created_at)}</span>
+                                </td>
+                                <td class="col-btn-view th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-view" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">
+                                        👁️ Xem
+                                    </button>
+                                </td>
+                                <td class="col-btn-download th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-download" onclick="handleDownloadDoc('${doc.id}')" title="Tải file về máy">
+                                        ⬇️ Tải về
+                                    </button>
+                                </td>
+                                <td class="col-btn-approve th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-approve" onclick="approveDocument('${doc.id}', this)" title="Phê duyệt &amp; Công khai học liệu này">
+                                        ✅ Duyệt
+                                    </button>
+                                </td>
+                                <td class="col-btn-reject th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-reject" onclick="rejectDocument('${doc.id}', this)" title="Trả lại &amp; Yêu cầu giáo viên sửa lại">
+                                        ❌ Trả lại
+                                    </button>
+                                </td>
+                                <td class="col-btn-edit th-center" onclick="event.stopPropagation()">
+                                    ${canEdit ? `
+                                        <button type="button" class="win-btn win-btn-edit" onclick="openEditDocModal('${doc.id}')" title="Sửa thông tin bài đăng này">
+                                            ✏️ Sửa
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng mới có quyền sửa bài này">
+                                            ✏️ Sửa
+                                        </button>
+                                    `}
+                                </td>
+                                <td class="col-btn-delete th-center" onclick="event.stopPropagation()">
+                                    ${canDelete ? `
+                                        <button type="button" class="win-btn win-btn-delete" onclick="handleDeleteDoc('${doc.id}')" title="${isAdmin && !isOwner ? 'Xóa bài này (Quyền Quản trị viên)' : 'Xóa bài đăng của bạn'}">
+                                            🗑️ Xóa
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng hoặc Quản trị viên mới được xóa">
+                                            🗑️ Xóa
+                                        </button>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 async function approveDocument(docId, btnElement = null) {

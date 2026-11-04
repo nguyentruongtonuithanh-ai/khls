@@ -3001,8 +3001,10 @@ optgroup {
     50% { transform: scale(1.02); box-shadow: 0 0 30px rgba(37, 99, 235, 0.8); }
     100% { transform: scale(1); box-shadow: 0 0 0 rgba(37, 99, 235, 0); }
 }
-.review-item-card.highlighted-card {
-    border: 2px solid #2563eb !important;
+.review-item-card.highlighted-card,
+.win-details-row.highlighted-card {
+    background: rgba(37, 99, 235, 0.15) !important;
+    outline: 2px solid #2563eb !important;
     animation: reviewHighlightPulse 1.2s ease 2;
 }
 
@@ -3328,6 +3330,8 @@ optgroup {
 .win-details-row td.col-date,
 .win-details-row td.col-btn-view,
 .win-details-row td.col-btn-download,
+.win-details-row td.col-btn-approve,
+.win-details-row td.col-btn-reject,
 .win-details-row td.col-btn-edit,
 .win-details-row td.col-btn-delete {
     text-align: center;
@@ -3364,12 +3368,29 @@ optgroup {
     width: 90px;
 }
 
+.win-details-table .col-btn-approve {
+    width: 80px;
+}
+
+.win-details-table .col-btn-reject {
+    width: 85px;
+}
+
 .win-details-table .col-btn-edit {
     width: 75px;
 }
 
 .win-details-table .col-btn-delete {
     width: 75px;
+}
+
+.win-review-table {
+    min-width: 960px;
+}
+
+.review-list.review-table-container {
+    max-width: 100%;
+    margin-top: var(--space-md);
 }
 
 .win-details-row {
@@ -3485,6 +3506,32 @@ optgroup {
     background: var(--primary);
     color: #ffffff;
     border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.win-btn-approve {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.win-btn-approve:hover {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #10b981;
+    transform: translateY(-1px);
+}
+
+.win-btn-reject {
+    background: rgba(244, 63, 94, 0.12);
+    color: #f43f5e;
+    border-color: rgba(244, 63, 94, 0.35);
+}
+
+.win-btn-reject:hover {
+    background: #f43f5e;
+    color: #ffffff;
+    border-color: #f43f5e;
     transform: translateY(-1px);
 }
 
