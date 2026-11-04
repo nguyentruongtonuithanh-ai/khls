@@ -877,7 +877,7 @@ const state = {
 
 // ======================== APP INITIALIZATION ========================
 
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
     CATEGORIES = store.getCategories();
     GRADES = store.getGrades();
     SUBJECTS = store.getSubjects();
@@ -916,7 +916,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('focus', () => {
         syncDocumentsFromDrive(false);
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
 // ======================== THEME ========================
 
@@ -3538,10 +3544,6 @@ async function rejectDocument(docId, btnElement = null) {
 
     const reason = prompt('Nhập lý do hoặc góp ý để giáo viên điều chỉnh lại tài liệu:', 'Cần bổ sung thêm phần dặn dò và phiếu bài tập theo chuẩn yêu cầu.');
     if (reason === null) return;
-
-    const docs = store.getDocuments();
-    const doc = docs.find(d => d.id === docId);
-    if (!doc) return;
 
     if (btnElement) {
         btnElement.disabled = true;
