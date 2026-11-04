@@ -1376,15 +1376,11 @@ function handleSaveDoc(e) {
         return;
     }
 
-    const title = document.getElementById('edit-doc-title').value.trim();
-    const category = document.getElementById('edit-doc-category').value;
-    const grade = document.getElementById('edit-doc-grade').value;
-    const subject = document.getElementById('edit-doc-subject').value;
-    const weekVal = document.getElementById('edit-doc-week').value;
-    const author = document.getElementById('edit-doc-author').value.trim();
-    const dept = document.getElementById('edit-doc-dept').value.trim();
-    const url = document.getElementById('edit-doc-url').value.trim();
-    const desc = document.getElementById('edit-doc-desc').value.trim();
+    const title = document.getElementById('edit-doc-title')?.value.trim();
+    const category = document.getElementById('edit-doc-category')?.value;
+    const grade = document.getElementById('edit-doc-grade')?.value;
+    const subject = document.getElementById('edit-doc-subject')?.value;
+    const weekVal = document.getElementById('edit-doc-week')?.value;
 
     if (!title) {
         showToast('Tiêu đề tài liệu không được để trống!', 'error');
@@ -1392,14 +1388,20 @@ function handleSaveDoc(e) {
     }
 
     doc.title = title;
-    doc.category = category;
-    doc.grade = grade;
-    doc.subject = subject;
-    doc.week = parseInt(weekVal, 10) || 1;
-    if (author) doc.author_name = author;
-    if (dept) doc.author_dept = dept;
-    if (url) doc.file_url = url;
-    doc.description = desc;
+    if (category) doc.category = category;
+    if (grade) doc.grade = grade;
+    if (subject) doc.subject = subject;
+    if (weekVal) doc.week = parseInt(weekVal, 10) || 1;
+
+    // Optional inputs (nếu có trong DOM thì cập nhật, không có thì giữ nguyên giá trị cũ)
+    const authorEl = document.getElementById('edit-doc-author');
+    if (authorEl && authorEl.value.trim()) doc.author_name = authorEl.value.trim();
+    const deptEl = document.getElementById('edit-doc-dept');
+    if (deptEl && deptEl.value.trim()) doc.author_dept = deptEl.value.trim();
+    const urlEl = document.getElementById('edit-doc-url');
+    if (urlEl && urlEl.value.trim()) doc.file_url = urlEl.value.trim();
+    const descEl = document.getElementById('edit-doc-desc');
+    if (descEl) doc.description = descEl.value.trim();
 
     store.saveDocuments(docs);
     closeEditDocModal();
