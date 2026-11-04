@@ -3095,62 +3095,18 @@ function renderReviewPage() {
     const grid = document.getElementById('review-docs-grid');
     if (!grid) return;
 
-    const filterContainer = document.getElementById('review-dept-filters');
     const allDocs = store.getDocuments();
-    const allPendingDocs = allDocs.filter(d => d.status === 'pending');
-
-    const departmentsList = [
-        'Tất cả',
-        'Tổ 1',
-        'Tổ 2',
-        'Tổ 3',
-        'Tổ 4',
-        'Tổ 5',
-        'Tổ Tin học - Ngoại ngữ',
-        'Tổ Âm nhạc - Mỹ thuật'
-    ];
-
-    // Render Department Filter Tabs
-    if (filterContainer) {
-        filterContainer.innerHTML = departmentsList.map(dept => {
-            const isAll = dept === 'Tất cả';
-            const count = isAll ? allPendingDocs.length : allPendingDocs.filter(d => (d.author_dept || '').trim() === dept).length;
-            const activeClass = (state.reviewDeptFilter === (isAll ? 'all' : dept)) ? 'active' : '';
-            return `
-                <button type="button" class="review-filter-pill ${activeClass}" onclick="setReviewDeptFilter('${isAll ? 'all' : dept}')">
-                    <span>${dept}</span>
-                    <span class="pill-badge">${count}</span>
-                </button>
-            `;
-        }).join('');
-    }
-
-    // Filter pending docs by department if selected (default 'all' shows everything!)
-    let pendingDocs = allPendingDocs;
-    if (state.reviewDeptFilter && state.reviewDeptFilter !== 'all') {
-        pendingDocs = pendingDocs.filter(d => (d.author_dept || '').trim() === state.reviewDeptFilter);
-    }
+    let pendingDocs = allDocs.filter(d => d.status === 'pending');
 
     if (pendingDocs.length === 0) {
-        grid.className = 'review-list';
+        grid.className = 'review-list review-table-container';
         grid.innerHTML = `
-            <div class="empty-state" style="padding: 40px 20px; text-align: center; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
+            <div class="empty-state" style="padding: 40px 20px; text-align: center; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-color); margin-top: 16px;">
                 <div style="font-size: 3.5rem; margin-bottom: 12px;">🎉</div>
-                <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 8px;">Không có tài liệu nào chờ duyệt trong mục này</h3>
-                <p style="color: var(--text-secondary); max-width: 540px; margin: 0 auto 20px; line-height: 1.6;">
-                    ${state.reviewDeptFilter !== 'all' ? `Tổ <strong>${state.reviewDeptFilter}</strong> hiện không có bài nào cần duyệt.` : 'Hiện tại không có học liệu nào đang chờ duyệt trong bộ nhớ máy.'}
-                    <br>Nếu Thầy/Cô vừa đóng góp học liệu từ máy tính khác hoặc mới tải lên, vui lòng bấm nút đồng bộ dưới đây để nạp từ Google Drive:
+                <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 8px;">Không có tài liệu nào chờ duyệt</h3>
+                <p style="color: var(--text-secondary); max-width: 540px; margin: 0 auto; line-height: 1.6;">
+                    Hiện tại tất cả học liệu đã được kiểm duyệt và xuất bản đầy đủ.
                 </p>
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-primary" onclick="syncDocumentsFromDrive(true)">
-                        🔄 Đồng bộ ngay từ Google Drive
-                    </button>
-                    ${state.reviewDeptFilter !== 'all' ? `
-                        <button type="button" class="btn btn-secondary" onclick="setReviewDeptFilter('all')">
-                            📂 Xem tất cả các tổ (${allPendingDocs.length})
-                        </button>
-                    ` : ''}
-                </div>
             </div>
         `;
         return;
