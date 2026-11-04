@@ -51,6 +51,7 @@
 
 /* Dark Theme (Default) */
 [data-theme="dark"] {
+    color-scheme: dark;
     --bg-primary: #0a0e27;
     --bg-secondary: #111539;
     --bg-surface: #181d42;
@@ -81,6 +82,7 @@
 
 /* Light Theme */
 [data-theme="light"] {
+    color-scheme: light;
     --bg-primary: #f8fafc;
     --bg-secondary: #f1f5f9;
     --bg-surface: #ffffff;
@@ -1496,6 +1498,65 @@ body.sidebar-collapsed .footer {
     box-shadow: 0 0 0 3px var(--primary-soft);
 }
 .form-input::placeholder { color: var(--text-muted); }
+
+/* Select and Option Styling to fix unreadable dropdown text */
+select.form-input,
+select.select-filter,
+select {
+    cursor: pointer;
+}
+
+select option,
+option {
+    background-color: var(--bg-surface, #181d42);
+    color: var(--text-primary, #f1f5f9);
+    padding: 8px 12px;
+}
+
+select optgroup,
+optgroup {
+    background-color: var(--bg-surface, #181d42);
+    color: var(--text-secondary, #94a3b8);
+    font-weight: 700;
+}
+
+[data-theme="dark"] select,
+[data-theme="dark"] select.form-input,
+[data-theme="dark"] select.select-filter {
+    background-color: #151a3d;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] select option,
+[data-theme="dark"] option {
+    background-color: #181d42 !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] select optgroup,
+[data-theme="dark"] optgroup {
+    background-color: #181d42 !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="light"] select,
+[data-theme="light"] select.form-input,
+[data-theme="light"] select.select-filter {
+    background-color: #ffffff;
+    color: #1e293b;
+}
+
+[data-theme="light"] select option,
+[data-theme="light"] option {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+}
+
+[data-theme="light"] select optgroup,
+[data-theme="light"] optgroup {
+    background-color: #ffffff !important;
+    color: #475569 !important;
+}
 
 .form-textarea {
     resize: vertical;
