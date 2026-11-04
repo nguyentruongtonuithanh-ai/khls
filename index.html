@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=6.4">
+    <link rel="stylesheet" href="css/style.css?v=6.5">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -39,7 +39,7 @@
                 <span>Đóng góp học liệu</span>
             </button>
 
-            <a href="#/review" class="btn btn-sm btn-outline" id="btn-header-review" title="Xem và phê duyệt các tài liệu mới nộp" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.85rem; border-radius:var(--radius-md); border-color:rgba(99,102,241,0.35);">
+            <a href="#/review" class="btn btn-sm btn-outline" id="btn-header-review" title="Xem và phê duyệt các tài liệu mới nộp" style="display:none; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.85rem; border-radius:var(--radius-md); border-color:rgba(99,102,241,0.35);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                 <span>Duyệt học liệu</span>
             </a>
@@ -60,7 +60,7 @@
                         <!-- Render qua JS -->
                     </div>
                     <div class="notification-footer" id="notification-footer">
-                        <a href="#/review" class="notification-footer-link" id="notification-review-link">
+                        <a href="#/review" class="notification-footer-link" id="notification-review-link" style="display:none;">
                             Đi đến trang kiểm duyệt học liệu →
                         </a>
                     </div>
@@ -81,7 +81,7 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
                     <div class="dropdown-menu" id="user-dropdown">
-                        <a href="#/review" class="dropdown-item" id="menu-review" style="font-weight:600;">
+                        <a href="#/review" class="dropdown-item" id="menu-review" style="font-weight:600; display:none;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                             <span>Duyệt học liệu</span>
                         </a>
@@ -119,7 +119,7 @@
             <a href="#/" class="tree-link" style="font-weight:600; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 8px;">
                 <span>🏠</span> <span>Trang chủ</span>
             </a>
-            <a href="#/review" class="tree-link" id="sidebar-review-link" style="font-weight:600; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 8px;">
+            <a href="#/review" class="tree-link" id="sidebar-review-link" style="font-weight:600; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); display: none; align-items: center; gap: 8px;">
                 <span>📋</span> <span>Duyệt học liệu</span>
             </a>
         </div>
@@ -490,7 +490,7 @@
                         <span class="breadcrumb-sep">›</span>
                         <span>Kiểm duyệt tài liệu</span>
                     </div>
-                    <h1 class="page-title">📋 Tài liệu chờ duyệt</h1>
+                    <h1 class="page-title" id="review-page-title">📋 Tài liệu chờ duyệt</h1>
                 </div>
 
                 <div class="review-list review-table-container" id="review-docs-grid">
@@ -1398,6 +1398,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=6.4"></script>
+    <script src="js/app.js?v=6.5"></script>
 </body>
 </html>

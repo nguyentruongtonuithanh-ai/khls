@@ -86,6 +86,71 @@ const INITIAL_USERS = [
         total_stars: 55
     },
     {
+        id: 9,
+        username: 'totruong2',
+        fullname: 'Nguyễn Thị Lan',
+        password: '123456',
+        role: 'leader',
+        department: 'Tổ 2',
+        honor: 'Tổ trưởng Chuyên môn Khối 2',
+        avatar_letter: 'L',
+        total_uploads: 10,
+        total_downloads: 780,
+        total_stars: 48
+    },
+    {
+        id: 10,
+        username: 'totruong4',
+        fullname: 'Trần Quang Huy',
+        password: '123456',
+        role: 'leader',
+        department: 'Tổ 4',
+        honor: 'Tổ trưởng Chuyên môn Khối 4',
+        avatar_letter: 'H',
+        total_uploads: 13,
+        total_downloads: 820,
+        total_stars: 52
+    },
+    {
+        id: 11,
+        username: 'totruong5',
+        fullname: 'Nguyễn Thị Thảo',
+        password: '123456',
+        role: 'leader',
+        department: 'Tổ 5',
+        honor: 'Tổ trưởng Chuyên môn Khối 5',
+        avatar_letter: 'T',
+        total_uploads: 15,
+        total_downloads: 940,
+        total_stars: 60
+    },
+    {
+        id: 12,
+        username: 'totruong_tinhoc',
+        fullname: 'Lê Bảo Anh',
+        password: '123456',
+        role: 'leader',
+        department: 'Tổ Tin học - Ngoại ngữ',
+        honor: 'Tổ trưởng Chuyên môn Tin học & Ngoại ngữ',
+        avatar_letter: 'A',
+        total_uploads: 8,
+        total_downloads: 650,
+        total_stars: 40
+    },
+    {
+        id: 13,
+        username: 'totruong_amnhac',
+        fullname: 'Nguyễn Thanh Tùng',
+        password: '123456',
+        role: 'leader',
+        department: 'Tổ Âm nhạc - Mỹ thuật',
+        honor: 'Tổ trưởng Chuyên môn Âm nhạc & Mỹ thuật',
+        avatar_letter: 'T',
+        total_uploads: 9,
+        total_downloads: 590,
+        total_stars: 38
+    },
+    {
         id: 4,
         username: 'gvha',
         fullname: 'Lê Thu Hà',
@@ -531,6 +596,7 @@ const INITIAL_NOTIFICATIONS = [
         time: '20 phút trước',
         icon: '📋',
         type: 'review',
+        department: 'Tổ 1',
         link: '#/review',
         unread: true
     },
@@ -541,6 +607,7 @@ const INITIAL_NOTIFICATIONS = [
         time: '1 giờ trước',
         icon: '💻',
         type: 'review',
+        department: 'Tổ 4',
         link: '#/review',
         unread: true
     },
@@ -628,6 +695,13 @@ const store = {
                 }
                 if (u && !u.password) {
                     u.password = (u.username === 'admin' || u.role === 'admin') ? 'admin' : '123456';
+                    updated = true;
+                }
+            });
+            INITIAL_USERS.forEach(initU => {
+                const found = users.find(u => u.username === initU.username || u.id === initU.id);
+                if (!found) {
+                    users.push({ ...initU });
                     updated = true;
                 }
             });
@@ -912,6 +986,11 @@ function handleRoute() {
         renderDetailPage(docId);
         syncDocumentsFromDrive(false);
     } else if (page === 'review') {
+        if (!canUserAccessReview(state.user)) {
+            showToast('Thầy/Cô không có quyền truy cập mục Duyệt học liệu! Mục này chỉ dành cho Ban Giám Hiệu và Tổ trưởng chuyên môn.', 'warning');
+            navigate('#/');
+            return;
+        }
         renderReviewPage();
         const docParam = queryParams.get('doc');
         if (docParam) {
@@ -1289,6 +1368,85 @@ function canUserEditDoc(doc, user = state.user) {
     if (user.role === 'admin') return true;
     // Chủ nhân của bài đăng sẽ được quyền sửa bài đó
     return isDocOwner(doc, user);
+}
+
+function normalizeDept(dept) {
+    if (!dept) return '';
+    return dept.toString().trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function isSameDepartment(dept1, dept2) {
+    const d1 = normalizeDept(dept1);
+    const d2 = normalizeDept(dept2);
+    if (!d1 || !d2) return false;
+    if (d1 === d2) return true;
+
+    // So khớp chữ số tổ: ví dụ "tổ 1" và "tổ 1 chuyên môn", hoặc "1"
+    const num1 = d1.match(/\d+/)?.[0];
+    const num2 = d2.match(/\d+/)?.[0];
+    if (num1 && num2 && num1 === num2 && d1.includes('tổ') && d2.includes('tổ')) {
+        return true;
+    }
+    if (d1.includes('tin học') && d2.includes('tin học')) return true;
+    if (d1.includes('mỹ thuật') && d2.includes('mỹ thuật')) return true;
+    if (d1.includes('âm nhạc') && d2.includes('âm nhạc')) return true;
+
+    return false;
+}
+
+function canUserAccessReview(user = state.user) {
+    if (!user) return false;
+    if (user.role === 'admin' || user.username === 'admin') return true;
+    if (user.role === 'leader') return true;
+    if (user.username && user.username.toLowerCase().startsWith('totruong')) return true;
+    if (user.honor && user.honor.toLowerCase().includes('tổ trưởng')) return true;
+    return false;
+}
+
+function getLeaderAssignedGrade(user) {
+    if (!user) return null;
+    const dept = (user.department || '').toLowerCase();
+    const honor = (user.honor || '').toLowerCase();
+    const uname = (user.username || '').toLowerCase();
+    const match = dept.match(/tổ\s*([1-5])\b/i) 
+               || dept.match(/khối\s*([1-5])\b/i) 
+               || honor.match(/khối\s*([1-5])\b/i) 
+               || uname.match(/totruong([1-5])\b/i);
+    return match ? String(match[1]) : null;
+}
+
+function canUserReviewDoc(doc, user = state.user) {
+    if (!user || !canUserAccessReview(user)) return false;
+    // Admin / Ban Giám Hiệu có toàn quyền duyệt mọi tài liệu
+    if (user.role === 'admin' || user.username === 'admin') return true;
+    if (!doc) return false;
+
+    // Tổ trưởng khối 1 -> 5: chỉ được duyệt tài liệu của các môn thuộc khối lớp đó
+    const assignedGrade = getLeaderAssignedGrade(user);
+    if (assignedGrade) {
+        return String(doc.grade || '').trim() === assignedGrade;
+    }
+
+    // Nếu là tổ bộ môn đặc thù (Tin học - Ngoại ngữ / Âm nhạc - Mỹ thuật)
+    const userDept = normalizeDept(user.department);
+    const uname = (user.username || '').toLowerCase();
+    const docSubject = (doc.subject || '').toLowerCase();
+
+    if (userDept.includes('tin học') || userDept.includes('ngoại ngữ') || uname.includes('tinhoc')) {
+        return docSubject.includes('tin') || docSubject.includes('anh') || isSameDepartment(user.department, doc.author_dept);
+    }
+    if (userDept.includes('âm nhạc') || userDept.includes('mỹ thuật') || uname.includes('amnhac')) {
+        return docSubject.includes('nhac') || docSubject.includes('my') || isSameDepartment(user.department, doc.author_dept);
+    }
+
+    // Dự phòng theo tổ tác giả nếu không thuộc các trường hợp trên
+    let docDept = (doc.author_dept || '').trim();
+    if (!docDept && doc.author_id) {
+        const author = store.getUsers().find(u => u.id === doc.author_id);
+        if (author && author.department) docDept = author.department.trim();
+    }
+
+    return isSameDepartment(user.department, docDept);
 }
 
 function handleDeleteDoc(docId) {
@@ -3095,8 +3253,38 @@ function renderReviewPage() {
     const grid = document.getElementById('review-docs-grid');
     if (!grid) return;
 
+    if (!canUserAccessReview(state.user)) {
+        showToast('Thầy/Cô không có quyền truy cập mục Duyệt học liệu! Mục này chỉ dành cho Ban Giám Hiệu và Tổ trưởng chuyên môn.', 'warning');
+        navigate('#/');
+        return;
+    }
+
+    const titleEl = document.getElementById('review-page-title');
+    if (titleEl) {
+        if (state.user.role === 'admin' || state.user.username === 'admin') {
+            titleEl.textContent = '📋 Tài liệu chờ duyệt (Toàn trường)';
+        } else {
+            const assignedGrade = getLeaderAssignedGrade(state.user);
+            if (assignedGrade) {
+                titleEl.textContent = `📋 Tài liệu chờ duyệt - Khối ${assignedGrade} (${state.user.department || 'Tổ chuyên môn'})`;
+            } else {
+                titleEl.textContent = `📋 Tài liệu chờ duyệt - ${state.user.department || 'Tổ chuyên môn'}`;
+            }
+        }
+    }
+
     const allDocs = store.getDocuments();
-    let pendingDocs = allDocs.filter(d => d.status === 'pending');
+    const allPendingDocs = allDocs.filter(d => d.status === 'pending');
+
+    // Phân quyền hiển thị:
+    // - Admin: xem được tài liệu chờ duyệt của tất cả các tổ
+    // - Tổ trưởng: CHỈ xem và duyệt tài liệu của giáo viên trong tổ mình!
+    let pendingDocs = [];
+    if (state.user.role === 'admin' || state.user.username === 'admin') {
+        pendingDocs = allPendingDocs;
+    } else {
+        pendingDocs = allPendingDocs.filter(doc => canUserReviewDoc(doc, state.user));
+    }
 
     if (pendingDocs.length === 0) {
         grid.className = 'review-list review-table-container';
@@ -3105,7 +3293,7 @@ function renderReviewPage() {
                 <div style="font-size: 3.5rem; margin-bottom: 12px;">🎉</div>
                 <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 8px;">Không có tài liệu nào chờ duyệt</h3>
                 <p style="color: var(--text-secondary); max-width: 540px; margin: 0 auto; line-height: 1.6;">
-                    Hiện tại tất cả học liệu đã được kiểm duyệt và xuất bản đầy đủ.
+                    ${(state.user.role === 'admin' || state.user.username === 'admin') ? 'Hiện tại tất cả học liệu toàn trường đã được kiểm duyệt và xuất bản đầy đủ.' : `Hiện tại <strong>${state.user.department || 'tổ của Thầy/Cô'}</strong> không có học liệu nào đang chờ duyệt.`}
                 </p>
             </div>
         `;
@@ -3255,6 +3443,11 @@ async function approveDocument(docId, btnElement = null) {
     const doc = docs.find(d => d.id === docId);
     if (!doc) return;
 
+    if (!canUserReviewDoc(doc, state.user)) {
+        showToast(`Thầy/Cô chỉ có quyền duyệt học liệu của khối lớp / tổ chuyên môn được phân công!`, 'error');
+        return;
+    }
+
     if (btnElement) {
         btnElement.disabled = true;
         btnElement.innerHTML = '⏳ Đang đồng bộ lên Drive...';
@@ -3334,6 +3527,15 @@ async function approveDocument(docId, btnElement = null) {
 }
 
 async function rejectDocument(docId, btnElement = null) {
+    const docs = store.getDocuments();
+    const doc = docs.find(d => d.id === docId);
+    if (!doc) return;
+
+    if (!canUserReviewDoc(doc, state.user)) {
+        showToast(`Thầy/Cô chỉ có quyền xử lý học liệu của khối lớp / tổ chuyên môn được phân công!`, 'error');
+        return;
+    }
+
     const reason = prompt('Nhập lý do hoặc góp ý để giáo viên điều chỉnh lại tài liệu:', 'Cần bổ sung thêm phần dặn dò và phiếu bài tập theo chuẩn yêu cầu.');
     if (reason === null) return;
 
@@ -3379,11 +3581,42 @@ async function rejectDocument(docId, btnElement = null) {
 
 // ======================== NOTIFICATIONS DROPDOWN ========================
 
+function filterNotificationsForUser(notifs, user = state.user) {
+    if (!user) return [];
+    return notifs.filter(n => {
+        // Nếu là thông báo kiểm duyệt:
+        if (n.type === 'review' || (n.link && n.link.startsWith('#/review'))) {
+            // Chỉ hiển thị cho Admin và Tổ trưởng
+            if (!canUserAccessReview(user)) return false;
+            // Admin xem tất cả thông báo
+            if (user.role === 'admin' || user.username === 'admin') return true;
+
+            // Nếu là tổ trưởng khối lớp 1..5: chỉ xem thông báo học liệu của khối đó
+            const leaderGrade = getLeaderAssignedGrade(user);
+            if (leaderGrade) {
+                if (n.grade) {
+                    return String(n.grade).trim() === leaderGrade;
+                }
+                const docIdMatch = (n.link || '').match(/doc=([^&]+)/);
+                if (docIdMatch) {
+                    const doc = store.getDocuments().find(d => String(d.id) === String(docIdMatch[1]));
+                    if (doc) return String(doc.grade || '').trim() === leaderGrade;
+                }
+                if (n.department && !isSameDepartment(n.department, user.department)) return false;
+            } else if (user.department && n.department && !isSameDepartment(n.department, user.department)) {
+                return false;
+            }
+        }
+        return true;
+    });
+}
+
 function updatePendingBadge() {
     const badge = document.getElementById('notification-badge');
     const notifBtn = document.getElementById('notification-btn');
     const notifs = store.getNotifications();
-    const unreadCount = notifs.filter(n => n.unread).length;
+    const userNotifs = filterNotificationsForUser(notifs, state.user);
+    const unreadCount = userNotifs.filter(n => n.unread).length;
 
     if (badge) {
         badge.textContent = unreadCount;
@@ -3404,8 +3637,9 @@ function renderNotificationList() {
     if (!listEl) return;
 
     const notifs = store.getNotifications();
+    const userNotifs = filterNotificationsForUser(notifs, state.user);
 
-    if (!notifs || notifs.length === 0) {
+    if (!userNotifs || userNotifs.length === 0) {
         listEl.innerHTML = `
             <div class="notification-empty">
                 <span style="font-size:1.8rem; display:block; margin-bottom:6px;">📭</span>
@@ -3415,7 +3649,7 @@ function renderNotificationList() {
         return;
     }
 
-    listEl.innerHTML = notifs.map(n => `
+    listEl.innerHTML = userNotifs.map(n => `
         <div class="notification-item ${n.unread ? 'unread' : ''}" onclick="handleNotificationClick('${n.id}')">
             <div class="notification-icon-box">${n.icon || '🔔'}</div>
             <div class="notification-body">
@@ -3471,7 +3705,10 @@ function handleNotificationClick(notifId) {
         closeNotificationDropdown();
         if (notif.link) {
             if (notif.link.startsWith('#/review')) {
-                state.reviewDeptFilter = 'all'; // Đảm bảo hiển thị tất cả các tổ
+                if (!canUserAccessReview(state.user)) {
+                    showToast('Thầy/Cô không có quyền truy cập mục Duyệt học liệu! Mục này chỉ dành cho Ban Giám Hiệu và Tổ trưởng chuyên môn.', 'warning');
+                    return;
+                }
                 if (state.currentPage === 'review') {
                     renderReviewPage();
                 }
@@ -5526,10 +5763,13 @@ function initUploadForm() {
         notifs.unshift({
             id: 'notif-' + Date.now(),
             title: 'Tài liệu mới chờ duyệt',
-            text: `${currentUser.fullname} vừa nộp: ${title}`,
+            text: `${currentUser.fullname} (${currentUser.department || 'Giáo viên'}) vừa nộp: ${title}`,
             time: 'Vừa xong',
             icon: '📋',
             type: 'review',
+            grade: newDoc.grade,
+            subject: newDoc.subject,
+            department: currentUser.department,
             link: `#/review?doc=${newDoc.id}`,
             unread: true
         });
@@ -5546,13 +5786,17 @@ function initUploadForm() {
         document.getElementById('upload-dropzone').style.display = '';
 
         updatePendingBadge();
-        showToast('🎉 Gửi học liệu thành công! Đã lưu trọn vẹn nội dung file.', 'success');
-        state.reviewDeptFilter = 'all';
-        navigate(`#/review?doc=${newDoc.id}`);
-        renderReviewPage();
-        setTimeout(() => {
-            highlightReviewDocFromLink(`#/review?doc=${newDoc.id}`, newDoc.title);
-        }, 150);
+        showToast('🎉 Gửi học liệu thành công! Tài liệu đã được gửi tới Tổ trưởng / Ban Giám Hiệu chờ phê duyệt.', 'success');
+        if (canUserAccessReview(state.user)) {
+            navigate(`#/review?doc=${newDoc.id}`);
+            renderReviewPage();
+            setTimeout(() => {
+                highlightReviewDocFromLink(`#/review?doc=${newDoc.id}`, newDoc.title);
+            }, 150);
+        } else {
+            navigate('#/profile');
+            renderProfilePage();
+        }
     });
 }
 
@@ -5680,6 +5924,17 @@ function updateUserUI() {
     const uploadSidebar = document.getElementById('btn-upload-sidebar');
     const menuDashboard = document.getElementById('menu-dashboard');
     const menuAdmin = document.getElementById('menu-admin');
+    const btnHeaderReview = document.getElementById('btn-header-review');
+    const sidebarReviewLink = document.getElementById('sidebar-review-link');
+    const menuReview = document.getElementById('menu-review');
+    const notifReviewLink = document.getElementById('notification-review-link');
+
+    // Phân quyền mục Duyệt học liệu: Chỉ Admin và Tổ trưởng mới thấy
+    const canReview = canUserAccessReview(state.user);
+    if (btnHeaderReview) btnHeaderReview.style.display = canReview ? 'inline-flex' : 'none';
+    if (sidebarReviewLink) sidebarReviewLink.style.display = canReview ? 'flex' : 'none';
+    if (menuReview) menuReview.style.display = canReview ? 'flex' : 'none';
+    if (notifReviewLink) notifReviewLink.style.display = canReview ? 'block' : 'none';
 
     if (state.user) {
         if (state.user.fullname) {
@@ -6669,6 +6924,9 @@ async function syncDocumentsFromDrive(isManual = false) {
                                 time: 'Mới cập nhật',
                                 icon: '☁️',
                                 type: 'review',
+                                grade: cloudDoc.grade,
+                                subject: cloudDoc.subject,
+                                department: cloudDoc.author_dept,
                                 link: '#/review?doc=' + cloudDoc.id,
                                 unread: true
                             });
@@ -6973,6 +7231,9 @@ async function handleContributeSubmit(e) {
             time: 'Vừa xong',
             icon: '📋',
             type: 'review',
+            grade: newDoc.grade,
+            subject: newDoc.subject,
+            department: authorDept,
             link: `#/review?doc=${newDoc.id}`,
             unread: true
         });
@@ -6986,15 +7247,19 @@ async function handleContributeSubmit(e) {
         } else if (activeGas && gasUploadFailed) {
             showToast(`🎉 Đóng góp học liệu thành công! (Đã lưu an toàn vào hệ thống).`, 'info');
         } else {
-            showToast(`🎉 Đóng góp học liệu thành công! (Tài liệu đã lưu an toàn vào hệ thống chờ Ban Giám Hiệu duyệt).`, 'success');
+            showToast(`🎉 Đóng góp học liệu thành công! (Tài liệu đã gửi tới Tổ trưởng / Ban Giám Hiệu chờ phê duyệt).`, 'success');
         }
 
-        state.reviewDeptFilter = 'all'; // Đảm bảo mở ra là thấy ngay tất cả bài chờ duyệt
-        navigate(`#/review?doc=${newDoc.id}`);
-        renderReviewPage();
-        setTimeout(() => {
-            highlightReviewDocFromLink(`#/review?doc=${newDoc.id}`, newDoc.title);
-        }, 150);
+        if (canUserAccessReview(state.user)) {
+            navigate(`#/review?doc=${newDoc.id}`);
+            renderReviewPage();
+            setTimeout(() => {
+                highlightReviewDocFromLink(`#/review?doc=${newDoc.id}`, newDoc.title);
+            }, 150);
+        } else {
+            navigate('#/profile');
+            renderProfilePage();
+        }
 
     } catch (err) {
         console.error('Lỗi khi tải lên Google Drive:', err);
