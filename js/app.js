@@ -1547,12 +1547,30 @@ function handleDeleteDoc(docId) {
         setTimeout(() => cardEl.remove(), 250);
     }
 
-    // 5. Gửi tín hiệu xóa lên Google Drive Apps Script nếu có
+    // 5. Đồng bộ danh sách tài liệu đã xóa lên Google Drive để mọi tài khoản/thiết bị khác tự động cập nhật
+    setTimeout(() => {
+        pushStructureToCloud(false);
+    }, 100);
+
+    // 6. Gửi tín hiệu xóa và cập nhật trạng thái rejected lên Google Drive Apps Script
     const settings = store.getSettings();
     const myGas = localStorage.getItem('khls_my_drive_gas_url');
     const activeGas = myGas || settings.drive_gas_url;
     if (activeGas && (doc.drive_id || doc.id)) {
         try {
+            // Gửi action reject để cập nhật ngay lập tức trên cơ sở dữ liệu Drive hiện tại (status = 'rejected')
+            fetch(activeGas, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'reject',
+                    docId: doc.id,
+                    driveId: doc.drive_id || '',
+                    rejectReason: 'DELETED_BY_ADMIN'
+                })
+            }).catch(e => console.warn('Lỗi đồng bộ reject Drive:', e));
+
+            // Gửi action delete để xóa vĩnh viễn tệp
             fetch(activeGas, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -5636,6 +5654,7 @@ async function pushStructureToCloud(showNotification = false) {
     const categories = store.getCategories();
     const grades = store.getGrades();
     const subjects = store.getSubjects();
+    const deleted_doc_ids = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
     const timestamp = Date.now();
     localStorage.setItem('khls_structure_timestamp', String(timestamp));
 
@@ -5643,6 +5662,7 @@ async function pushStructureToCloud(showNotification = false) {
         categories,
         grades,
         subjects,
+        deleted_doc_ids,
         timestamp,
         updated_by: (state.user && state.user.fullname) || 'Admin',
         updated_at: new Date().toISOString()
@@ -6093,13 +6113,23 @@ function loginAs(user) {
     localStorage.setItem('khls-user', JSON.stringify(user));
     updateUserUI();
     updatePendingBadge();
+
+    // Vẽ lại trang hiện tại theo quyền hạn tài khoản mới
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+    } else if (state.currentPage === 'review') {
+        renderReviewPage();
+    } else if (state.currentPage === 'home') {
+        renderHomePage();
     }
-    // Nếu đăng nhập là Admin, tự động đồng bộ cấu trúc mới nhất lên Drive
+
+    // Nếu đăng nhập là Admin: đồng bộ cấu trúc và danh sách xóa lên Drive
     if (user && user.role === 'admin') {
-        setTimeout(() => pushStructureToCloud(false), 500);
+        setTimeout(() => pushStructureToCloud(false), 400);
+    } else {
+        // Tài khoản giáo viên/tổ trưởng: đồng bộ ngay từ Drive về để cập nhật danh sách bài đã xóa/duyệt
+        setTimeout(() => syncDocumentsFromDrive(false), 300);
     }
 }
 
@@ -6107,15 +6137,16 @@ function handleLogout() {
     state.user = null;
     localStorage.removeItem('khls-user');
     updateUserUI();
+    updatePendingBadge();
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
-    } else {
+    } else if (state.currentPage === 'review') {
         navigate('#/');
+    } else if (state.currentPage === 'home') {
+        renderHomePage();
     }
     showToast('Đã đăng xuất khỏi hệ thống', 'info');
-    const dropdown = document.getElementById('user-dropdown');
-    if (dropdown) dropdown.classList.remove('active');
 }
 
 function updateUserUI() {
@@ -7013,14 +7044,14 @@ async function syncDocumentsFromDrive(isManual = false) {
 
         const data = await resp.json();
         if (data && data.status === 'success' && Array.isArray(data.documents)) {
-            // 1. Tự động đồng bộ Cấu trúc thư mục (Categories, Grades, Subjects) nếu trên Drive có bản mới từ Admin
+            // 1. Tự động đồng bộ Cấu trúc thư mục và Danh sách học liệu đã xóa từ Admin
             const structDocs = data.documents.filter(d => d.id === '__khls_structure__' || d.title === '__KHLSSYSTEM_STRUCTURE__');
             let cloudStruct = null;
             let maxTimestamp = 0;
             structDocs.forEach(d => {
                 try {
                     const parsed = typeof d.description === 'string' ? JSON.parse(d.description) : d.description;
-                    if (parsed && (parsed.timestamp || parsed.categories || parsed.subjects)) {
+                    if (parsed && (parsed.timestamp || parsed.categories || parsed.subjects || parsed.deleted_doc_ids)) {
                         const t = Number(parsed.timestamp) || 1;
                         if (t >= maxTimestamp) {
                             maxTimestamp = t;
@@ -7031,6 +7062,13 @@ async function syncDocumentsFromDrive(isManual = false) {
             });
 
             if (cloudStruct) {
+                // 1a. Nhận danh sách các tài liệu đã bị Admin xóa từ Google Drive
+                if (Array.isArray(cloudStruct.deleted_doc_ids) && cloudStruct.deleted_doc_ids.length > 0) {
+                    cloudStruct.deleted_doc_ids.forEach(delId => {
+                        store.addDeletedDocId(delId);
+                    });
+                }
+
                 const curCats = store.getCategories();
                 const curGrades = store.getGrades();
                 const curSubs = store.getSubjects();
@@ -7072,22 +7110,45 @@ async function syncDocumentsFromDrive(isManual = false) {
                 }
             }
 
-            // 2. Lọc bỏ bản ghi hệ thống và các tài liệu đã bị xóa
+            // 2. Lọc bỏ bản ghi hệ thống và các tài liệu đã bị xóa hoặc đã bị từ chối/gỡ bỏ
             const deletedIds = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
+            const isDocBlacklisted = (d) => {
+                if (!d) return false;
+                if (d.status === 'rejected') return true;
+                const sId = String(d.id || '').trim();
+                const sDrive = String(d.drive_id || '').trim();
+                if (sId && deletedIds.includes(sId)) return true;
+                if (sDrive && deletedIds.includes(sDrive)) return true;
+                return false;
+            };
+
             const validCloudDocs = data.documents.filter(d => 
                 d.id !== '__khls_structure__' && 
                 d.title !== '__KHLSSYSTEM_STRUCTURE__' &&
-                !deletedIds.includes(String(d.id)) &&
-                (!d.drive_id || !deletedIds.includes(String(d.drive_id)))
+                !isDocBlacklisted(d)
             );
             let localDocs = store.getDocuments().filter(d => 
                 d.id !== '__khls_structure__' && 
                 d.title !== '__KHLSSYSTEM_STRUCTURE__' &&
-                !deletedIds.includes(String(d.id)) &&
-                (!d.drive_id || !deletedIds.includes(String(d.drive_id)))
+                !isDocBlacklisted(d)
             );
             let hasChanges = false;
             let newDocsCount = 0;
+
+            // Xóa tức thì các phần tử trong DOM nếu đã bị đưa vào danh sách xóa
+            deletedIds.forEach(delId => {
+                const r = document.getElementById('doc-row-' + delId);
+                if (r) r.remove();
+                const c = document.getElementById('doc-card-' + delId);
+                if (c) c.remove();
+            });
+
+            // Lọc bỏ bất kỳ tài liệu nào trong localDocs trùng với danh sách đã xóa
+            const prevLen = localDocs.length;
+            localDocs = localDocs.filter(d => !isDocBlacklisted(d));
+            if (localDocs.length !== prevLen) {
+                hasChanges = true;
+            }
 
             validCloudDocs.forEach(cloudDoc => {
                 const existingIdx = localDocs.findIndex(d => 

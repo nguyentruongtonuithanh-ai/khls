@@ -138,6 +138,18 @@ function doPost(e) {
       return responseJSON({ status: "error", message: "Không tìm thấy mã học liệu: " + data.docId });
     }
 
+    // Xử lý Xóa vĩnh viễn học liệu khỏi cơ sở dữ liệu trên Drive
+    if (data.action === "delete") {
+      var allDocs = loadDocuments(folder);
+      var newDocs = allDocs.filter(function(d) {
+        var matchId = data.docId && String(d.id) === String(data.docId);
+        var matchDrive = data.driveId && String(d.drive_id) === String(data.driveId);
+        return !matchId && !matchDrive;
+      });
+      saveDocumentsDb(folder, newDocs);
+      return responseJSON({ status: "success", message: "Đã xóa học liệu trên Drive", deletedDocId: data.docId });
+    }
+
     // Xử lý Đồng bộ Cấu trúc thư mục (Danh mục, Khối lớp, Môn học) dùng chung toàn trường
     if (data.action === "sync_structure" || data.docId === "__khls_structure__") {
       var allDocs = loadDocuments(folder);
