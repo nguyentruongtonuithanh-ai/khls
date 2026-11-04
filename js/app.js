@@ -3388,7 +3388,6 @@ function renderReviewPage() {
                                         <span class="win-file-title" title="${escapeHtml(doc.title)}">
                                             ${escapeHtml(doc.title)}
                                         </span>
-                                        ${driveId ? `<span class="badge-drive" style="font-size:0.7rem; padding:1px 6px; margin-left:4px; flex-shrink:0;" title="Đã lưu trữ an toàn trên Google Drive">☁️ Drive</span>` : ''}
                                     </div>
                                 </td>
                                 <td class="col-category">
