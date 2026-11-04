@@ -3751,6 +3751,9 @@ function renderAdminPage(activeTab = 'users') {
                     </p>
                 </div>
                 <div class="admin-tree-actions-primary">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="pushStructureToCloud(true)" title="Đẩy toàn bộ cây thư mục lên Google Drive chung để máy giáo viên tự động cập nhật">
+                        ☁️ Đồng bộ lên Drive toàn trường
+                    </button>
                     <button type="button" class="btn btn-primary btn-sm" onclick="openEditCategoryModal(null)">
                         ➕ Thêm Danh mục chính
                     </button>
@@ -4529,6 +4532,7 @@ function handleSaveCategory(e) {
     renderCategories();
     syncCategorySelects();
     renderAdminPage('categories');
+    pushStructureToCloud(false);
 }
 
 function deleteCategory(catId) {
@@ -4573,6 +4577,7 @@ function deleteCategory(catId) {
         renderCategories();
         syncCategorySelects();
         renderAdminPage('categories');
+        pushStructureToCloud(false);
     }
 }
 
@@ -4885,6 +4890,7 @@ function handleSaveGrade(e) {
         const cat = store.getCategories().find(c => c.id === currentSubfolderCatId);
         if (cat) renderSubfoldersModalBody(cat);
     }
+    pushStructureToCloud(false);
 }
 
 function deleteGrade(gradeId) {
@@ -4919,6 +4925,7 @@ function deleteGrade(gradeId) {
             const cat = store.getCategories().find(c => c.id === currentSubfolderCatId);
             if (cat) renderSubfoldersModalBody(cat);
         }
+        pushStructureToCloud(false);
     }
 }
 
@@ -5054,6 +5061,7 @@ function handleSaveSubject(e) {
         const cat = store.getCategories().find(c => c.id === currentSubfolderCatId);
         if (cat) renderSubfoldersModalBody(cat);
     }
+    pushStructureToCloud(false);
 }
 
 function deleteSubject(subjectId) {
@@ -5088,6 +5096,75 @@ function deleteSubject(subjectId) {
             const cat = store.getCategories().find(c => c.id === currentSubfolderCatId);
             if (cat) renderSubfoldersModalBody(cat);
         }
+        pushStructureToCloud(false);
+    }
+}
+
+// ======================== STRUCTURE CLOUD SYNC (ĐỒNG BỘ CẤU TRÚC THƯ MỤC LÊN GOOGLE DRIVE) ========================
+
+async function pushStructureToCloud(showNotification = false) {
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const settings = store.getSettings();
+    const activeGas = myGas || settings.drive_gas_url;
+    if (!activeGas) {
+        if (showNotification) showToast('Chưa cấu hình liên kết Google Apps Script Web App!', 'warning');
+        return false;
+    }
+
+    const categories = store.getCategories();
+    const grades = store.getGrades();
+    const subjects = store.getSubjects();
+    const timestamp = Date.now();
+    localStorage.setItem('khls_structure_timestamp', String(timestamp));
+
+    const structData = {
+        categories,
+        grades,
+        subjects,
+        timestamp,
+        updated_by: (state.user && state.user.fullname) || 'Admin',
+        updated_at: new Date().toISOString()
+    };
+
+    const jsonStr = JSON.stringify(structData);
+    let base64Data = '';
+    try {
+        base64Data = btoa(unescape(encodeURIComponent(jsonStr)));
+    } catch(e) {
+        base64Data = btoa(jsonStr);
+    }
+
+    const payload = {
+        action: 'upload',
+        docId: '__khls_structure__',
+        fileName: 'khls_system_structure.json',
+        fileType: 'application/json',
+        title: '__KHLSSYSTEM_STRUCTURE__',
+        description: jsonStr,
+        category: 'hethong',
+        grade: 'all',
+        subject: 'all',
+        author: (state.user && state.user.fullname) || 'Admin',
+        base64Data: base64Data,
+        folderId: localStorage.getItem('khls_my_drive_folder_id') || ''
+    };
+
+    try {
+        await fetch(activeGas, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+        if (showNotification) {
+            showToast('☁️ Đã đồng bộ cấu trúc thư mục mới nhất lên Google Drive thành công!', 'success');
+        }
+        return true;
+    } catch(err) {
+        console.warn('Lỗi đẩy cấu trúc thư mục lên Drive:', err);
+        if (showNotification) {
+            showToast('Không thể kết nối Drive để đồng bộ cấu trúc!', 'error');
+        }
+        return false;
     }
 }
 
@@ -6380,11 +6457,43 @@ async function syncDocumentsFromDrive(isManual = false) {
 
         const data = await resp.json();
         if (data && data.status === 'success' && Array.isArray(data.documents)) {
-            const localDocs = store.getDocuments();
+            // 1. Tự động đồng bộ Cấu trúc thư mục (Categories, Grades, Subjects) nếu trên Drive có bản mới từ Admin
+            const structDoc = data.documents.find(d => d.id === '__khls_structure__' || d.title === '__KHLSSYSTEM_STRUCTURE__');
+            if (structDoc && structDoc.description) {
+                try {
+                    const cloudStruct = JSON.parse(structDoc.description);
+                    if (cloudStruct && cloudStruct.timestamp) {
+                        const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
+                        if (cloudStruct.timestamp > localTime) {
+                            if (Array.isArray(cloudStruct.categories) && cloudStruct.categories.length > 0) {
+                                store.saveCategories(cloudStruct.categories);
+                            }
+                            if (Array.isArray(cloudStruct.grades) && cloudStruct.grades.length > 0) {
+                                store.saveGrades(cloudStruct.grades);
+                            }
+                            if (Array.isArray(cloudStruct.subjects) && cloudStruct.subjects.length > 0) {
+                                store.saveSubjects(cloudStruct.subjects);
+                            }
+                            localStorage.setItem('khls_structure_timestamp', String(cloudStruct.timestamp));
+                            renderSidebar();
+                            syncAllSelects();
+                            if (state.currentPage === 'admin' && document.querySelector('.admin-tab.active')?.getAttribute('data-tab') === 'categories') {
+                                renderAdminPage('categories');
+                            }
+                        }
+                    }
+                } catch(parseErr) {
+                    console.warn('Lỗi phân tích cấu trúc thư mục từ Drive:', parseErr);
+                }
+            }
+
+            // 2. Lọc bỏ bản ghi hệ thống khỏi danh sách bài giảng học liệu
+            const validCloudDocs = data.documents.filter(d => d.id !== '__khls_structure__' && d.title !== '__KHLSSYSTEM_STRUCTURE__');
+            let localDocs = store.getDocuments().filter(d => d.id !== '__khls_structure__' && d.title !== '__KHLSSYSTEM_STRUCTURE__');
             let hasChanges = false;
             let newDocsCount = 0;
 
-            data.documents.forEach(cloudDoc => {
+            validCloudDocs.forEach(cloudDoc => {
                 const existingIdx = localDocs.findIndex(d => 
                     d.id === cloudDoc.id || 
                     (d.drive_id && cloudDoc.drive_id && d.drive_id === cloudDoc.drive_id) ||

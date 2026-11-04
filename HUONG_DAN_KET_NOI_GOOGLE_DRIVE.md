@@ -137,6 +137,25 @@ function doPost(e) {
       }
       return responseJSON({ status: "error", message: "Không tìm thấy mã học liệu: " + data.docId });
     }
+
+    // Xử lý Đồng bộ Cấu trúc thư mục (Danh mục, Khối lớp, Môn học) dùng chung toàn trường
+    if (data.action === "sync_structure" || data.docId === "__khls_structure__") {
+      var allDocs = loadDocuments(folder);
+      var structIdx = allDocs.findIndex(function(d) { return d.id === "__khls_structure__"; });
+      var structDoc = {
+        id: "__khls_structure__",
+        title: "__KHLSSYSTEM_STRUCTURE__",
+        description: data.description || "",
+        updated_at: new Date().toISOString()
+      };
+      if (structIdx >= 0) {
+        allDocs[structIdx] = structDoc;
+      } else {
+        allDocs.push(structDoc);
+      }
+      saveDocumentsDb(folder, allDocs);
+      return responseJSON({ status: "success", message: "Đã đồng bộ cấu trúc thư mục lên Drive", structure: structDoc });
+    }
     
     // Tải lên tệp học liệu mới
     var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
