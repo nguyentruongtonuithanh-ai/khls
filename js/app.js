@@ -899,6 +899,9 @@ const state = {
     pendingContributeAfterLogin: false,
     theme: localStorage.getItem('khls-theme') || 'dark',
     viewMode: 'details', // 'details' (mặc định dạng bảng Windows Details) hoặc 'grid'
+    profileViewMode: localStorage.getItem('khls_profile_view_mode') || 'details',
+    profileSortCol: 'date',
+    profileSortDir: 'desc',
     winSortCol: 'week',  // 'week', 'name', 'author', 'date'
     winSortDir: 'asc',   // 'asc' (từ trên xuống: Tuần 1, Tuần 2...) hoặc 'desc'
     reviewSortCol: 'week',
@@ -1603,6 +1606,8 @@ function handleDeleteDoc(docId) {
         navigate('#/browse');
     } else if (state.currentPage === 'home') {
         renderHomePage();
+    } else if (state.currentPage === 'profile') {
+        renderProfilePage();
     }
 }
 
@@ -1718,6 +1723,8 @@ function handleSaveDoc(e) {
         renderReviewPage();
     } else if (state.currentPage === 'detail') {
         renderDetailPage(doc.id);
+    } else if (state.currentPage === 'profile') {
+        renderProfilePage();
     }
 }
 
@@ -4091,9 +4098,162 @@ function markAllNotificationsRead() {
 
 // ======================== PAGE: PROFILE ========================
 
+function setProfileViewMode(mode) {
+    state.profileViewMode = mode;
+    localStorage.setItem('khls_profile_view_mode', mode);
+    renderProfilePage();
+}
+
+function handleProfileTableSort(col) {
+    if (state.profileSortCol === col) {
+        state.profileSortDir = state.profileSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.profileSortCol = col;
+        state.profileSortDir = (col === 'date' || col === 'status') ? 'desc' : 'asc';
+    }
+    renderProfilePage();
+}
+
+function renderProfileDetailsTable(docs) {
+    const col = state.profileSortCol || 'date';
+    const dir = state.profileSortDir || 'desc';
+    const arrow = dir === 'asc' ? '▲' : '▼';
+
+    return `
+        <div class="win-details-wrapper">
+            <table class="win-details-table win-profile-table">
+                <thead>
+                    <tr class="win-details-header">
+                        <th class="col-name" onclick="handleProfileTableSort('name')" title="Bấm để sắp xếp theo Tên tài liệu">
+                            <div class="th-content">
+                                <span>Tên tài liệu</span>
+                                <span class="sort-arrow">${col === 'name' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-category" onclick="handleProfileTableSort('category')" title="Bấm để sắp xếp theo Mục đăng">
+                            <div class="th-content">
+                                <span>Mục đăng</span>
+                                <span class="sort-arrow">${col === 'category' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-week th-center" onclick="handleProfileTableSort('week')" title="Bấm để sắp xếp theo Tuần">
+                            <div class="th-content th-center">
+                                <span>Tuần</span>
+                                <span class="sort-arrow">${col === 'week' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-status th-center" onclick="handleProfileTableSort('status')" title="Bấm để sắp xếp theo Trạng thái duyệt">
+                            <div class="th-content th-center">
+                                <span>Trạng thái</span>
+                                <span class="sort-arrow">${col === 'status' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-date th-center" onclick="handleProfileTableSort('date')" title="Bấm để sắp xếp theo Ngày gửi">
+                            <div class="th-content th-center">
+                                <span>Ngày gửi</span>
+                                <span class="sort-arrow">${col === 'date' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-btn-view th-center">Xem trước</th>
+                        <th class="col-btn-download th-center">Tải về</th>
+                        <th class="col-btn-edit th-center">Sửa</th>
+                        <th class="col-btn-delete th-center">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${docs.map(doc => {
+                        const weekNum = getDocWeek(doc);
+                        const canEdit = canUserEditDoc(doc);
+                        const canDelete = canUserDeleteDoc(doc);
+                        const isOwner = isDocOwner(doc);
+                        const isAdmin = state.user && state.user.role === 'admin';
+
+                        let statusBadge = '';
+                        if (doc.status === 'approved') {
+                            statusBadge = `<span class="win-status-badge status-approved" title="Đã được Ban Giám Hiệu / Tổ trưởng phê duyệt và xuất bản">✅ Đã duyệt</span>`;
+                        } else if (doc.status === 'rejected') {
+                            statusBadge = `<span class="win-status-badge status-rejected" title="Góp ý từ Ban Giám Hiệu: ${escapeHtml(doc.reject_reason || 'Cần điều chỉnh lại')}">⚠️ Cần sửa lại</span>`;
+                        } else {
+                            statusBadge = `<span class="win-status-badge status-pending" title="Học liệu đang chờ Ban Giám Hiệu / Tổ trưởng chuyên môn phê duyệt">⏳ Chờ duyệt</span>`;
+                        }
+
+                        return `
+                            <tr class="win-details-row profile-details-row" id="doc-row-${doc.id}" onclick="navigate('#/detail/${doc.id}')" title="Nhấp vào dòng để xem chi tiết ${escapeHtml(doc.title)}">
+                                <td class="col-name">
+                                    <div class="win-file-cell">
+                                        <span class="win-file-icon ${getFileTypeClass(doc.file_name)}" title="${getFileTypeLabel(doc.file_name)}">
+                                            ${getFileTypeIcon(doc.file_name)}
+                                        </span>
+                                        <span class="win-file-title" title="${escapeHtml(doc.title)}">
+                                            ${escapeHtml(doc.title)}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="col-category">
+                                    <div class="win-category-text" title="${escapeHtml(getCategoryName(doc.category))}${doc.grade ? ` • Khối ${doc.grade}` : ''}${doc.subject ? ` • ${escapeHtml(getSubjectName(doc.subject))}` : ''}">
+                                        <span style="font-weight:600; color:var(--text-primary); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            ${escapeHtml(getCategoryName(doc.category))}
+                                        </span>
+                                        ${(doc.grade || doc.subject) ? `
+                                            <small style="display:block; font-size:0.75rem; color:var(--primary); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                ${doc.grade ? `Khối ${doc.grade}` : ''}${doc.grade && doc.subject ? ' • ' : ''}${doc.subject ? escapeHtml(getSubjectName(doc.subject)) : ''}
+                                            </small>
+                                        ` : ''}
+                                    </div>
+                                </td>
+                                <td class="col-week th-center">
+                                    <span class="win-week-badge">Tuần ${weekNum}</span>
+                                </td>
+                                <td class="col-status th-center">
+                                    ${statusBadge}
+                                </td>
+                                <td class="col-date th-center">
+                                    <span class="win-date-text">${formatDocDate(doc.created_at)}</span>
+                                </td>
+                                <td class="col-btn-view th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-view" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">
+                                        👁️ Xem
+                                    </button>
+                                </td>
+                                <td class="col-btn-download th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-download" onclick="handleDownloadDoc('${doc.id}')" title="Tải file về máy">
+                                        ⬇️ Tải về
+                                    </button>
+                                </td>
+                                <td class="col-btn-edit th-center" onclick="event.stopPropagation()">
+                                    ${canEdit ? `
+                                        <button type="button" class="win-btn win-btn-edit" onclick="openEditDocModal('${doc.id}')" title="Sửa thông tin bài đăng này">
+                                            ✏️ Sửa
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng mới có quyền sửa bài này">
+                                            ✏️ Sửa
+                                        </button>
+                                    `}
+                                </td>
+                                <td class="col-btn-delete th-center" onclick="event.stopPropagation()">
+                                    ${canDelete ? `
+                                        <button type="button" class="win-btn win-btn-delete" onclick="handleDeleteDoc('${doc.id}')" title="${isAdmin && !isOwner ? 'Xóa bài này (Quyền Quản trị viên)' : 'Xóa bài đăng của bạn'}">
+                                            🗑️ Xóa
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng hoặc Quản trị viên mới được xóa">
+                                            🗑️ Xóa
+                                        </button>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
 function renderProfilePage() {
     const user = state.user || store.getUsers()[3]; // Default to teacher Cô Lê Thu Hà if not logged in
-    const docs = store.getDocuments().filter(d => d.author_id === user.id || d.author_name === user.fullname);
+    const docs = store.getDocuments().filter(d => isDocOwner(d, user) || (d.author_id && user.id && String(d.author_id) === String(user.id)));
 
     const nameEl = document.getElementById('profile-name');
     const roleEl = document.getElementById('profile-role');
@@ -4116,16 +4276,64 @@ function renderProfilePage() {
     if (downStatEl) downStatEl.textContent = totalDownloads;
     if (starStatEl) starStatEl.textContent = avgStars;
 
+    // View toggle buttons (Chi tiết / Lưới thẻ)
+    const toggleContainer = document.getElementById('profile-view-toggles');
+    if (toggleContainer) {
+        toggleContainer.innerHTML = `
+            <button type="button" class="btn btn-sm ${state.profileViewMode === 'details' ? 'btn-primary' : 'btn-secondary'}" onclick="setProfileViewMode('details')" title="Xem dạng bảng chi tiết (Windows Details)" style="display:inline-flex; align-items:center; gap:5px; font-weight:600;">
+                <span>📋 Chi tiết</span>
+            </button>
+            <button type="button" class="btn btn-sm ${state.profileViewMode === 'grid' ? 'btn-primary' : 'btn-secondary'}" onclick="setProfileViewMode('grid')" title="Xem dạng lưới thẻ" style="display:inline-flex; align-items:center; gap:5px; font-weight:600;">
+                <span>🗂️ Lưới thẻ</span>
+            </button>
+        `;
+    }
+
     if (gridEl) {
         if (docs.length === 0) {
+            gridEl.className = 'browse-docs-container';
             gridEl.innerHTML = `
-                <div class="empty-state">
-                    <p>Thầy/Cô chưa tải lên tài liệu nào. Hãy bắt đầu đóng góp học liệu để cùng chia sẻ nhé!</p>
-                    <a href="#/upload" class="btn btn-primary" style="margin-top:1rem;">Đóng góp ngay</a>
+                <div class="empty-state" style="padding: 40px 20px; text-align: center; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-color); margin-top: 16px;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">📁</div>
+                    <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 8px;">Thầy/Cô chưa có học liệu nào</h3>
+                    <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto; line-height: 1.6;">
+                        Hãy bắt đầu đóng góp học liệu để cùng chia sẻ với đồng nghiệp nhé!
+                    </p>
+                    <a href="#/upload" class="btn btn-primary" style="margin-top:1rem; display:inline-flex; align-items:center; gap:6px;">
+                        <span>📤 Đóng góp ngay</span>
+                    </a>
                 </div>
             `;
-        } else {
+        } else if (state.profileViewMode === 'grid') {
+            gridEl.className = 'docs-grid';
             gridEl.innerHTML = docs.map(renderDocCard).join('');
+        } else {
+            // Mặc định: Dạng bảng chi tiết (Windows Details)
+            gridEl.className = 'browse-docs-container';
+
+            // Sắp xếp
+            const col = state.profileSortCol || 'date';
+            const dir = state.profileSortDir || 'desc';
+            const sortDir = dir === 'desc' ? -1 : 1;
+
+            if (col === 'name') {
+                docs.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'vi') * sortDir);
+            } else if (col === 'category') {
+                docs.sort((a, b) => {
+                    const catA = `${getCategoryName(a.category)} ${a.grade || ''} ${getSubjectName(a.subject) || ''}`;
+                    const catB = `${getCategoryName(b.category)} ${b.grade || ''} ${getSubjectName(b.subject) || ''}`;
+                    return catA.localeCompare(catB, 'vi') * sortDir;
+                });
+            } else if (col === 'week') {
+                docs.sort((a, b) => (getDocWeek(a) - getDocWeek(b)) * sortDir);
+            } else if (col === 'status') {
+                docs.sort((a, b) => (a.status || '').localeCompare(b.status || '') * sortDir);
+            } else {
+                // Mặc định: theo ngày gửi mới nhất lên đầu
+                docs.sort((a, b) => (new Date(a.created_at) - new Date(b.created_at)) * sortDir);
+            }
+
+            gridEl.innerHTML = renderProfileDetailsTable(docs);
         }
     }
 }

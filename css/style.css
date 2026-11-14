@@ -3468,6 +3468,7 @@ optgroup {
 .win-details-header th.th-center .th-content,
 .win-details-header th.th-center,
 .win-details-row td.col-week,
+.win-details-row td.col-status,
 .win-details-row td.col-date,
 .win-details-row td.col-btn-view,
 .win-details-row td.col-btn-download,
@@ -3530,6 +3531,43 @@ optgroup {
     width: 80px;
 }
 
+.win-details-table .col-status {
+    width: 120px;
+}
+
+.win-profile-table {
+    min-width: 1050px;
+}
+
+.win-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+}
+
+.win-status-badge.status-approved {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.win-status-badge.status-pending {
+    background: rgba(234, 179, 8, 0.12);
+    color: #b45309;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.win-status-badge.status-rejected {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
 .win-review-table {
     min-width: 1120px;
 }
@@ -3558,6 +3596,7 @@ optgroup {
     vertical-align: middle;
 }
 
+.win-details-row td.col-status,
 .win-details-row td.col-btn-view,
 .win-details-row td.col-btn-download,
 .win-details-row td.col-btn-approve,

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=7.6">
+    <link rel="stylesheet" href="css/style.css?v=7.7">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -472,8 +472,11 @@
                         </div>
                     </div>
                 </div>
-                <h2 class="section-title mt-2">Tài liệu đã đóng góp</h2>
-                <div class="docs-grid" id="profile-docs-grid">
+                <div class="profile-docs-header" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 10px;">
+                    <h2 class="section-title" style="margin: 0;">Tài liệu đã đóng góp</h2>
+                    <div class="view-mode-toggles" id="profile-view-toggles" style="display: flex; gap: 8px;"></div>
+                </div>
+                <div class="browse-docs-container" id="profile-docs-grid">
                     <div class="empty-state">
                         <p>Chưa có tài liệu nào</p>
                     </div>
@@ -1398,6 +1401,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=7.6"></script>
+    <script src="js/app.js?v=7.7"></script>
 </body>
 </html>
