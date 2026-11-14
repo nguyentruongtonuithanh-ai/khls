@@ -5787,7 +5787,6 @@ async function pushStructureToCloud(showNotification = false) {
     const grades = store.getGrades();
     const subjects = store.getSubjects();
     const deleted_doc_ids = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
-    const pending_doc_ids = ['doc-1794624057507', 'doc-1794624217318'];
     const timestamp = Date.now();
     localStorage.setItem('khls_structure_timestamp', String(timestamp));
 
@@ -5796,7 +5795,6 @@ async function pushStructureToCloud(showNotification = false) {
         grades,
         subjects,
         deleted_doc_ids,
-        pending_doc_ids,
         timestamp,
         updated_by: (state.user && state.user.fullname) || 'Admin',
         updated_at: new Date().toISOString()
@@ -7252,14 +7250,6 @@ async function syncDocumentsFromDrive(isManual = false) {
                 }
             }
 
-            // 1b. Khắc phục các bài bị duyệt nhầm: đưa về trạng thái chờ duyệt (pending)
-            const resetToPendingList = ['doc-1794624057507', 'doc-1794624217318'];
-            if (cloudStruct && Array.isArray(cloudStruct.pending_doc_ids)) {
-                cloudStruct.pending_doc_ids.forEach(pendId => {
-                    if (!resetToPendingList.includes(pendId)) resetToPendingList.push(pendId);
-                });
-            }
-
             // 2. Lọc bỏ bản ghi hệ thống và các tài liệu đã bị xóa hoặc đã bị từ chối/gỡ bỏ
             const deletedIds = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
             const isDocBlacklisted = (d) => {
@@ -7300,23 +7290,7 @@ async function syncDocumentsFromDrive(isManual = false) {
                 hasChanges = true;
             }
 
-            // Đồng bộ danh sách tài liệu cần đưa về trạng thái chờ duyệt (pending)
-            resetToPendingList.forEach(pendId => {
-                const target = localDocs.find(d => String(d.id) === String(pendId));
-                if (target && target.status !== 'pending') {
-                    target.status = 'pending';
-                    target.approved_by = null;
-                    hasChanges = true;
-                }
-            });
-
             validCloudDocs.forEach(cloudDoc => {
-                // Khắc phục bài bị duyệt nhầm từ Cloud
-                if (resetToPendingList.includes(cloudDoc.id)) {
-                    cloudDoc.status = 'pending';
-                    cloudDoc.approved_by = null;
-                }
-
                 // Nhận dạng tài liệu DUY NHẤT theo ID hệ thống hoặc Google Drive File ID:
                 // TUYỆT ĐỐI KHÔNG nhận dạng nhầm theo file_name / file_size / title
                 const existingIdx = localDocs.findIndex(d => 
@@ -7325,29 +7299,31 @@ async function syncDocumentsFromDrive(isManual = false) {
                 );
 
                 if (existingIdx >= 0) {
-                    if (resetToPendingList.includes(localDocs[existingIdx].id)) {
-                        localDocs[existingIdx].status = 'pending';
-                        localDocs[existingIdx].approved_by = null;
-                        hasChanges = true;
-                    }
-
                     // 1. Luôn đồng bộ ID từ Cloud về Local để 2 bên khớp tuyệt đối
                     if (cloudDoc.id && localDocs[existingIdx].id !== cloudDoc.id) {
                         localDocs[existingIdx].id = cloudDoc.id;
                         hasChanges = true;
                     }
 
-                    // 2. Nhận trạng thái duyệt mới nhất từ Cloud (Cloud là nguồn chuẩn):
-                    // KHÔNG BAO GIỜ tự ý tự động duyệt học liệu mới nộp trên Cloud
+                    // 2. Nhận trạng thái duyệt mới nhất từ Cloud:
+                    // ĐẶC BIỆT: Nếu máy này vừa duyệt (approved) hoặc từ chối (rejected),
+                    // mà Cloud vẫn còn đang là pending (do trễ mạng), TUYỆT ĐỐI KHÔNG hạ cấp bài đã duyệt về lại pending!
                     if (cloudDoc.status && localDocs[existingIdx].status !== cloudDoc.status) {
-                        const oldStatus = localDocs[existingIdx].status;
-                        const newStatus = cloudDoc.status;
-                        localDocs[existingIdx].status = newStatus;
-                        localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
-                        if (cloudDoc.reject_reason) {
-                            localDocs[existingIdx].reject_reason = cloudDoc.reject_reason;
-                        }
-                        hasChanges = true;
+                        const localStatus = localDocs[existingIdx].status;
+                        const isLocalProcessed = localStatus === 'approved' || localStatus === 'rejected';
+                        const isCloudPending = cloudDoc.status === 'pending';
+
+                        if (isLocalProcessed && isCloudPending) {
+                            // Giữ nguyên quyết định duyệt của Admin/Tổ trưởng trên máy, không bị kéo lùi về pending
+                        } else {
+                            const oldStatus = localDocs[existingIdx].status;
+                            const newStatus = cloudDoc.status;
+                            localDocs[existingIdx].status = newStatus;
+                            localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
+                            if (cloudDoc.reject_reason) {
+                                localDocs[existingIdx].reject_reason = cloudDoc.reject_reason;
+                            }
+                            hasChanges = true;
 
                             // NẾU TÀI LIỆU NÀY CÓ TRẠNG THÁI APPROVED HOẶC REJECTED -> TẠO THÔNG BÁO CHO TÁC GIẢ
                             if (newStatus === 'approved' || newStatus === 'rejected') {
@@ -7404,6 +7380,7 @@ async function syncDocumentsFromDrive(isManual = false) {
                                 }
                             }
                         }
+                    }
 
                     if (cloudDoc.file_url && !localDocs[existingIdx].file_url) {
                         localDocs[existingIdx].file_url = cloudDoc.file_url;
