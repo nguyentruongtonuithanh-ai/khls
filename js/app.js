@@ -7554,6 +7554,12 @@ async function handleContributeSubmit(e) {
     const weekVal = document.getElementById('modal-upload-week')?.value;
     const file = modalUploadedFile;
 
+    const currentUser = state.user || {
+        id: Date.now(),
+        fullname: authorName,
+        department: authorDept
+    };
+
     if (!file) {
         showToast('Vui lòng chọn hoặc kéo thả tệp học liệu!', 'error');
         document.getElementById('modal-upload-file').click();
@@ -7692,12 +7698,6 @@ async function handleContributeSubmit(e) {
         updateProgress(100, 'Hoàn tất! Đang lưu thông tin...');
 
         // Create new doc object
-        const currentUser = state.user || {
-            id: Date.now(),
-            fullname: authorName,
-            department: authorDept
-        };
-
         const newDoc = {
             id: (driveResult && driveResult.doc && driveResult.doc.id) ? driveResult.doc.id : docGeneratedId,
             title: title,
