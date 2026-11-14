@@ -5139,9 +5139,9 @@ function handleSaveUser(e) {
             avatar_letter: fullname.charAt(0).toUpperCase(),
             total_uploads: 0,
             total_downloads: 0,
-            total_stars: 0
+            total_stars: 0,
+            password: password || '123456'
         };
-        if (password) newUser.password = password;
 
         if (store.removeDeletedUserId) {
             store.removeDeletedUserId(newUser.id, newUser.username);
@@ -6622,25 +6622,47 @@ function closeLoginModal() {
 
 function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
+    const rawInput = (document.getElementById('login-email')?.value || '').trim();
+    const password = (document.getElementById('login-password')?.value || '').trim();
 
-    if (!email || !password) {
+    if (!rawInput || !password) {
         showToast('Vui lòng nhập tên đăng nhập và mật khẩu!', 'error');
         return;
     }
 
+    const inputLower = rawInput.toLowerCase();
+    const inputClean = inputLower.split('@')[0].replace(/\s+/g, '');
     const users = store.getUsers();
-    let matchedUser = users.find(u => u.username === email || u.fullname.toLowerCase() === email.toLowerCase());
 
+    // 1. Tìm kiếm tài khoản chính xác theo username, email hoặc họ tên (không phân biệt hoa thường)
+    let candidateUsers = users.filter(u => {
+        if (!u) return false;
+        const uUser = (u.username || '').toLowerCase().trim();
+        const uFull = (u.fullname || '').toLowerCase().trim();
+        const uFullClean = uFull.replace(/^(thầy|cô)\s+/i, '').trim();
+
+        return uUser === inputLower ||
+               uUser === inputClean ||
+               uFull === inputLower ||
+               uFullClean === inputLower ||
+               (inputLower === 'admin' && (uUser === 'admin' || u.role === 'admin')) ||
+               (inputLower === 'totruong' && (uUser.startsWith('totruong') || u.role === 'leader')) ||
+               (inputLower === 'trantanlong' && uUser === 'trantanlong');
+    });
+
+    // Ưu tiên tài khoản có quyền Quản trị viên hoặc Tổ trưởng nếu có nhiều tài khoản trùng tên
+    let matchedUser = candidateUsers.find(u => u.role === 'admin') 
+                   || candidateUsers.find(u => u.role === 'leader') 
+                   || candidateUsers[0];
+
+    // Fallback demo tài khoản mẫu
     if (!matchedUser) {
-        // Quick fallback for demo accounts
-        if (email === 'admin') {
+        if (inputLower === 'admin' || inputClean === 'admin') {
             matchedUser = users.find(u => u.role === 'admin') || users[0];
-        } else if (email === 'totruong') {
+        } else if (inputLower === 'totruong' || inputClean === 'totruong') {
             matchedUser = users.find(u => u.role === 'leader') || users[1];
-        } else if (email.toLowerCase() === 'trantanlong') {
-            matchedUser = users.find(u => u.username === 'trantanlong') || {
+        } else if (inputLower === 'trantanlong' || inputClean === 'trantanlong') {
+            matchedUser = users.find(u => (u.username || '').toLowerCase() === 'trantanlong') || {
                 id: 14,
                 username: 'trantanlong',
                 fullname: 'Trần Tấn Long',
@@ -6653,37 +6675,39 @@ function handleLogin(e) {
                 total_downloads: 120,
                 total_stars: 25
             };
-            if (!users.some(u => u.username === 'trantanlong')) {
+            if (!users.some(u => (u.username || '').toLowerCase() === 'trantanlong')) {
                 users.push(matchedUser);
                 store.saveUsers(users);
             }
-        } else {
-            matchedUser = {
-                id: Date.now(),
-                username: email,
-                fullname: email,
-                password: '123456',
-                role: 'teacher',
-                department: 'Tổ Chuyên Môn',
-                avatar_letter: email.charAt(0).toUpperCase(),
-                total_uploads: 0,
-                total_downloads: 0,
-                total_stars: 0
-            };
-            users.push(matchedUser);
-            store.saveUsers(users);
         }
     }
 
-    const expectedPass = matchedUser.password || ((matchedUser.username === 'admin' || matchedUser.role === 'admin') ? 'admin' : '123456');
-    if (password !== expectedPass) {
-        showToast('Mật khẩu không chính xác! Vui lòng thử lại hoặc nhờ Quản trị viên reset.', 'error');
+    if (!matchedUser) {
+        showToast(`❌ Không tìm thấy tài khoản "${rawInput}" trên hệ thống! Vui lòng kiểm tra lại tên đăng nhập.`, 'error');
         return;
+    }
+
+    // 2. Kiểm tra mật khẩu (hỗ trợ cả 123456 và mật khẩu đã lưu hoặc admin)
+    const expectedPass = matchedUser.password || '123456';
+    const isValidPass = (password === expectedPass) || 
+                        (password === '123456') || 
+                        ((matchedUser.username === 'admin' || matchedUser.role === 'admin') && password === 'admin');
+
+    if (!isValidPass) {
+        showToast('❌ Mật khẩu không chính xác! Mật khẩu mặc định là 123456.', 'error');
+        return;
+    }
+
+    // Luôn đảm bảo tài khoản lưu mật khẩu chuẩn
+    if (matchedUser.password !== password && password) {
+        matchedUser.password = password;
+        store.saveUsers(users);
     }
 
     loginAs(matchedUser);
     closeLoginModal();
-    showToast(`Chào mừng ${matchedUser.fullname} đã đăng nhập! 🎉`, 'success');
+    const roleTitle = matchedUser.role === 'admin' ? ' (Quản trị viên)' : matchedUser.role === 'leader' ? ' (Tổ trưởng)' : '';
+    showToast(`Chào mừng ${matchedUser.fullname}${roleTitle} đã đăng nhập! 🎉`, 'success');
     if (state.pendingContributeAfterLogin) {
         state.pendingContributeAfterLogin = false;
         setTimeout(() => {
@@ -6745,11 +6769,21 @@ function updateUserUI() {
     const notifBtn = document.getElementById('notification-btn');
     const notifWrapper = document.getElementById('notification-wrapper');
     const uploadSidebar = document.getElementById('btn-upload-sidebar');
+
+    // Header buttons
+    const btnHeaderReview = document.getElementById('btn-header-review');
+    const btnHeaderDashboard = document.getElementById('btn-header-dashboard');
+    const btnHeaderAdmin = document.getElementById('btn-header-admin');
+
+    // Sidebar quick links
+    const sidebarReviewLink = document.getElementById('sidebar-review-link');
+    const sidebarDashboardLink = document.getElementById('sidebar-dashboard-link');
+    const sidebarAdminLink = document.getElementById('sidebar-admin-link');
+
+    // User avatar dropdown
+    const menuReview = document.getElementById('menu-review');
     const menuDashboard = document.getElementById('menu-dashboard');
     const menuAdmin = document.getElementById('menu-admin');
-    const btnHeaderReview = document.getElementById('btn-header-review');
-    const sidebarReviewLink = document.getElementById('sidebar-review-link');
-    const menuReview = document.getElementById('menu-review');
     const notifReviewLink = document.getElementById('notification-review-link');
 
     // Phân quyền mục Duyệt học liệu: Chỉ Admin và Tổ trưởng mới thấy
@@ -6775,13 +6809,28 @@ function updateUserUI() {
         if (avatarLetterEl) avatarLetterEl.textContent = letter;
         if (displayNameEl) displayNameEl.textContent = state.user.fullname;
 
-        if (state.user.role === 'admin') {
+        const isAdmin = state.user.role === 'admin' || state.user.username === 'admin';
+        const isLeader = state.user.role === 'leader';
+
+        if (isAdmin) {
+            if (btnHeaderDashboard) btnHeaderDashboard.style.display = 'inline-flex';
+            if (btnHeaderAdmin) btnHeaderAdmin.style.display = 'inline-flex';
+            if (sidebarDashboardLink) sidebarDashboardLink.style.display = 'flex';
+            if (sidebarAdminLink) sidebarAdminLink.style.display = 'flex';
             if (menuDashboard) menuDashboard.style.display = 'flex';
             if (menuAdmin) menuAdmin.style.display = 'flex';
-        } else if (state.user.role === 'leader') {
+        } else if (isLeader) {
+            if (btnHeaderDashboard) btnHeaderDashboard.style.display = 'inline-flex';
+            if (btnHeaderAdmin) btnHeaderAdmin.style.display = 'none';
+            if (sidebarDashboardLink) sidebarDashboardLink.style.display = 'flex';
+            if (sidebarAdminLink) sidebarAdminLink.style.display = 'none';
             if (menuDashboard) menuDashboard.style.display = 'flex';
             if (menuAdmin) menuAdmin.style.display = 'none';
         } else {
+            if (btnHeaderDashboard) btnHeaderDashboard.style.display = 'none';
+            if (btnHeaderAdmin) btnHeaderAdmin.style.display = 'none';
+            if (sidebarDashboardLink) sidebarDashboardLink.style.display = 'none';
+            if (sidebarAdminLink) sidebarAdminLink.style.display = 'none';
             if (menuDashboard) menuDashboard.style.display = 'none';
             if (menuAdmin) menuAdmin.style.display = 'none';
         }
@@ -6791,6 +6840,11 @@ function updateUserUI() {
         if (notifWrapper) notifWrapper.style.display = 'none';
         if (notifBtn) notifBtn.style.display = 'none';
         if (uploadSidebar) uploadSidebar.style.display = 'flex';
+
+        if (btnHeaderDashboard) btnHeaderDashboard.style.display = 'none';
+        if (btnHeaderAdmin) btnHeaderAdmin.style.display = 'none';
+        if (sidebarDashboardLink) sidebarDashboardLink.style.display = 'none';
+        if (sidebarAdminLink) sidebarAdminLink.style.display = 'none';
         if (menuDashboard) menuDashboard.style.display = 'none';
         if (menuAdmin) menuAdmin.style.display = 'none';
     }
@@ -6811,8 +6865,8 @@ function restoreSession() {
                     (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
                     (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase())
                 );
-                if (matched && matched.password) {
-                    state.user.password = matched.password;
+                if (matched) {
+                    state.user = { ...state.user, ...matched };
                     localStorage.setItem('khls-user', JSON.stringify(state.user));
                 }
             }

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=8.8">
+    <link rel="stylesheet" href="css/style.css?v=8.9">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -42,6 +42,16 @@
             <a href="#/review" class="btn btn-sm btn-outline" id="btn-header-review" title="Xem và phê duyệt các tài liệu mới nộp" style="display:none; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.85rem; border-radius:var(--radius-md); border-color:rgba(99,102,241,0.35);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                 <span>Duyệt học liệu</span>
+            </a>
+
+            <a href="#/dashboard" class="btn btn-sm btn-outline" id="btn-header-dashboard" title="Xem báo cáo thống kê" style="display:none; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.85rem; border-radius:var(--radius-md);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="#/admin" class="btn btn-sm btn-outline" id="btn-header-admin" title="Trang quản trị hệ thống" style="display:none; align-items:center; gap:6px; font-weight:600; padding:0.45rem 0.85rem; border-radius:var(--radius-md); border-color:rgba(168,85,247,0.4); color:var(--primary);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <span>Quản trị</span>
             </a>
 
             <div class="notification-wrapper" id="notification-wrapper" style="position: relative; display: none;">
@@ -121,6 +131,12 @@
             </a>
             <a href="#/review" class="tree-link" id="sidebar-review-link" style="font-weight:600; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); display: none; align-items: center; gap: 8px;">
                 <span>📋</span> <span>Duyệt học liệu</span>
+            </a>
+            <a href="#/dashboard" class="tree-link" id="sidebar-dashboard-link" style="font-weight:600; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); display: none; align-items: center; gap: 8px;">
+                <span>📊</span> <span>Dashboard Thống kê</span>
+            </a>
+            <a href="#/admin" class="tree-link" id="sidebar-admin-link" style="font-weight:600; padding: 0.45rem 0.65rem; border-radius: var(--radius-sm); display: none; align-items: center; gap: 8px;">
+                <span>⚙️</span> <span>Quản trị hệ thống</span>
             </a>
         </div>
         <div class="sidebar-header" style="padding-top: 0.4rem;">
@@ -1445,6 +1461,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=8.8"></script>
+    <script src="js/app.js?v=8.9"></script>
 </body>
 </html>
