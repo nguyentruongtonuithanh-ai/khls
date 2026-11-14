@@ -4571,6 +4571,11 @@ function renderAdminPage(activeTab = 'users') {
                                     <div style="display:flex; gap:6px; flex-wrap:wrap;">
                                         <button class="btn btn-secondary btn-sm" onclick="openEditUserModal(${u.id})" title="Sửa thông tin giáo viên">✏️ Sửa</button>
                                         <button class="btn btn-outline-warning btn-sm" onclick="openResetPasswordModal(${u.id})" title="Đặt lại mật khẩu cho giáo viên này">🔑 Reset MK</button>
+                                        ${(u.id === 1 || String(u.id) === '1' || u.username === 'admin' || (state.user && (state.user.id === u.id || String(state.user.id) === String(u.id)))) ? `
+                                            <button class="btn btn-secondary btn-sm" disabled style="opacity:0.35; cursor:not-allowed;" title="Không thể xóa tài khoản Quản trị viên đang đăng nhập">🗑️ Xóa</button>
+                                        ` : `
+                                            <button class="btn btn-outline-danger btn-sm" onclick="deleteUser('${u.id}')" title="Xóa tài khoản giáo viên này khỏi hệ thống">🗑️ Xóa</button>
+                                        `}
                                     </div>
                                 </td>
                             </tr>
@@ -5079,28 +5084,36 @@ function handleSaveUser(e) {
 }
 
 function deleteUser(userId) {
+    if (!state.user || state.user.role !== 'admin') {
+        showToast('Chỉ Quản trị viên mới có quyền xóa tài khoản!', 'error');
+        return;
+    }
     const users = store.getUsers();
     const user = users.find(u => u.id === userId || String(u.id) === String(userId));
-    if (!user) return;
+    if (!user) {
+        showToast('Không tìm thấy tài khoản cần xóa!', 'error');
+        return;
+    }
 
-    if (user.id === 1 || user.username === 'admin') {
+    if (user.id === 1 || String(user.id) === '1' || user.username === 'admin') {
         showToast('Không thể xóa tài khoản Quản trị viên mặc định!', 'error');
         return;
     }
 
     if (state.user && (state.user.id === user.id || String(state.user.id) === String(user.id))) {
-        showToast('Bạn không thể xóa tài khoản đang đăng nhập!', 'error');
+        showToast('Thầy/Cô không thể tự xóa tài khoản của chính mình!', 'warning');
         return;
     }
 
-    if (confirm(`Thầy/Cô có chắc chắn muốn xóa tài khoản "${user.fullname}" (${user.username})?`)) {
+    if (confirm(`Thầy/Cô có chắc chắn muốn xóa tài khoản giáo viên "${user.fullname}" (${user.username}) khỏi hệ thống không?`)) {
         const filtered = users.filter(u => u.id !== user.id && String(u.id) !== String(user.id));
         store.saveUsers(filtered);
         closeEditUserModal();
-        showToast(`Đã xóa tài khoản "${user.fullname}"!`, 'info');
+        showToast(`✅ Đã xóa tài khoản giáo viên "${user.fullname}" thành công! 🗑️`, 'success');
         renderAdminPage('users');
     }
 }
+window.deleteUser = deleteUser;
 
 function promptAddUser() {
     openEditUserModal(null);
