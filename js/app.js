@@ -737,7 +737,10 @@ const store = {
             if (changed) {
                 localStorage.setItem('khls_deleted_user_ids_v1', JSON.stringify(list));
             }
-        } catch(e) {}
+            return changed;
+        } catch(e) {
+            return false;
+        }
     },
     removeDeletedUserId(id, username = '') {
         try {
@@ -868,8 +871,13 @@ const store = {
             return INITIAL_USERS.filter(u => !this.isUserDeleted(u.id, u.username));
         }
     },
-    saveUsers(users) {
+    saveUsers(users, syncTimestamp = null) {
         localStorage.setItem('khls_users_v2', JSON.stringify(users));
+        if (syncTimestamp) {
+            localStorage.setItem('khls_structure_timestamp', String(syncTimestamp));
+        } else {
+            localStorage.setItem('khls_structure_timestamp', String(Date.now()));
+        }
     },
     getDeletedDocIds() {
         try {
@@ -5144,6 +5152,7 @@ function handleSaveUser(e) {
         users[userIndex].department = dept;
         users[userIndex].honor = honor;
         users[userIndex].avatar_letter = fullname.charAt(0).toUpperCase();
+        users[userIndex].updated_at = Date.now();
         if (password) {
             users[userIndex].password = password;
         }
@@ -5174,6 +5183,11 @@ function handleSaveUser(e) {
         closeEditUserModal();
         showToast(`Đã lưu thay đổi thông tin giáo viên: ${fullname}! 🎉`, 'success');
         renderAdminPage('users');
+
+        // ĐỒNG BỘ NGAY LẬP TỨC LÊN GOOGLE DRIVE
+        setTimeout(() => {
+            pushStructureToCloud(false);
+        }, 150);
     } else {
         // Thêm tài khoản mới
         const conflict = users.find(u => u.username.toLowerCase() === username);
@@ -5194,7 +5208,8 @@ function handleSaveUser(e) {
             total_uploads: 0,
             total_downloads: 0,
             total_stars: 0,
-            password: password || '123456'
+            password: password || '123456',
+            updated_at: Date.now()
         };
 
         if (store.removeDeletedUserId) {
@@ -5317,9 +5332,11 @@ function handleEditProfileSubmit(e) {
     }
 
     const oldName = state.user.fullname;
+    const now = Date.now();
     state.user.fullname = newName.replace(/^(Thầy|Cô)\s+/i, '').trim();
     if (newDept) state.user.department = newDept;
     state.user.avatar_letter = (state.user.fullname.split(' ').pop() || state.user.fullname).charAt(0).toUpperCase();
+    state.user.updated_at = now;
 
     localStorage.setItem('khls-user', JSON.stringify(state.user));
 
@@ -5330,6 +5347,7 @@ function handleEditProfileSubmit(e) {
         u.fullname = state.user.fullname;
         u.department = state.user.department;
         u.avatar_letter = state.user.avatar_letter;
+        u.updated_at = now;
         store.saveUsers(users);
     }
 
@@ -5351,6 +5369,11 @@ function handleEditProfileSubmit(e) {
     updateUserUI();
     renderProfilePage();
     showToast(`✅ Đã cập nhật họ và tên thành "${state.user.fullname}" thành công! 🎉`, 'success');
+
+    // Đồng bộ người dùng cập nhật lên Google Drive
+    setTimeout(() => {
+        pushStructureToCloud(false);
+    }, 150);
 }
 
 function openChangePasswordModal() {
@@ -5462,13 +5485,20 @@ function handleChangePassword(e) {
 
     // Cập nhật mật khẩu mới
     users[userIndex].password = newPass;
+    users[userIndex].updated_at = Date.now();
     store.saveUsers(users);
 
     state.user.password = newPass;
+    state.user.updated_at = users[userIndex].updated_at;
     localStorage.setItem('khls-user', JSON.stringify(state.user));
 
     closeChangePasswordModal();
     showToast(`✅ Đã đổi mật khẩu thành công cho tài khoản ${state.user.fullname}! 🔑`, 'success');
+
+    // Đồng bộ lên Google Drive
+    setTimeout(() => {
+        pushStructureToCloud(false);
+    }, 150);
 }
 
 function openResetPasswordModal(userId) {
@@ -5534,17 +5564,24 @@ function handleResetPasswordSubmit(e) {
     }
 
     user.password = newPass;
+    user.updated_at = Date.now();
     store.saveUsers(users);
 
     // Nếu reset chính tài khoản admin đang đăng nhập
     if (state.user && (state.user.id === user.id || String(state.user.id) === String(user.id))) {
         state.user.password = newPass;
+        state.user.updated_at = user.updated_at;
         localStorage.setItem('khls-user', JSON.stringify(state.user));
     }
 
     closeResetPasswordModal();
     showToast(`⚡ Đã đặt lại mật khẩu cho giáo viên "${user.fullname}" thành: "${newPass}"!`, 'success');
     renderAdminPage('users');
+
+    // Đồng bộ lên Google Drive
+    setTimeout(() => {
+        pushStructureToCloud(false);
+    }, 150);
 }
 
 // ======================== CATEGORY MANAGEMENT (QUẢN LÝ THƯ MỤC / DANH MỤC) ========================
@@ -7181,7 +7218,8 @@ Hồ Xuân Hương, huong.hx@nuithanh.edu.vn, teacher, Tổ Thể chất`;
                         avatar_letter: fullname.charAt(0),
                         total_uploads: 0,
                         total_downloads: 0,
-                        total_stars: 0
+                        total_stars: 0,
+                        updated_at: Date.now()
                     });
                     addedCount++;
                 }
@@ -7192,6 +7230,11 @@ Hồ Xuân Hương, huong.hx@nuithanh.edu.vn, teacher, Tổ Thể chất`;
         closeBatchUserModal();
         showToast(`Đã thêm thành công ${addedCount} tài khoản giáo viên mới! 🎉`, 'success');
         renderAdminPage('users');
+
+        // Đồng bộ lên Google Drive
+        setTimeout(() => {
+            pushStructureToCloud(false);
+        }, 150);
     });
 
     // File Dropzone handlers
@@ -7794,24 +7837,82 @@ async function syncDocumentsFromDrive(isManual = false) {
                 // 1b. Nhận danh sách các tài khoản giáo viên đã bị Admin xóa từ Google Drive
                 let userDeletionsUpdated = false;
                 if (Array.isArray(cloudStruct.deleted_user_ids) && cloudStruct.deleted_user_ids.length > 0) {
+                    const prevCount = store.getDeletedUserIds ? store.getDeletedUserIds().length : 0;
                     cloudStruct.deleted_user_ids.forEach(delUId => {
                         if (store.addDeletedUserId) store.addDeletedUserId(delUId);
                     });
-                    userDeletionsUpdated = true;
+                    const newCount = store.getDeletedUserIds ? store.getDeletedUserIds().length : 0;
+                    if (newCount > prevCount) {
+                        userDeletionsUpdated = true;
+                    }
+                }
+
+                // Nếu có tài khoản mới vừa bị xóa từ cloud, loại bỏ ngay khỏi danh sách người dùng cục bộ
+                if (userDeletionsUpdated) {
+                    const curUsers = store.getUsers();
+                    const filteredCurUsers = curUsers.filter(u => u && !store.isUserDeleted(u.id, u.username));
+                    if (filteredCurUsers.length !== curUsers.length) {
+                        const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
+                        store.saveUsers(filteredCurUsers, localTime);
+                        if (state.currentPage === 'admin') {
+                            const activeTab = document.querySelector('.admin-tab.active')?.getAttribute('data-tab') || 'users';
+                            if (activeTab === 'users') {
+                                renderAdminPage('users');
+                            }
+                        }
+                    }
                 }
 
                 // 1c. Đồng bộ danh sách tài khoản người dùng từ Google Drive
-                if (Array.isArray(cloudStruct.users) && cloudStruct.users.length > 0) {
-                    const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
-                    if (maxTimestamp > localTime || userDeletionsUpdated) {
-                        const validCloudUsers = cloudStruct.users.filter(u => u && !store.isUserDeleted(u.id, u.username));
-                        if (validCloudUsers.length > 0) {
-                            store.saveUsers(validCloudUsers);
-                            if (state.currentPage === 'admin') {
-                                const activeTab = document.querySelector('.admin-tab.active')?.getAttribute('data-tab') || 'users';
-                                if (activeTab === 'users') {
-                                    renderAdminPage('users');
+                const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
+                if (Array.isArray(cloudStruct.users) && cloudStruct.users.length > 0 && maxTimestamp > localTime) {
+                    const validCloudUsers = cloudStruct.users.filter(u => u && !store.isUserDeleted(u.id, u.username));
+                    if (validCloudUsers.length > 0) {
+                        // Hợp nhất thông minh: Nếu tài khoản cục bộ có thời gian cập nhật (updated_at) mới hơn đám mây, bảo toàn phiên bản cục bộ
+                        const localUsers = store.getUsers();
+                        const mergedUsers = [...validCloudUsers];
+                        localUsers.forEach(lUser => {
+                            if (!lUser) return;
+                            const cIdx = mergedUsers.findIndex(cUser => 
+                                (cUser.id && lUser.id && String(cUser.id) === String(lUser.id)) ||
+                                (cUser.username && lUser.username && cUser.username.toLowerCase() === lUser.username.toLowerCase())
+                            );
+                            if (cIdx !== -1) {
+                                const lTime = Number(lUser.updated_at || 0);
+                                const cTime = Number(mergedUsers[cIdx].updated_at || 0);
+                                if (lTime > cTime) {
+                                    mergedUsers[cIdx] = lUser; // Giữ nguyên bản sửa cục bộ mới hơn
                                 }
+                            } else {
+                                if (!store.isUserDeleted(lUser.id, lUser.username)) {
+                                    mergedUsers.push(lUser);
+                                }
+                            }
+                        });
+
+                        store.saveUsers(mergedUsers, maxTimestamp);
+
+                        // Đồng bộ phiên đăng nhập của state.user nếu được cập nhật từ đám mây
+                        if (state.user) {
+                            const curInMerged = mergedUsers.find(u => 
+                                (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
+                                (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase())
+                            );
+                            if (curInMerged) {
+                                const curLocalTime = Number(state.user.updated_at || 0);
+                                const curMergedTime = Number(curInMerged.updated_at || 0);
+                                if (curMergedTime >= curLocalTime && (state.user.fullname !== curInMerged.fullname || state.user.department !== curInMerged.department || state.user.role !== curInMerged.role)) {
+                                    state.user = { ...state.user, ...curInMerged };
+                                    localStorage.setItem('khls-user', JSON.stringify(state.user));
+                                    updateUserUI();
+                                }
+                            }
+                        }
+
+                        if (state.currentPage === 'admin') {
+                            const activeTab = document.querySelector('.admin-tab.active')?.getAttribute('data-tab') || 'users';
+                            if (activeTab === 'users') {
+                                renderAdminPage('users');
                             }
                         }
                     }
