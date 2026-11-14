@@ -692,15 +692,86 @@ const store = {
     saveSettings(settings) {
         localStorage.setItem('khls_settings_v2', JSON.stringify(settings));
     },
+    getDeletedUserIds() {
+        try {
+            const data = localStorage.getItem('khls_deleted_user_ids_v1');
+            return data ? JSON.parse(data) : [];
+        } catch(e) {
+            return [];
+        }
+    },
+    addDeletedUserId(id, username = '') {
+        try {
+            const list = this.getDeletedUserIds();
+            let changed = false;
+            if (id !== null && id !== undefined && id !== '') {
+                const strId = String(id).trim();
+                if (!list.includes(strId)) {
+                    list.push(strId);
+                    changed = true;
+                }
+            }
+            if (username && typeof username === 'string') {
+                const lowerUser = username.trim().toLowerCase();
+                if (!list.includes(lowerUser)) {
+                    list.push(lowerUser);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                localStorage.setItem('khls_deleted_user_ids_v1', JSON.stringify(list));
+            }
+        } catch(e) {}
+    },
+    removeDeletedUserId(id, username = '') {
+        try {
+            let list = this.getDeletedUserIds();
+            const strId = id !== null && id !== undefined ? String(id).trim() : '';
+            const lowerUser = username && typeof username === 'string' ? username.trim().toLowerCase() : '';
+            const prevLen = list.length;
+            list = list.filter(item => item !== strId && item !== lowerUser);
+            if (list.length !== prevLen) {
+                localStorage.setItem('khls_deleted_user_ids_v1', JSON.stringify(list));
+            }
+        } catch(e) {}
+    },
+    isUserDeleted(id, username = '') {
+        try {
+            const list = this.getDeletedUserIds();
+            if (!list || list.length === 0) return false;
+            if (id !== null && id !== undefined && id !== '') {
+                if (list.includes(String(id).trim())) return true;
+            }
+            if (username && typeof username === 'string') {
+                if (list.includes(username.trim().toLowerCase())) return true;
+            }
+            return false;
+        } catch(e) {
+            return false;
+        }
+    },
     getUsers() {
+        const deletedIds = this.getDeletedUserIds();
         const data = localStorage.getItem('khls_users_v2');
         if (!data) {
-            localStorage.setItem('khls_users_v2', JSON.stringify(INITIAL_USERS));
-            return INITIAL_USERS;
+            const initialFiltered = INITIAL_USERS.filter(u => !this.isUserDeleted(u.id, u.username));
+            localStorage.setItem('khls_users_v2', JSON.stringify(initialFiltered));
+            return initialFiltered;
         }
         try {
-            const users = JSON.parse(data);
+            let users = JSON.parse(data);
             let updated = false;
+
+            // 1. Luôn loại bỏ các tài khoản nằm trong danh sách đã xóa vĩnh viễn
+            if (deletedIds && deletedIds.length > 0) {
+                const prevLen = users.length;
+                users = users.filter(u => u && !this.isUserDeleted(u.id, u.username));
+                if (users.length !== prevLen) {
+                    updated = true;
+                }
+            }
+
+            // 2. Chuẩn hóa tên và mật khẩu
             users.forEach(u => {
                 if (u && u.fullname && /^(Thầy|Cô)\s+/i.test(u.fullname)) {
                     u.fullname = u.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
@@ -716,33 +787,31 @@ const store = {
                     updated = true;
                 }
             });
-            INITIAL_USERS.forEach(initU => {
-                const found = users.find(u => u.username === initU.username || u.id === initU.id);
-                if (!found) {
-                    users.push({ ...initU });
-                    updated = true;
-                }
-            });
+
+            // 3. Nếu state.user đang đăng nhập chưa có trong users (và không bị xóa) thì đồng bộ vào
             if (typeof state !== 'undefined' && state && state.user) {
-                const userExists = users.some(u => 
-                    (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
-                    (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase()) ||
-                    (u.fullname && state.user.fullname && u.fullname.toLowerCase() === state.user.fullname.toLowerCase())
-                );
-                if (!userExists) {
-                    users.push({
-                        ...state.user,
-                        password: state.user.password || '123456'
-                    });
-                    updated = true;
+                if (!this.isUserDeleted(state.user.id, state.user.username)) {
+                    const userExists = users.some(u => 
+                        (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
+                        (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase()) ||
+                        (u.fullname && state.user.fullname && u.fullname.toLowerCase() === state.user.fullname.toLowerCase())
+                    );
+                    if (!userExists) {
+                        users.push({
+                            ...state.user,
+                            password: state.user.password || '123456'
+                        });
+                        updated = true;
+                    }
                 }
             }
+
             if (updated) {
                 localStorage.setItem('khls_users_v2', JSON.stringify(users));
             }
             return users;
         } catch(e) {
-            return INITIAL_USERS;
+            return INITIAL_USERS.filter(u => !this.isUserDeleted(u.id, u.username));
         }
     },
     saveUsers(users) {
@@ -5074,6 +5143,10 @@ function handleSaveUser(e) {
         };
         if (password) newUser.password = password;
 
+        if (store.removeDeletedUserId) {
+            store.removeDeletedUserId(newUser.id, newUser.username);
+        }
+
         users.push(newUser);
         store.saveUsers(users);
 
@@ -5105,11 +5178,14 @@ function deleteUser(userId) {
         return;
     }
 
-    if (confirm(`Thầy/Cô có chắc chắn muốn xóa tài khoản giáo viên "${user.fullname}" (${user.username}) khỏi hệ thống không?`)) {
-        const filtered = users.filter(u => u.id !== user.id && String(u.id) !== String(user.id));
+    if (confirm(`Thầy/Cô có chắc chắn muốn xóa vĩnh viễn tài khoản giáo viên "${user.fullname}" (${user.username}) khỏi hệ thống không?`)) {
+        if (store.addDeletedUserId) {
+            store.addDeletedUserId(user.id, user.username);
+        }
+        const filtered = users.filter(u => u.id !== user.id && String(u.id) !== String(user.id) && u.username !== user.username);
         store.saveUsers(filtered);
         closeEditUserModal();
-        showToast(`✅ Đã xóa tài khoản giáo viên "${user.fullname}" thành công! 🗑️`, 'success');
+        showToast(`✅ Đã xóa vĩnh viễn tài khoản giáo viên "${user.fullname}"! 🗑️`, 'success');
         renderAdminPage('users');
     }
 }
@@ -6260,6 +6336,8 @@ function resetToInitialData() {
         localStorage.removeItem('khls_categories_v2');
         localStorage.removeItem('khls_grades_v2');
         localStorage.removeItem('khls_subjects_v2');
+        localStorage.removeItem('khls_deleted_user_ids_v1');
+        localStorage.removeItem('khls_deleted_doc_ids_v1');
         showToast('Đã khôi phục dữ liệu mẫu ban đầu!', 'info');
         window.location.reload();
     }
