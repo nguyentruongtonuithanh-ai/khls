@@ -2089,20 +2089,8 @@ ${escapeHtml(docText)}
                     <span class="doc-viewer-size-badge">${formatFileSize(doc.file_size)}</span>
                 </div>
                 <div class="doc-viewer-toolbar-right">
-                    ${driveId ? `
-                        <a href="https://drive.google.com/file/d/${driveId}/view" target="_blank" rel="noopener" class="btn btn-sm btn-outline doc-viewer-btn" title="Mở trên Google Drive">
-                            <svg width="14" height="14" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg>
-                            <span>Google Drive</span>
-                        </a>
-                    ` : ''}
-                    <button type="button" class="btn btn-sm btn-secondary doc-viewer-btn" onclick="openDocumentInNewTab('${doc.id}')" title="Mở sang tab mới">
-                        <span>↗️ Mở tab mới</span>
-                    </button>
                     <button type="button" class="btn btn-sm btn-primary doc-viewer-btn" onclick="handleDownloadDoc('${doc.id}')" title="Tải tệp tin về máy">
                         <span>⬇️ Tải về</span>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-secondary doc-viewer-btn" onclick="toggleDocViewerFullscreen()" title="Toàn màn hình">
-                        <span>⛶ Phóng to</span>
                     </button>
                 </div>
             </div>
