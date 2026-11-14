@@ -7827,6 +7827,8 @@ async function syncDocumentsFromDrive(isManual = false) {
             });
 
             if (cloudStruct) {
+                const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
+
                 // 1a. Nhận danh sách các tài liệu đã bị Admin xóa từ Google Drive
                 if (Array.isArray(cloudStruct.deleted_doc_ids) && cloudStruct.deleted_doc_ids.length > 0) {
                     cloudStruct.deleted_doc_ids.forEach(delId => {
@@ -7852,7 +7854,6 @@ async function syncDocumentsFromDrive(isManual = false) {
                     const curUsers = store.getUsers();
                     const filteredCurUsers = curUsers.filter(u => u && !store.isUserDeleted(u.id, u.username));
                     if (filteredCurUsers.length !== curUsers.length) {
-                        const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
                         store.saveUsers(filteredCurUsers, localTime);
                         if (state.currentPage === 'admin') {
                             const activeTab = document.querySelector('.admin-tab.active')?.getAttribute('data-tab') || 'users';
@@ -7864,7 +7865,6 @@ async function syncDocumentsFromDrive(isManual = false) {
                 }
 
                 // 1c. Đồng bộ danh sách tài khoản người dùng từ Google Drive
-                const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
                 if (Array.isArray(cloudStruct.users) && cloudStruct.users.length > 0 && maxTimestamp > localTime) {
                     const validCloudUsers = cloudStruct.users.filter(u => u && !store.isUserDeleted(u.id, u.username));
                     if (validCloudUsers.length > 0) {
@@ -7925,8 +7925,6 @@ async function syncDocumentsFromDrive(isManual = false) {
                 const isDiff = JSON.stringify(cloudStruct.categories || []) !== JSON.stringify(curCats) ||
                                JSON.stringify(cloudStruct.grades || []) !== JSON.stringify(curGrades) ||
                                JSON.stringify(cloudStruct.subjects || []) !== JSON.stringify(curSubs);
-
-                const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
 
                 if (isDiff || maxTimestamp > localTime) {
                     if (Array.isArray(cloudStruct.categories) && cloudStruct.categories.length > 0) {
