@@ -656,6 +656,22 @@ const INITIAL_NOTIFICATIONS = [
     }
 ];
 
+// ======================== HELPER CHUẨN HÓA TIẾNG VIỆT ========================
+
+function removeVietnameseTones(str) {
+    if (!str) return '';
+    str = String(str).toLowerCase().trim();
+    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a');
+    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+    str = str.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+    str = str.replace(/đ/g, 'd');
+    str = str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return str;
+}
+
 // ======================== APP STORE & STATE ========================
 
 const store = {
@@ -762,23 +778,17 @@ const store = {
             let users = JSON.parse(data);
             let updated = false;
 
-            // 1. Luôn loại bỏ các tài khoản nằm trong danh sách đã xóa vĩnh viễn
-            if (deletedIds && deletedIds.length > 0) {
-                const prevLen = users.length;
-                users = users.filter(u => u && !this.isUserDeleted(u.id, u.username));
-                if (users.length !== prevLen) {
-                    updated = true;
-                }
-            }
+            // Xóa bỏ 'nguyenthichauvan' khỏi blacklist đã xóa nếu trước đó bị đưa nhầm vào
+            this.removeDeletedUserId(null, 'nguyenthichauvan');
 
-            // 2. Chuẩn hóa tên và mật khẩu
+            // 1. Chuẩn hóa tên và mật khẩu
             users.forEach(u => {
                 if (u && u.fullname && /^(Thầy|Cô)\s+/i.test(u.fullname)) {
                     u.fullname = u.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
                     updated = true;
                 }
                 if (u && !u.password) {
-                    u.password = (u.username === 'admin' || u.role === 'admin') ? 'admin' : '123456';
+                    u.password = '123456';
                     updated = true;
                 }
                 if (u && u.username === 'trantanlong' && (u.fullname === 'trantanlong' || !u.fullname || u.fullname.toLowerCase() === 'trantanlong')) {
@@ -788,21 +798,52 @@ const store = {
                 }
             });
 
-            // 3. Nếu state.user đang đăng nhập chưa có trong users (và không bị xóa) thì đồng bộ vào
+            // 2. Đảm bảo tài khoản Quản trị viên Cô Nguyễn Thị Châu Vân luôn tồn tại với quyền admin
+            let chauVanUser = users.find(u => 
+                (u.username && u.username.toLowerCase() === 'nguyenthichauvan') ||
+                (u.fullname && typeof removeVietnameseTones !== 'undefined' && removeVietnameseTones(u.fullname).replace(/\s+/g, '') === 'nguyenthichauvan')
+            );
+            if (!chauVanUser) {
+                chauVanUser = {
+                    id: 15,
+                    username: 'nguyenthichauvan',
+                    fullname: 'Nguyễn Thị Châu Vân',
+                    password: '123456',
+                    role: 'admin',
+                    department: 'Ban Giám Hiệu',
+                    honor: 'Quản trị viên Hệ thống',
+                    avatar_letter: 'V',
+                    total_uploads: 0,
+                    total_downloads: 0,
+                    total_stars: 0
+                };
+                users.push(chauVanUser);
+                updated = true;
+            } else {
+                if (chauVanUser.role !== 'admin') {
+                    chauVanUser.role = 'admin';
+                    chauVanUser.department = chauVanUser.department || 'Ban Giám Hiệu';
+                    updated = true;
+                }
+                if (!chauVanUser.password) {
+                    chauVanUser.password = '123456';
+                    updated = true;
+                }
+            }
+
+            // 3. Nếu state.user đang đăng nhập chưa có trong users thì đồng bộ vào
             if (typeof state !== 'undefined' && state && state.user) {
-                if (!this.isUserDeleted(state.user.id, state.user.username)) {
-                    const userExists = users.some(u => 
-                        (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
-                        (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase()) ||
-                        (u.fullname && state.user.fullname && u.fullname.toLowerCase() === state.user.fullname.toLowerCase())
-                    );
-                    if (!userExists) {
-                        users.push({
-                            ...state.user,
-                            password: state.user.password || '123456'
-                        });
-                        updated = true;
-                    }
+                const userExists = users.some(u => 
+                    (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
+                    (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase()) ||
+                    (u.fullname && state.user.fullname && u.fullname.toLowerCase() === state.user.fullname.toLowerCase())
+                );
+                if (!userExists) {
+                    users.push({
+                        ...state.user,
+                        password: state.user.password || '123456'
+                    });
+                    updated = true;
                 }
             }
 
@@ -6631,23 +6672,27 @@ function handleLogin(e) {
     }
 
     const inputLower = rawInput.toLowerCase();
-    const inputClean = inputLower.split('@')[0].replace(/\s+/g, '');
+    const inputClean = removeVietnameseTones(rawInput).split('@')[0].replace(/\s+/g, '');
     const users = store.getUsers();
 
-    // 1. Tìm kiếm tài khoản chính xác theo username, email hoặc họ tên (không phân biệt hoa thường)
+    // 1. Tìm kiếm tài khoản thông minh theo username, email hoặc họ tên (hỗ trợ không dấu, viết liền, bỏ @...)
     let candidateUsers = users.filter(u => {
         if (!u) return false;
         const uUser = (u.username || '').toLowerCase().trim();
+        const uUserClean = removeVietnameseTones(uUser).replace(/\s+/g, '');
         const uFull = (u.fullname || '').toLowerCase().trim();
-        const uFullClean = uFull.replace(/^(thầy|cô)\s+/i, '').trim();
+        const uFullClean = removeVietnameseTones(uFull).replace(/\s+/g, '');
+        const uFullNoPrefix = removeVietnameseTones(uFull.replace(/^(thầy|cô)\s+/i, '')).replace(/\s+/g, '');
 
         return uUser === inputLower ||
                uUser === inputClean ||
-               uFull === inputLower ||
-               uFullClean === inputLower ||
-               (inputLower === 'admin' && (uUser === 'admin' || u.role === 'admin')) ||
-               (inputLower === 'totruong' && (uUser.startsWith('totruong') || u.role === 'leader')) ||
-               (inputLower === 'trantanlong' && uUser === 'trantanlong');
+               uUserClean === inputClean ||
+               uFullClean === inputClean ||
+               uFullNoPrefix === inputClean ||
+               (inputClean === 'admin' && (uUser === 'admin' || u.role === 'admin')) ||
+               (inputClean === 'totruong' && (uUser.startsWith('totruong') || u.role === 'leader')) ||
+               (inputClean === 'trantanlong' && uUser === 'trantanlong') ||
+               (inputClean === 'nguyenthichauvan' && (uUserClean === 'nguyenthichauvan' || uFullClean.includes('chauvan')));
     });
 
     // Ưu tiên tài khoản có quyền Quản trị viên hoặc Tổ trưởng nếu có nhiều tài khoản trùng tên
@@ -6657,28 +6702,14 @@ function handleLogin(e) {
 
     // Fallback demo tài khoản mẫu
     if (!matchedUser) {
-        if (inputLower === 'admin' || inputClean === 'admin') {
+        if (inputClean === 'admin') {
             matchedUser = users.find(u => u.role === 'admin') || users[0];
-        } else if (inputLower === 'totruong' || inputClean === 'totruong') {
+        } else if (inputClean === 'totruong') {
             matchedUser = users.find(u => u.role === 'leader') || users[1];
-        } else if (inputLower === 'trantanlong' || inputClean === 'trantanlong') {
-            matchedUser = users.find(u => (u.username || '').toLowerCase() === 'trantanlong') || {
-                id: 14,
-                username: 'trantanlong',
-                fullname: 'Trần Tấn Long',
-                password: '123456',
-                role: 'teacher',
-                department: 'Tổ Tin học - Ngoại ngữ',
-                honor: 'Giáo viên sáng tạo & tích cực',
-                avatar_letter: 'L',
-                total_uploads: 5,
-                total_downloads: 120,
-                total_stars: 25
-            };
-            if (!users.some(u => (u.username || '').toLowerCase() === 'trantanlong')) {
-                users.push(matchedUser);
-                store.saveUsers(users);
-            }
+        } else if (inputClean === 'trantanlong') {
+            matchedUser = users.find(u => (u.username || '').toLowerCase() === 'trantanlong');
+        } else if (inputClean === 'nguyenthichauvan') {
+            matchedUser = users.find(u => (u.username || '').toLowerCase() === 'nguyenthichauvan');
         }
     }
 
