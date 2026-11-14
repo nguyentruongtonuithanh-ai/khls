@@ -4112,12 +4112,6 @@ function markAllNotificationsRead() {
 
 // ======================== PAGE: PROFILE ========================
 
-function setProfileViewMode(mode) {
-    state.profileViewMode = mode;
-    localStorage.setItem('khls_profile_view_mode', mode);
-    renderProfilePage();
-}
-
 function handleProfileTableSort(col) {
     if (state.profileSortCol === col) {
         state.profileSortDir = state.profileSortDir === 'asc' ? 'desc' : 'asc';
@@ -4290,19 +4284,6 @@ function renderProfilePage() {
     if (downStatEl) downStatEl.textContent = totalDownloads;
     if (starStatEl) starStatEl.textContent = avgStars;
 
-    // View toggle buttons (Chi tiết / Lưới thẻ)
-    const toggleContainer = document.getElementById('profile-view-toggles');
-    if (toggleContainer) {
-        toggleContainer.innerHTML = `
-            <button type="button" class="btn btn-sm ${state.profileViewMode === 'details' ? 'btn-primary' : 'btn-secondary'}" onclick="setProfileViewMode('details')" title="Xem dạng bảng chi tiết (Windows Details)" style="display:inline-flex; align-items:center; gap:5px; font-weight:600;">
-                <span>📋 Chi tiết</span>
-            </button>
-            <button type="button" class="btn btn-sm ${state.profileViewMode === 'grid' ? 'btn-primary' : 'btn-secondary'}" onclick="setProfileViewMode('grid')" title="Xem dạng lưới thẻ" style="display:inline-flex; align-items:center; gap:5px; font-weight:600;">
-                <span>🗂️ Lưới thẻ</span>
-            </button>
-        `;
-    }
-
     if (gridEl) {
         if (docs.length === 0) {
             gridEl.className = 'browse-docs-container';
@@ -4318,11 +4299,8 @@ function renderProfilePage() {
                     </a>
                 </div>
             `;
-        } else if (state.profileViewMode === 'grid') {
-            gridEl.className = 'docs-grid';
-            gridEl.innerHTML = docs.map(renderDocCard).join('');
         } else {
-            // Mặc định: Dạng bảng chi tiết (Windows Details)
+            // Dạng bảng chi tiết (Windows Details)
             gridEl.className = 'browse-docs-container';
 
             // Sắp xếp
