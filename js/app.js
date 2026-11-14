@@ -948,6 +948,18 @@ const state = {
 // ======================== APP INITIALIZATION ========================
 
 function initApp() {
+    // Chuẩn hóa tên tác giả cho các tài liệu hiện có
+    try {
+        const docs = store.getDocuments();
+        let docsChanged = false;
+        docs.forEach(d => {
+            if (d && (d.author_name === 'trantanlong' || !d.author_name)) {
+                d.author_name = 'Trần Tấn Long';
+                docsChanged = true;
+            }
+        });
+        if (docsChanged) store.saveDocuments(docs);
+    } catch(e) {}
     CATEGORIES = store.getCategories();
     GRADES = store.getGrades();
     SUBJECTS = store.getSubjects();
@@ -2103,6 +2115,29 @@ ${escapeHtml(docText)}
 
 // ======================== PAGE: DETAIL ========================
 
+
+function getDocAuthorName(doc) {
+    if (!doc) return 'Giáo viên';
+    let name = doc.author_name;
+    if (!name || name === 'trantanlong' || !name.includes(' ')) {
+        const users = store.getUsers ? store.getUsers() : [];
+        const u = users.find(x => 
+            (doc.author_id && (x.id === doc.author_id || String(x.id) === String(doc.author_id))) ||
+            (doc.author_name && x.username && x.username.toLowerCase() === doc.author_name.toLowerCase()) ||
+            (doc.author_name && x.fullname && x.fullname.toLowerCase() === doc.author_name.toLowerCase())
+        );
+        if (u && u.fullname && u.fullname !== u.username) {
+            name = u.fullname;
+        } else if (name === 'trantanlong') {
+            name = 'Trần Tấn Long';
+        }
+    }
+    if (name === 'trantanlong') {
+        name = 'Trần Tấn Long';
+    }
+    return (name || 'Giáo viên').replace(/^(Thầy|Cô)\s+/i, '').trim();
+}
+
 function renderDetailPage(docId) {
     const container = document.getElementById('detail-container');
     const titleBreadcrumb = document.getElementById('detail-breadcrumb-title');
@@ -2164,7 +2199,7 @@ function renderDetailPage(docId) {
                     <h1 class="detail-title">${doc.title}</h1>
 
                     <div class="detail-meta-bar">
-                        <span>👤 Tác giả: <strong>${doc.author_name}</strong> (${doc.author_dept || 'Tổ Chuyên Môn'})</span>
+                        <span>👤 Tác giả: <strong>${getDocAuthorName(doc)}</strong></span>
                         <span>📅 ${timeAgo(doc.created_at)}</span>
                         <span>👁️ ${doc.view_count} xem</span>
                         <span>⬇️ ${doc.download_count || 0} tải</span>
@@ -2457,7 +2492,7 @@ NĂM HỌC 2025 - 2026
 
 TÀI LIỆU: ${doc.title}
 Môn: ${getSubjectName(doc.subject)} | Khối: Khối ${doc.grade}
-Tác giả: ${doc.author_name} (${doc.author_dept || 'Tổ Chuyên Môn'})
+Tác giả: ${getDocAuthorName(doc)}
 Tệp đính kèm: ${doc.file_name}
 
 Mô tả:
@@ -3038,7 +3073,7 @@ function getAccurateDocumentHtml(doc) {
                 <span class="doc-sub-tag">KHỐI ${doc.grade} • MÔN ${getSubjectName(doc.subject).toUpperCase()}</span>
                 <h2 style="color:#1e3a8a; font-size:1.45rem; font-weight:800; margin:10px 0 4px;">${doc.title}</h2>
                 <div style="font-size:0.9rem; color:#64748b; margin-top:4px;">
-                    Tác giả: <strong>${doc.author_name}</strong> (${doc.author_dept || 'Tổ Chuyên Môn'}) • Tệp: <code>${doc.file_name}</code>
+                    Tác giả: <strong>${getDocAuthorName(doc)}</strong> • Tệp: <code>${doc.file_name}</code>
                 </div>
             </div>
 
