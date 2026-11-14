@@ -923,6 +923,9 @@ function initApp() {
     syncAllSelects();
     initRouter();
     initEventListeners();
+    if (state.user) {
+        checkDocumentStatusNotifications(state.user);
+    }
     updatePendingBadge();
     animateCounters();
     syncDriveLinks();
@@ -2115,6 +2118,21 @@ function renderDetailPage(docId) {
                         </button>
                     </div>
 
+                    ${doc.status === 'rejected' ? `
+                        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: var(--radius-md); padding: 14px 18px; margin-top: 14px; margin-bottom: 8px; color: #ef4444;">
+                            <div style="font-weight: 700; font-size: 1rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                <span>⚠️ Học liệu chưa được phê duyệt / Cần chỉnh sửa</span>
+                            </div>
+                            <div style="font-size: 0.92rem; color: var(--text-primary); line-height: 1.6;">
+                                <strong>Góp ý từ Ban Giám Hiệu / Tổ trưởng:</strong> ${escapeHtml(doc.reject_reason || 'Cần điều chỉnh và bổ sung thêm nội dung theo yêu cầu chuyên môn.')}
+                            </div>
+                        </div>
+                    ` : (doc.status === 'pending' ? `
+                        <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: var(--radius-md); padding: 12px 16px; margin-top: 14px; margin-bottom: 8px; color: #eab308; font-size: 0.9rem;">
+                            ⏳ <strong>Học liệu đang chờ Ban Giám Hiệu / Tổ trưởng chuyên môn phê duyệt.</strong>
+                        </div>
+                    ` : '')}
+
                     <h1 class="detail-title">${doc.title}</h1>
 
                     <div class="detail-meta-bar">
@@ -2198,7 +2216,7 @@ function renderDetailPage(docId) {
                 <div class="detail-card">
                     <h4 style="margin-bottom:var(--space-sm);">📋 Thông tin kỹ thuật</h4>
                     <ul style="font-size:0.85rem; line-height:2.2; color:var(--text-secondary);">
-                        <li>📁 <strong>Định dạng:</strong> ${doc.file_type.toUpperCase()}</li>
+                        <li>📁 <strong>Định dạng:</strong> ${(doc.file_type || 'DOCX').toUpperCase()}</li>
                         <li>⚖️ <strong>Dung lượng:</strong> ${formatFileSize(doc.file_size)}</li>
                         <li>☁️ <strong>Lưu trữ:</strong> ${driveId ? '<span style="color:#2563eb; font-weight:700;">Google Drive Trường</span>' : 'Bộ nhớ hệ thống'}</li>
                         <li>🏫 <strong>Trường:</strong> TH Núi Thành</li>
@@ -3726,17 +3744,21 @@ async function approveDocument(docId, btnElement = null) {
         store.saveUsers(users);
     }
 
-    // Add notification
+    // Add notification targeted directly to document author
     const notifs = store.getNotifications();
     notifs.unshift({
-        id: 'notif-' + Date.now(),
+        id: `notif-approved-${doc.id}-${Date.now()}`,
+        doc_id: doc.id,
+        target_user_id: doc.author_id,
+        target_author_name: doc.author_name,
         title: 'Học liệu đã được duyệt',
-        text: `Học liệu "${doc.title}" đã được ${approver} phê duyệt xuất bản.`,
+        text: `Học liệu "${doc.title}" của Thầy/Cô đã được ${approver} phê duyệt xuất bản.`,
         time: 'Vừa xong',
         icon: '✅',
-        type: 'doc',
+        type: 'approved',
         link: `#/detail/${doc.id}`,
-        unread: true
+        unread: true,
+        created_at: new Date().toISOString()
     });
     store.saveNotifications(notifs);
 
@@ -3771,6 +3793,7 @@ async function rejectDocument(docId, btnElement = null) {
     const settings = store.getSettings();
     const myGas = localStorage.getItem('khls_my_drive_gas_url');
     const activeGas = myGas || settings.drive_gas_url;
+    const approverName = state.user ? state.user.fullname : 'Tổ trưởng Chuyên môn';
 
     if (activeGas) {
         try {
@@ -3783,7 +3806,7 @@ async function rejectDocument(docId, btnElement = null) {
                     driveId: doc.drive_id || '',
                     fileName: doc.file_name || '',
                     rejectReason: reason,
-                    approvedBy: state.user ? state.user.fullname : 'Tổ trưởng Chuyên môn'
+                    approvedBy: approverName
                 })
             });
         } catch (e) {
@@ -3794,6 +3817,26 @@ async function rejectDocument(docId, btnElement = null) {
     doc.status = 'rejected';
     doc.reject_reason = reason;
     store.saveDocuments(docs);
+
+    // Gửi thông báo từ chối trực tiếp đến tác giả bài đăng
+    const notifs = store.getNotifications();
+    notifs.unshift({
+        id: `notif-rejected-${doc.id}-${Date.now()}`,
+        doc_id: doc.id,
+        target_user_id: doc.author_id,
+        target_author_name: doc.author_name,
+        title: 'Học liệu cần chỉnh sửa / Chưa được duyệt',
+        text: `Học liệu "${doc.title}" của Thầy/Cô chưa được duyệt. ${reason ? 'Góp ý từ ' + approverName + ': "' + reason + '"' : 'Vui lòng kiểm tra lại.'}`,
+        time: 'Vừa xong',
+        icon: '⚠️',
+        type: 'rejected',
+        link: `#/detail/${doc.id}`,
+        unread: true,
+        created_at: new Date().toISOString(),
+        reason: reason
+    });
+    store.saveNotifications(notifs);
+
     showToast('Đã gửi phản hồi từ chối / yêu cầu sửa học liệu đến giáo viên', 'warning');
     updatePendingBadge();
     renderReviewPage();
@@ -3801,17 +3844,99 @@ async function rejectDocument(docId, btnElement = null) {
 
 // ======================== NOTIFICATIONS DROPDOWN ========================
 
+function checkDocumentStatusNotifications(user = state.user) {
+    if (!user) return;
+    const docs = store.getDocuments();
+    const notifs = store.getNotifications();
+    let hasNew = false;
+
+    docs.forEach(doc => {
+        if (!isDocOwner(doc, user)) return;
+
+        const approverName = doc.approved_by || 'Ban Giám Hiệu';
+
+        if (doc.status === 'approved') {
+            const exists = notifs.some(n => n.doc_id === doc.id && n.type === 'approved');
+            if (!exists) {
+                notifs.unshift({
+                    id: `notif-approved-${doc.id}`,
+                    doc_id: doc.id,
+                    target_user_id: user.id || doc.author_id,
+                    target_author_name: user.fullname || doc.author_name,
+                    title: 'Học liệu đã được duyệt',
+                    text: `Học liệu "${doc.title}" của Thầy/Cô đã được ${approverName} phê duyệt xuất bản.`,
+                    time: 'Mới cập nhật',
+                    icon: '✅',
+                    type: 'approved',
+                    link: `#/detail/${doc.id}`,
+                    unread: true,
+                    created_at: new Date().toISOString()
+                });
+                hasNew = true;
+            }
+        } else if (doc.status === 'rejected') {
+            const exists = notifs.some(n => n.doc_id === doc.id && n.type === 'rejected');
+            if (!exists) {
+                const reasonText = doc.reject_reason || 'Cần bổ sung thêm thông tin theo yêu cầu chuyên môn.';
+                notifs.unshift({
+                    id: `notif-rejected-${doc.id}`,
+                    doc_id: doc.id,
+                    target_user_id: user.id || doc.author_id,
+                    target_author_name: user.fullname || doc.author_name,
+                    title: 'Học liệu cần chỉnh sửa / Chưa được duyệt',
+                    text: `Học liệu "${doc.title}" của Thầy/Cô chưa được duyệt. Góp ý từ ${approverName}: "${reasonText}"`,
+                    time: 'Mới cập nhật',
+                    icon: '⚠️',
+                    type: 'rejected',
+                    link: `#/detail/${doc.id}`,
+                    unread: true,
+                    created_at: new Date().toISOString(),
+                    reason: reasonText
+                });
+                hasNew = true;
+            }
+        }
+    });
+
+    if (hasNew) {
+        store.saveNotifications(notifs);
+        updatePendingBadge();
+    }
+}
+
 function filterNotificationsForUser(notifs, user = state.user) {
     if (!user) return [];
+
+    const normalize = (name) => (name || '').replace(/^(Thầy|Cô)\s+/i, '').trim().toLowerCase();
+    const userFull = normalize(user.fullname);
+
     return notifs.filter(n => {
-        // Nếu là thông báo kiểm duyệt:
+        // 1. Thông báo phê duyệt hoặc từ chối bài đăng dành riêng cho giáo viên tác giả:
+        if (n.type === 'approved' || n.type === 'rejected' || n.target_user_id || n.target_author_name) {
+            if (n.target_user_id && user.id && String(n.target_user_id) === String(user.id)) {
+                return true;
+            }
+            if (n.target_author_name && userFull) {
+                const targetName = normalize(n.target_author_name);
+                if (targetName === userFull || targetName.includes(userFull) || userFull.includes(targetName)) {
+                    return true;
+                }
+            }
+            if (n.doc_id) {
+                const doc = store.getDocuments().find(d => String(d.id) === String(n.doc_id));
+                if (doc && isDocOwner(doc, user)) {
+                    return true;
+                }
+            }
+            // Không phải tác giả của bài này -> ẩn đi, không làm phiền người khác
+            return false;
+        }
+
+        // 2. Thông báo kiểm duyệt: chỉ hiển thị cho Admin và Tổ trưởng chuyên môn
         if (n.type === 'review' || (n.link && n.link.startsWith('#/review'))) {
-            // Chỉ hiển thị cho Admin và Tổ trưởng
             if (!canUserAccessReview(user)) return false;
-            // Admin xem tất cả thông báo
             if (user.role === 'admin' || user.username === 'admin') return true;
 
-            // Nếu là tổ trưởng khối lớp 1..5: chỉ xem thông báo học liệu của khối đó
             const leaderGrade = getLeaderAssignedGrade(user);
             if (leaderGrade) {
                 if (n.grade) {
@@ -3893,12 +4018,14 @@ function toggleNotificationDropdown() {
     if (isOpen) {
         renderNotificationList();
 
-        // Khi người dùng bấm vào xem thông báo -> Đã xem rồi nên xóa số 3 trên badge
+        // Khi người dùng bấm vào xem thông báo -> Chỉ đánh dấu đã đọc các thông báo của chính người này
         const notifs = store.getNotifications();
+        const userNotifs = filterNotificationsForUser(notifs, state.user);
         let changed = false;
-        notifs.forEach(n => {
-            if (n.unread) {
-                n.unread = false;
+        userNotifs.forEach(un => {
+            const original = notifs.find(n => n.id === un.id);
+            if (original && original.unread) {
+                original.unread = false;
                 changed = true;
             }
         });
@@ -3945,11 +4072,15 @@ function handleNotificationClick(notifId) {
 
 function markAllNotificationsRead() {
     const notifs = store.getNotifications();
-    notifs.forEach(n => { n.unread = false; });
+    const userNotifs = filterNotificationsForUser(notifs, state.user);
+    userNotifs.forEach(un => {
+        const original = notifs.find(n => n.id === un.id);
+        if (original) original.unread = false;
+    });
     store.saveNotifications(notifs);
     updatePendingBadge();
     renderNotificationList();
-    showToast('Đã đánh dấu tất cả thông báo là đã đọc', 'info');
+    showToast('Đã đánh dấu tất cả thông báo của bạn là đã đọc', 'info');
 }
 
 // ======================== PAGE: PROFILE ========================
@@ -6124,6 +6255,9 @@ function loginAs(user) {
         renderHomePage();
     }
 
+    // Kiểm tra ngay các thông báo duyệt / từ chối của tài khoản vừa đăng nhập
+    checkDocumentStatusNotifications(user);
+
     // Nếu đăng nhập là Admin: đồng bộ cấu trúc và danh sách xóa lên Drive
     if (user && user.role === 'admin') {
         setTimeout(() => pushStructureToCloud(false), 400);
@@ -7184,9 +7318,69 @@ async function syncDocumentsFromDrive(isManual = false) {
                             }
                         } else {
                             // Nhận trạng thái duyệt mới nhất từ Cloud (ví dụ Máy B nhận bài đã duyệt từ Máy A)
-                            localDocs[existingIdx].status = cloudDoc.status;
+                            const oldStatus = localDocs[existingIdx].status;
+                            const newStatus = cloudDoc.status;
+                            localDocs[existingIdx].status = newStatus;
                             localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
+                            if (cloudDoc.reject_reason) {
+                                localDocs[existingIdx].reject_reason = cloudDoc.reject_reason;
+                            }
                             hasChanges = true;
+
+                            // NẾU TÀI LIỆU NÀY CÓ TRẠNG THÁI APPROVED HOẶC REJECTED -> TẠO THÔNG BÁO CHO TÁC GIẢ
+                            if (newStatus === 'approved' || newStatus === 'rejected') {
+                                const notifs = store.getNotifications();
+                                const notifType = newStatus;
+                                const notifKey = `notif-${notifType}-${cloudDoc.id}`;
+                                const exists = notifs.some(n => n.id === notifKey || (n.doc_id === cloudDoc.id && n.type === notifType));
+
+                                if (!exists) {
+                                    const approverName = cloudDoc.approved_by || 'Ban Giám Hiệu';
+                                    if (newStatus === 'approved') {
+                                        notifs.unshift({
+                                            id: notifKey,
+                                            doc_id: cloudDoc.id,
+                                            target_user_id: cloudDoc.author_id,
+                                            target_author_name: cloudDoc.author_name,
+                                            title: 'Học liệu đã được duyệt',
+                                            text: `Học liệu "${cloudDoc.title}" của Thầy/Cô đã được ${approverName} phê duyệt xuất bản.`,
+                                            time: 'Mới cập nhật',
+                                            icon: '✅',
+                                            type: 'approved',
+                                            link: `#/detail/${cloudDoc.id}`,
+                                            unread: true,
+                                            created_at: new Date().toISOString()
+                                        });
+                                    } else {
+                                        const reasonText = cloudDoc.reject_reason || 'Cần bổ sung thêm thông tin theo yêu cầu chuyên môn.';
+                                        notifs.unshift({
+                                            id: notifKey,
+                                            doc_id: cloudDoc.id,
+                                            target_user_id: cloudDoc.author_id,
+                                            target_author_name: cloudDoc.author_name,
+                                            title: 'Học liệu cần chỉnh sửa / Chưa được duyệt',
+                                            text: `Học liệu "${cloudDoc.title}" của Thầy/Cô chưa được duyệt. Góp ý từ ${approverName}: "${reasonText}"`,
+                                            time: 'Mới cập nhật',
+                                            icon: '⚠️',
+                                            type: 'rejected',
+                                            link: `#/detail/${cloudDoc.id}`,
+                                            unread: true,
+                                            created_at: new Date().toISOString(),
+                                            reason: reasonText
+                                        });
+                                    }
+                                    store.saveNotifications(notifs);
+
+                                    // Nếu tác giả bài này đang đăng nhập trên máy này, hiện thông báo Toast nổi ngay lập tức!
+                                    if (state.user && isDocOwner(cloudDoc, state.user)) {
+                                        if (newStatus === 'approved') {
+                                            showToast(`🎉 Học liệu "${cloudDoc.title}" của Thầy/Cô đã được ${approverName} phê duyệt xuất bản!`, 'success');
+                                        } else {
+                                            showToast(`⚠️ Học liệu "${cloudDoc.title}" của Thầy/Cô có phản hồi cần chỉnh sửa từ ${approverName}!`, 'warning');
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -7238,6 +7432,11 @@ async function syncDocumentsFromDrive(isManual = false) {
                 } else if (state.currentPage === 'detail' && state.currentDocId) {
                     renderDetailPage(state.currentDocId);
                 }
+            }
+
+            // Kiểm tra trạng thái học liệu của người dùng hiện tại để sinh thông báo nếu còn thiếu
+            if (state.user) {
+                checkDocumentStatusNotifications(state.user);
             }
 
             if (isManual) {
