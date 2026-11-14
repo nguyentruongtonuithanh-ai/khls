@@ -1960,8 +1960,7 @@ function renderBrowsePage(cat = '', grade = '', subject = '', query = '') {
             gridEl.innerHTML = `
                 <div class="empty-state">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <p>Không tìm thấy giáo án / học liệu phù hợp với bộ lọc hiện tại.</p>
-                    <a href="#/upload" class="btn btn-primary" style="margin-top:1rem;">Đóng góp tài liệu mới</a>
+                    <p>Chưa có học liệu.</p>
                 </div>
             `;
         } else if (state.viewMode === 'grid') {
