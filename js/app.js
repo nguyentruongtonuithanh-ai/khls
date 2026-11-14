@@ -5037,7 +5037,7 @@ function openEditUserModal(userId) {
         fullnameInput.value = user.fullname || '';
         usernameInput.value = user.username || '';
         roleSelect.value = user.role || 'teacher';
-        honorInput.value = user.honor || '';
+        if (honorInput) honorInput.value = user.honor || '';
 
         if (standardDepts.includes(user.department)) {
             deptSelect.value = user.department;
@@ -5075,7 +5075,7 @@ function openEditUserModal(userId) {
         deptSelect.value = 'Tổ 1';
         deptCustomInput.style.display = 'none';
         deptCustomInput.value = '';
-        honorInput.value = 'Giáo viên mới';
+        if (honorInput) honorInput.value = 'Giáo viên mới';
 
         if (deleteBtn) deleteBtn.style.display = 'none';
     }
@@ -5109,7 +5109,7 @@ function handleSaveUser(e) {
         dept = deptCustomInput ? deptCustomInput.value.trim() : '';
         if (!dept) dept = 'Tổ Chuyên Môn';
     }
-    const honor = honorInput ? honorInput.value.trim() : 'Giáo viên';
+    const honor = (honorInput && honorInput.value.trim()) ? honorInput.value.trim() : '';
     const password = passwordInput ? passwordInput.value.trim() : '';
 
     if (!fullname) {
@@ -5150,7 +5150,7 @@ function handleSaveUser(e) {
         users[userIndex].username = username;
         users[userIndex].role = role;
         users[userIndex].department = dept;
-        users[userIndex].honor = honor;
+        users[userIndex].honor = honor || users[userIndex].honor || (role === 'admin' ? 'Quản trị viên' : role === 'leader' ? 'Tổ trưởng' : 'Giáo viên');
         users[userIndex].avatar_letter = fullname.charAt(0).toUpperCase();
         users[userIndex].updated_at = Date.now();
         if (password) {
@@ -5203,7 +5203,7 @@ function handleSaveUser(e) {
             fullname: fullname,
             role: role,
             department: dept,
-            honor: honor || 'Giáo viên mới',
+            honor: honor || (role === 'admin' ? 'Quản trị viên' : role === 'leader' ? 'Tổ trưởng' : 'Giáo viên'),
             avatar_letter: fullname.charAt(0).toUpperCase(),
             total_uploads: 0,
             total_downloads: 0,
