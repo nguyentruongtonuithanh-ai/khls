@@ -753,13 +753,17 @@ const store = {
     },
     isUserDeleted(id, username = '') {
         try {
+            // Admin chính và Admin Châu Vân không bao giờ bị coi là đã xóa
+            const lowerUser = username ? String(username).trim().toLowerCase() : '';
+            if (lowerUser === 'admin' || lowerUser === 'nguyenthichauvan') return false;
+
             const list = this.getDeletedUserIds();
             if (!list || list.length === 0) return false;
             if (id !== null && id !== undefined && id !== '') {
                 if (list.includes(String(id).trim())) return true;
             }
-            if (username && typeof username === 'string') {
-                if (list.includes(username.trim().toLowerCase())) return true;
+            if (lowerUser) {
+                if (list.includes(lowerUser)) return true;
             }
             return false;
         } catch(e) {
@@ -781,7 +785,16 @@ const store = {
             // Xóa bỏ 'nguyenthichauvan' khỏi blacklist đã xóa nếu trước đó bị đưa nhầm vào
             this.removeDeletedUserId(null, 'nguyenthichauvan');
 
-            // 1. Chuẩn hóa tên và mật khẩu
+            // 1. Luôn loại bỏ các tài khoản nằm trong danh sách đã xóa vĩnh viễn (trừ tài khoản admin được bảo vệ)
+            if (deletedIds && deletedIds.length > 0) {
+                const prevLen = users.length;
+                users = users.filter(u => u && !this.isUserDeleted(u.id, u.username));
+                if (users.length !== prevLen) {
+                    updated = true;
+                }
+            }
+
+            // 2. Chuẩn hóa tên và mật khẩu
             users.forEach(u => {
                 if (u && u.fullname && /^(Thầy|Cô)\s+/i.test(u.fullname)) {
                     u.fullname = u.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
@@ -798,7 +811,7 @@ const store = {
                 }
             });
 
-            // 2. Đảm bảo tài khoản Quản trị viên Cô Nguyễn Thị Châu Vân luôn tồn tại với quyền admin
+            // 3. Đảm bảo tài khoản Quản trị viên Cô Nguyễn Thị Châu Vân luôn tồn tại với quyền admin
             let chauVanUser = users.find(u => 
                 (u.username && u.username.toLowerCase() === 'nguyenthichauvan') ||
                 (u.fullname && typeof removeVietnameseTones !== 'undefined' && removeVietnameseTones(u.fullname).replace(/\s+/g, '') === 'nguyenthichauvan')
@@ -831,7 +844,7 @@ const store = {
                 }
             }
 
-            // 3. Nếu state.user đang đăng nhập chưa có trong users thì đồng bộ vào
+            // 4. Nếu state.user đang đăng nhập chưa có trong users thì đồng bộ vào
             if (typeof state !== 'undefined' && state && state.user) {
                 const userExists = users.some(u => 
                     (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
@@ -5194,6 +5207,11 @@ function handleSaveUser(e) {
         closeEditUserModal();
         showToast(`Đã thêm thành công giáo viên: ${fullname}! 🎉`, 'success');
         renderAdminPage('users');
+
+        // Đồng bộ người dùng mới lên Google Drive
+        setTimeout(() => {
+            pushStructureToCloud(false);
+        }, 150);
     }
 }
 
@@ -5228,6 +5246,11 @@ function deleteUser(userId) {
         closeEditUserModal();
         showToast(`✅ Đã xóa vĩnh viễn tài khoản giáo viên "${user.fullname}"! 🗑️`, 'success');
         renderAdminPage('users');
+
+        // ĐỒNG BỘ NGAY LẬP TỨC LÊN GOOGLE DRIVE để Admin B và mọi tài khoản/thiết bị khác nhận được việc xóa!
+        setTimeout(() => {
+            pushStructureToCloud(false);
+        }, 150);
     }
 }
 window.deleteUser = deleteUser;
@@ -6260,6 +6283,8 @@ async function pushStructureToCloud(showNotification = false) {
     const grades = store.getGrades();
     const subjects = store.getSubjects();
     const deleted_doc_ids = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
+    const deleted_user_ids = store.getDeletedUserIds ? store.getDeletedUserIds() : [];
+    const users = store.getUsers ? store.getUsers() : [];
     const timestamp = Date.now();
     localStorage.setItem('khls_structure_timestamp', String(timestamp));
 
@@ -6268,6 +6293,8 @@ async function pushStructureToCloud(showNotification = false) {
         grades,
         subjects,
         deleted_doc_ids,
+        deleted_user_ids,
+        users,
         timestamp,
         updated_by: (state.user && state.user.fullname) || 'Admin',
         updated_at: new Date().toISOString()
@@ -6769,9 +6796,12 @@ function loginAs(user) {
     // Kiểm tra ngay các thông báo duyệt / từ chối của tài khoản vừa đăng nhập
     checkDocumentStatusNotifications(user);
 
-    // Nếu đăng nhập là Admin: đồng bộ cấu trúc và danh sách xóa lên Drive
+    // Nếu đăng nhập là Admin: đồng bộ ngay từ Drive về để nhận mọi thay đổi của các Admin khác
     if (user && user.role === 'admin') {
-        setTimeout(() => pushStructureToCloud(false), 400);
+        setTimeout(async () => {
+            await syncDocumentsFromDrive(false);
+            pushStructureToCloud(false);
+        }, 150);
     } else {
         // Tài khoản giáo viên/tổ trưởng: đồng bộ ngay từ Drive về để cập nhật danh sách bài đã xóa/duyệt
         setTimeout(() => syncDocumentsFromDrive(false), 300);
@@ -6786,7 +6816,7 @@ function handleLogout() {
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
-    } else if (state.currentPage === 'review') {
+    } else if (state.currentPage === 'review' || state.currentPage === 'admin' || state.currentPage === 'dashboard') {
         navigate('#/');
     } else if (state.currentPage === 'home') {
         renderHomePage();
@@ -7759,6 +7789,32 @@ async function syncDocumentsFromDrive(isManual = false) {
                     cloudStruct.deleted_doc_ids.forEach(delId => {
                         store.addDeletedDocId(delId);
                     });
+                }
+
+                // 1b. Nhận danh sách các tài khoản giáo viên đã bị Admin xóa từ Google Drive
+                let userDeletionsUpdated = false;
+                if (Array.isArray(cloudStruct.deleted_user_ids) && cloudStruct.deleted_user_ids.length > 0) {
+                    cloudStruct.deleted_user_ids.forEach(delUId => {
+                        if (store.addDeletedUserId) store.addDeletedUserId(delUId);
+                    });
+                    userDeletionsUpdated = true;
+                }
+
+                // 1c. Đồng bộ danh sách tài khoản người dùng từ Google Drive
+                if (Array.isArray(cloudStruct.users) && cloudStruct.users.length > 0) {
+                    const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
+                    if (maxTimestamp > localTime || userDeletionsUpdated) {
+                        const validCloudUsers = cloudStruct.users.filter(u => u && !store.isUserDeleted(u.id, u.username));
+                        if (validCloudUsers.length > 0) {
+                            store.saveUsers(validCloudUsers);
+                            if (state.currentPage === 'admin') {
+                                const activeTab = document.querySelector('.admin-tab.active')?.getAttribute('data-tab') || 'users';
+                                if (activeTab === 'users') {
+                                    renderAdminPage('users');
+                                }
+                            }
+                        }
+                    }
                 }
 
                 const curCats = store.getCategories();
