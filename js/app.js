@@ -214,6 +214,19 @@ const INITIAL_USERS = [
         total_uploads: 7,
         total_downloads: 530,
         total_stars: 36
+    },
+    {
+        id: 14,
+        username: 'trantanlong',
+        fullname: 'Trần Tấn Long',
+        password: '123456',
+        role: 'teacher',
+        department: 'Tổ Tin học - Ngoại ngữ',
+        honor: 'Giáo viên sáng tạo & tích cực',
+        avatar_letter: 'L',
+        total_uploads: 5,
+        total_downloads: 120,
+        total_stars: 25
     }
 ];
 
@@ -695,6 +708,11 @@ const store = {
                 }
                 if (u && !u.password) {
                     u.password = (u.username === 'admin' || u.role === 'admin') ? 'admin' : '123456';
+                    updated = true;
+                }
+                if (u && u.username === 'trantanlong' && (u.fullname === 'trantanlong' || !u.fullname || u.fullname.toLowerCase() === 'trantanlong')) {
+                    u.fullname = 'Trần Tấn Long';
+                    u.avatar_letter = 'L';
                     updated = true;
                 }
             });
@@ -4261,6 +4279,15 @@ function renderProfileDetailsTable(docs) {
 
 function renderProfilePage() {
     const user = state.user || store.getUsers()[3]; // Default to teacher Cô Lê Thu Hà if not logged in
+    if (user && user.username === 'trantanlong' && (user.fullname === 'trantanlong' || !user.fullname || user.fullname.toLowerCase() === 'trantanlong')) {
+        user.fullname = 'Trần Tấn Long';
+        user.avatar_letter = 'L';
+        if (state.user && state.user.username === 'trantanlong') {
+            state.user.fullname = 'Trần Tấn Long';
+            state.user.avatar_letter = 'L';
+            localStorage.setItem('khls-user', JSON.stringify(state.user));
+        }
+    }
     const docs = store.getDocuments().filter(d => isDocOwner(d, user) || (d.author_id && user.id && String(d.author_id) === String(user.id)));
 
     const nameEl = document.getElementById('profile-name');
@@ -4275,7 +4302,7 @@ function renderProfilePage() {
     if (nameEl) nameEl.textContent = user.fullname;
     if (roleEl) roleEl.textContent = user.role === 'admin' ? 'Quản trị viên Hệ thống' : user.role === 'leader' ? 'Tổ trưởng Chuyên môn' : 'Giáo viên';
     if (deptEl) deptEl.textContent = `${user.department} • ${user.honor || 'Giáo viên tích cực'}`;
-    if (letterEl) letterEl.textContent = user.fullname.charAt(0);
+    if (letterEl) letterEl.textContent = (user.avatar_letter || (user.fullname ? (user.fullname.split(' ').pop() || user.fullname).charAt(0) : 'G')).toUpperCase();
 
     const totalDownloads = docs.reduce((acc, d) => acc + (d.download_count || 0), 0);
     const avgStars = docs.length > 0 ? (docs.reduce((acc, d) => acc + (d.avg_rating || 0), 0) / docs.length).toFixed(1) : '5.0';
@@ -5080,6 +5107,79 @@ function togglePasswordVisibility(inputId, btn) {
             : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
         input.focus();
     }
+}
+
+
+// ======================== EDIT PROFILE FUNCTIONS ========================
+
+function openEditProfileModal() {
+    if (!state.user) {
+        showToast('Vui lòng đăng nhập trước!', 'info');
+        openLoginModal();
+        return;
+    }
+    const modal = document.getElementById('edit-profile-modal');
+    if (!modal) return;
+    const unameInput = document.getElementById('edit-profile-username');
+    const fnameInput = document.getElementById('edit-profile-fullname');
+    const deptSelect = document.getElementById('edit-profile-dept');
+    if (unameInput) unameInput.value = state.user.username || '';
+    if (fnameInput) fnameInput.value = state.user.fullname || '';
+    if (deptSelect && state.user.department) deptSelect.value = state.user.department;
+    modal.classList.add('active');
+    setTimeout(() => fnameInput && fnameInput.focus(), 100);
+}
+
+function closeEditProfileModal() {
+    const modal = document.getElementById('edit-profile-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function handleEditProfileSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!state.user) return;
+    const newName = document.getElementById('edit-profile-fullname')?.value.trim();
+    const newDept = document.getElementById('edit-profile-dept')?.value;
+    if (!newName) {
+        showToast('Họ và tên không được để trống!', 'error');
+        return;
+    }
+
+    const oldName = state.user.fullname;
+    state.user.fullname = newName.replace(/^(Thầy|Cô)\s+/i, '').trim();
+    if (newDept) state.user.department = newDept;
+    state.user.avatar_letter = (state.user.fullname.split(' ').pop() || state.user.fullname).charAt(0).toUpperCase();
+
+    localStorage.setItem('khls-user', JSON.stringify(state.user));
+
+    // Cập nhật trong store.getUsers()
+    const users = store.getUsers();
+    const u = users.find(x => x.username === state.user.username || String(x.id) === String(state.user.id));
+    if (u) {
+        u.fullname = state.user.fullname;
+        u.department = state.user.department;
+        u.avatar_letter = state.user.avatar_letter;
+        store.saveUsers(users);
+    }
+
+    // Cập nhật tên tác giả trong các tài liệu mà người dùng này đã đăng
+    const docs = store.getDocuments();
+    let docsUpdated = false;
+    docs.forEach(d => {
+        if (d.author_id === state.user.id || (d.author_name && (d.author_name === oldName || d.author_name === state.user.username))) {
+            d.author_name = state.user.fullname;
+            if (newDept) d.author_dept = newDept;
+            docsUpdated = true;
+        }
+    });
+    if (docsUpdated) {
+        store.saveDocuments(docs);
+    }
+
+    closeEditProfileModal();
+    updateUserUI();
+    renderProfilePage();
+    showToast(`✅ Đã cập nhật họ và tên thành "${state.user.fullname}" thành công! 🎉`, 'success');
 }
 
 function openChangePasswordModal() {
@@ -6430,6 +6530,24 @@ function handleLogin(e) {
             matchedUser = users.find(u => u.role === 'admin') || users[0];
         } else if (email === 'totruong') {
             matchedUser = users.find(u => u.role === 'leader') || users[1];
+        } else if (email.toLowerCase() === 'trantanlong') {
+            matchedUser = users.find(u => u.username === 'trantanlong') || {
+                id: 14,
+                username: 'trantanlong',
+                fullname: 'Trần Tấn Long',
+                password: '123456',
+                role: 'teacher',
+                department: 'Tổ Tin học - Ngoại ngữ',
+                honor: 'Giáo viên sáng tạo & tích cực',
+                avatar_letter: 'L',
+                total_uploads: 5,
+                total_downloads: 120,
+                total_stars: 25
+            };
+            if (!users.some(u => u.username === 'trantanlong')) {
+                users.push(matchedUser);
+                store.saveUsers(users);
+            }
         } else {
             matchedUser = {
                 id: Date.now(),
@@ -6655,6 +6773,7 @@ function initEventListeners() {
     document.getElementById('btn-close-cat-subfolders')?.addEventListener('click', closeSubfoldersModal);
 
     // Change Password Modal
+    document.getElementById('edit-profile-modal-close')?.addEventListener('click', closeEditProfileModal);
     document.getElementById('change-password-modal-close')?.addEventListener('click', closeChangePasswordModal);
     document.getElementById('btn-cancel-change-password')?.addEventListener('click', closeChangePasswordModal);
     document.getElementById('change-password-form')?.addEventListener('submit', handleChangePassword);
