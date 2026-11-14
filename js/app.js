@@ -1390,10 +1390,11 @@ function isDocOwner(doc, user = state.user) {
     const normalize = (name) => (name || '').replace(/^(Thầy|Cô)\s+/i, '').trim().toLowerCase();
     const docAuthor = normalize(doc.author_name);
     const userFull = normalize(user.fullname);
+    const userUname = normalize(user.username);
     
-    if (docAuthor && userFull) {
-        if (docAuthor === userFull) return true;
-        if (docAuthor.includes(userFull) || userFull.includes(docAuthor)) return true;
+    if (docAuthor) {
+        if (userFull && (docAuthor === userFull || docAuthor.includes(userFull) || userFull.includes(docAuthor))) return true;
+        if (userUname && (docAuthor === userUname || docAuthor.includes(userUname) || userUname.includes(docAuthor))) return true;
     }
     return false;
 }
@@ -3910,6 +3911,7 @@ function filterNotificationsForUser(notifs, user = state.user) {
 
     const normalize = (name) => (name || '').replace(/^(Thầy|Cô)\s+/i, '').trim().toLowerCase();
     const userFull = normalize(user.fullname);
+    const userUname = normalize(user.username);
 
     return notifs.filter(n => {
         // 1. Thông báo phê duyệt hoặc từ chối bài đăng dành riêng cho giáo viên tác giả:
@@ -3917,9 +3919,12 @@ function filterNotificationsForUser(notifs, user = state.user) {
             if (n.target_user_id && user.id && String(n.target_user_id) === String(user.id)) {
                 return true;
             }
-            if (n.target_author_name && userFull) {
+            if (n.target_author_name) {
                 const targetName = normalize(n.target_author_name);
-                if (targetName === userFull || targetName.includes(userFull) || userFull.includes(targetName)) {
+                if (userFull && (targetName === userFull || targetName.includes(userFull) || userFull.includes(targetName))) {
+                    return true;
+                }
+                if (userUname && (targetName === userUname || targetName.includes(userUname) || userUname.includes(targetName))) {
                     return true;
                 }
             }
@@ -7254,7 +7259,8 @@ async function syncDocumentsFromDrive(isManual = false) {
             const deletedIds = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
             const isDocBlacklisted = (d) => {
                 if (!d) return false;
-                if (d.status === 'rejected') return true;
+                // Chỉ loại bỏ các bài thực sự bị Admin xóa (đánh dấu DELETED_BY_ADMIN hoặc nằm trong deletedIds)
+                if (d.reject_reason === 'DELETED_BY_ADMIN') return true;
                 const sId = String(d.id || '').trim();
                 const sDrive = String(d.drive_id || '').trim();
                 if (sId && deletedIds.includes(sId)) return true;
@@ -7407,6 +7413,29 @@ async function syncDocumentsFromDrive(isManual = false) {
                                 department: cloudDoc.author_dept,
                                 link: '#/review?doc=' + cloudDoc.id,
                                 unread: true
+                            });
+                            store.saveNotifications(notifs);
+                        }
+                    } else if (cloudDoc.status === 'rejected') {
+                        const notifs = store.getNotifications();
+                        const existsNotif = notifs.some(n => n.doc_id === cloudDoc.id && n.type === 'rejected');
+                        if (!existsNotif) {
+                            const approverName = cloudDoc.approved_by || 'Ban Giám Hiệu';
+                            const reasonText = cloudDoc.reject_reason || 'Cần bổ sung thêm thông tin theo yêu cầu chuyên môn.';
+                            notifs.unshift({
+                                id: `notif-rejected-${cloudDoc.id}`,
+                                doc_id: cloudDoc.id,
+                                target_user_id: cloudDoc.author_id,
+                                target_author_name: cloudDoc.author_name,
+                                title: 'Học liệu cần chỉnh sửa / Chưa được duyệt',
+                                text: `Học liệu "${cloudDoc.title}" của Thầy/Cô chưa được duyệt. Góp ý từ ${approverName}: "${reasonText}"`,
+                                time: 'Mới cập nhật',
+                                icon: '⚠️',
+                                type: 'rejected',
+                                link: `#/detail/${cloudDoc.id}`,
+                                unread: true,
+                                created_at: new Date().toISOString(),
+                                reason: reasonText
                             });
                             store.saveNotifications(notifs);
                         }
@@ -7613,6 +7642,7 @@ async function handleContributeSubmit(e) {
                 base64Data: base64Data,
                 folderId: folderId,
                 author: authorName,
+                authorId: currentUser.id,
                 department: authorDept
             };
 
