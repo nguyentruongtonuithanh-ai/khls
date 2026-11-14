@@ -3624,6 +3624,7 @@ function renderReviewPage() {
                                         </span>
                                         <span class="win-file-title" title="${escapeHtml(doc.title)}">
                                             ${escapeHtml(doc.title)}
+                                            ${allDocs.some(d => d.status === 'approved' && d.id !== doc.id && (d.title || '').trim().toLowerCase() === (doc.title || '').trim().toLowerCase()) ? '<span title="Hệ thống đã có một học liệu cùng tên được phê duyệt trước đó" style="display:inline-block; font-size:0.72rem; background:rgba(234, 179, 8, 0.15); color:#b45309; border:1px solid rgba(234, 179, 8, 0.35); border-radius:4px; padding:1px 6px; margin-left:6px; font-weight:600; vertical-align:middle;">⚠️ Trùng tên bài đã có</span>' : ''}
                                         </span>
                                     </div>
                                 </td>
@@ -5786,6 +5787,7 @@ async function pushStructureToCloud(showNotification = false) {
     const grades = store.getGrades();
     const subjects = store.getSubjects();
     const deleted_doc_ids = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
+    const pending_doc_ids = ['doc-1794624057507', 'doc-1794624217318'];
     const timestamp = Date.now();
     localStorage.setItem('khls_structure_timestamp', String(timestamp));
 
@@ -5794,6 +5796,7 @@ async function pushStructureToCloud(showNotification = false) {
         grades,
         subjects,
         deleted_doc_ids,
+        pending_doc_ids,
         timestamp,
         updated_by: (state.user && state.user.fullname) || 'Admin',
         updated_at: new Date().toISOString()
@@ -6076,7 +6079,7 @@ function initUploadForm() {
         };
 
         const newDoc = {
-            id: 'doc-' + Date.now(),
+            id: 'doc-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
             title: title,
             description: desc,
             category: cat,
@@ -6747,14 +6750,19 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var folder = getFolder(data.folderId || DEFAULT_FOLDER_ID);
     
-    // 1. Phê duyệt hoặc Từ chối học liệu
-    if (data.action === "review" || data.action === "approve" || data.action === "reject") {
+    // 1. Phê duyệt, Từ chối hoặc Đặt lại trạng thái chờ duyệt học liệu
+    if (data.action === "review" || data.action === "approve" || data.action === "reject" || data.action === "pending" || data.action === "reset") {
       var allDocs = loadDocuments(folder);
       var targetDoc = allDocs.find(function(d) { return d.id === data.docId; });
       if (targetDoc) {
-        targetDoc.status = (data.action === "reject" ? "rejected" : "approved");
-        targetDoc.approved_by = data.approvedBy || "Ban Giám Hiệu";
-        if (data.rejectReason) targetDoc.reject_reason = data.rejectReason;
+        if (data.action === "pending" || data.action === "reset") {
+          targetDoc.status = "pending";
+          targetDoc.approved_by = null;
+        } else {
+          targetDoc.status = (data.action === "reject" ? "rejected" : "approved");
+          targetDoc.approved_by = data.approvedBy || "Ban Giám Hiệu";
+          if (data.rejectReason) targetDoc.reject_reason = data.rejectReason;
+        }
         saveDocumentsDb(folder, allDocs);
         return responseJSON({ status: "success", message: "Đã cập nhật trạng thái học liệu", doc: targetDoc });
       }
@@ -7244,6 +7252,14 @@ async function syncDocumentsFromDrive(isManual = false) {
                 }
             }
 
+            // 1b. Khắc phục các bài bị duyệt nhầm: đưa về trạng thái chờ duyệt (pending)
+            const resetToPendingList = ['doc-1794624057507', 'doc-1794624217318'];
+            if (cloudStruct && Array.isArray(cloudStruct.pending_doc_ids)) {
+                cloudStruct.pending_doc_ids.forEach(pendId => {
+                    if (!resetToPendingList.includes(pendId)) resetToPendingList.push(pendId);
+                });
+            }
+
             // 2. Lọc bỏ bản ghi hệ thống và các tài liệu đã bị xóa hoặc đã bị từ chối/gỡ bỏ
             const deletedIds = store.getDeletedDocIds ? store.getDeletedDocIds() : [];
             const isDocBlacklisted = (d) => {
@@ -7284,48 +7300,54 @@ async function syncDocumentsFromDrive(isManual = false) {
                 hasChanges = true;
             }
 
+            // Đồng bộ danh sách tài liệu cần đưa về trạng thái chờ duyệt (pending)
+            resetToPendingList.forEach(pendId => {
+                const target = localDocs.find(d => String(d.id) === String(pendId));
+                if (target && target.status !== 'pending') {
+                    target.status = 'pending';
+                    target.approved_by = null;
+                    hasChanges = true;
+                }
+            });
+
             validCloudDocs.forEach(cloudDoc => {
+                // Khắc phục bài bị duyệt nhầm từ Cloud
+                if (resetToPendingList.includes(cloudDoc.id)) {
+                    cloudDoc.status = 'pending';
+                    cloudDoc.approved_by = null;
+                }
+
+                // Nhận dạng tài liệu DUY NHẤT theo ID hệ thống hoặc Google Drive File ID:
+                // TUYỆT ĐỐI KHÔNG nhận dạng nhầm theo file_name / file_size / title
                 const existingIdx = localDocs.findIndex(d => 
-                    d.id === cloudDoc.id || 
-                    (d.drive_id && cloudDoc.drive_id && d.drive_id === cloudDoc.drive_id) ||
-                    (d.file_name === cloudDoc.file_name && d.file_size === cloudDoc.file_size)
+                    String(d.id) === String(cloudDoc.id) || 
+                    (d.drive_id && cloudDoc.drive_id && String(d.drive_id) === String(cloudDoc.drive_id))
                 );
 
                 if (existingIdx >= 0) {
+                    if (resetToPendingList.includes(localDocs[existingIdx].id)) {
+                        localDocs[existingIdx].status = 'pending';
+                        localDocs[existingIdx].approved_by = null;
+                        hasChanges = true;
+                    }
+
                     // 1. Luôn đồng bộ ID từ Cloud về Local để 2 bên khớp tuyệt đối
                     if (cloudDoc.id && localDocs[existingIdx].id !== cloudDoc.id) {
                         localDocs[existingIdx].id = cloudDoc.id;
                         hasChanges = true;
                     }
 
-                    // 2. Đồng bộ trạng thái duyệt hai chiều:
+                    // 2. Nhận trạng thái duyệt mới nhất từ Cloud (Cloud là nguồn chuẩn):
+                    // KHÔNG BAO GIỜ tự ý tự động duyệt học liệu mới nộp trên Cloud
                     if (cloudDoc.status && localDocs[existingIdx].status !== cloudDoc.status) {
-                        // NẾU trên máy này bài đã được duyệt (approved) nhưng trên Drive vẫn còn pending
-                        // => Máy này sẽ đẩy duyệt lên Drive ngay lập tức để đồng bộ cho toàn trường!
-                        if (localDocs[existingIdx].status === 'approved' && cloudDoc.status === 'pending') {
-                            if (activeGas) {
-                                fetch(activeGas, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                                    body: JSON.stringify({
-                                        action: 'approve',
-                                        docId: cloudDoc.id,
-                                        driveId: cloudDoc.drive_id || localDocs[existingIdx].drive_id || '',
-                                        fileName: cloudDoc.file_name || localDocs[existingIdx].file_name || '',
-                                        approvedBy: localDocs[existingIdx].approved_by || 'Ban Giám Hiệu'
-                                    })
-                                }).catch(e => console.warn('Tự động đẩy duyệt lên Drive thất bại:', e));
-                            }
-                        } else {
-                            // Nhận trạng thái duyệt mới nhất từ Cloud (ví dụ Máy B nhận bài đã duyệt từ Máy A)
-                            const oldStatus = localDocs[existingIdx].status;
-                            const newStatus = cloudDoc.status;
-                            localDocs[existingIdx].status = newStatus;
-                            localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
-                            if (cloudDoc.reject_reason) {
-                                localDocs[existingIdx].reject_reason = cloudDoc.reject_reason;
-                            }
-                            hasChanges = true;
+                        const oldStatus = localDocs[existingIdx].status;
+                        const newStatus = cloudDoc.status;
+                        localDocs[existingIdx].status = newStatus;
+                        localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
+                        if (cloudDoc.reject_reason) {
+                            localDocs[existingIdx].reject_reason = cloudDoc.reject_reason;
+                        }
+                        hasChanges = true;
 
                             // NẾU TÀI LIỆU NÀY CÓ TRẠNG THÁI APPROVED HOẶC REJECTED -> TẠO THÔNG BÁO CHO TÁC GIẢ
                             if (newStatus === 'approved' || newStatus === 'rejected') {
@@ -7382,7 +7404,6 @@ async function syncDocumentsFromDrive(isManual = false) {
                                 }
                             }
                         }
-                    }
 
                     if (cloudDoc.file_url && !localDocs[existingIdx].file_url) {
                         localDocs[existingIdx].file_url = cloudDoc.file_url;
@@ -7599,7 +7620,7 @@ async function handleContributeSubmit(e) {
 
         // If Google Apps Script is configured: upload to Drive!
         let gasUploadFailed = false;
-        const docGeneratedId = 'doc-' + Date.now();
+        const docGeneratedId = 'doc-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
         if (activeGas) {
             updateProgress(40, 'Đang tải tệp vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)...');
             const payload = {

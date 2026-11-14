@@ -120,18 +120,22 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var folder = getFolder(data.folderId || DEFAULT_FOLDER_ID);
     
-    // Xử lý Phê duyệt hoặc Từ chối học liệu
-    if (data.action === "review" || data.action === "approve" || data.action === "reject") {
+    // Xử lý Phê duyệt, Từ chối hoặc Đặt lại trạng thái chờ duyệt học liệu
+    if (data.action === "review" || data.action === "approve" || data.action === "reject" || data.action === "pending" || data.action === "reset") {
       var allDocs = loadDocuments(folder);
       var targetDoc = allDocs.find(function(d) {
-        return d.id === data.docId || 
-               (data.driveId && d.drive_id === data.driveId) || 
-               (data.fileName && d.file_name === data.fileName);
+        return String(d.id) === String(data.docId) || 
+               (data.driveId && String(d.drive_id) === String(data.driveId));
       });
       if (targetDoc) {
-        targetDoc.status = (data.action === "reject" ? "rejected" : "approved");
-        targetDoc.approved_by = data.approvedBy || "Ban Giám Hiệu";
-        if (data.rejectReason) targetDoc.reject_reason = data.rejectReason;
+        if (data.action === "pending" || data.action === "reset") {
+          targetDoc.status = "pending";
+          targetDoc.approved_by = null;
+        } else {
+          targetDoc.status = (data.action === "reject" ? "rejected" : "approved");
+          targetDoc.approved_by = data.approvedBy || "Ban Giám Hiệu";
+          if (data.rejectReason) targetDoc.reject_reason = data.rejectReason;
+        }
         saveDocumentsDb(folder, allDocs);
         return responseJSON({ status: "success", message: "Đã cập nhật trạng thái học liệu", doc: targetDoc });
       }
