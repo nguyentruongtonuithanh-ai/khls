@@ -2174,11 +2174,8 @@ function renderDetailPage(docId) {
         <div class="detail-grid">
             <div class="detail-main">
                 <div class="detail-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
                         <span class="doc-badge-pill">${catObj?.icon || '📁'} ${catName} • Khối ${doc.grade} • ${getSubjectName(doc.subject)}</span>
-                        <button class="btn btn-secondary btn-sm" onclick="openReportModal('${doc.id}')" title="Báo cáo lỗi">
-                            ⚠️ Báo cáo
-                        </button>
                     </div>
 
                     ${doc.status === 'rejected' ? `
