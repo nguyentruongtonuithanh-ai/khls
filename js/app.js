@@ -705,6 +705,20 @@ const store = {
                     updated = true;
                 }
             });
+            if (typeof state !== 'undefined' && state && state.user) {
+                const userExists = users.some(u => 
+                    (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
+                    (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase()) ||
+                    (u.fullname && state.user.fullname && u.fullname.toLowerCase() === state.user.fullname.toLowerCase())
+                );
+                if (!userExists) {
+                    users.push({
+                        ...state.user,
+                        password: state.user.password || '123456'
+                    });
+                    updated = true;
+                }
+            }
             if (updated) {
                 localStorage.setItem('khls_users_v2', JSON.stringify(users));
             }
@@ -5146,13 +5160,33 @@ function handleChangePassword(e) {
     }
 
     const users = store.getUsers();
-    const userIndex = users.findIndex(u => u.id === state.user.id || String(u.id) === String(state.user.id) || u.username === state.user.username);
+    let userIndex = users.findIndex(u => 
+        (u.id && state.user.id && String(u.id) === String(state.user.id)) || 
+        (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase()) ||
+        (u.fullname && state.user.fullname && u.fullname.toLowerCase() === state.user.fullname.toLowerCase())
+    );
+
     if (userIndex === -1) {
-        showToast('Không tìm thấy tài khoản người dùng!', 'error');
-        return;
+        // Tự động đồng bộ tài khoản đang đăng nhập vào danh sách users
+        const newUserObj = {
+            id: state.user.id || Date.now(),
+            username: state.user.username || state.user.fullname || 'user',
+            fullname: state.user.fullname || state.user.username || 'Giáo viên',
+            password: state.user.password || '123456',
+            role: state.user.role || 'teacher',
+            department: state.user.department || 'Tổ Chuyên Môn',
+            honor: state.user.honor || 'Giáo viên tích cực',
+            avatar_letter: (state.user.fullname || state.user.username || 'G').charAt(0).toUpperCase(),
+            total_uploads: 0,
+            total_downloads: 0,
+            total_stars: 0
+        };
+        users.push(newUserObj);
+        store.saveUsers(users);
+        userIndex = users.length - 1;
     }
 
-    const currentExpected = users[userIndex].password || ((users[userIndex].username === 'admin' || users[userIndex].role === 'admin') ? 'admin' : '123456');
+    const currentExpected = users[userIndex].password || state.user.password || ((users[userIndex].username === 'admin' || users[userIndex].role === 'admin') ? 'admin' : '123456');
     if (currentPass !== currentExpected) {
         showToast('Mật khẩu hiện tại không chính xác!', 'error');
         document.getElementById('change-pass-current')?.focus();
@@ -6423,6 +6457,7 @@ function handleLogin(e) {
                 id: Date.now(),
                 username: email,
                 fullname: email,
+                password: '123456',
                 role: 'teacher',
                 department: 'Tổ Chuyên Môn',
                 avatar_letter: email.charAt(0).toUpperCase(),
@@ -6430,6 +6465,8 @@ function handleLogin(e) {
                 total_downloads: 0,
                 total_stars: 0
             };
+            users.push(matchedUser);
+            store.saveUsers(users);
         }
     }
 
@@ -6562,6 +6599,17 @@ function restoreSession() {
             if (state.user && state.user.fullname) {
                 state.user.fullname = state.user.fullname.replace(/^(Thầy|Cô)\s+/i, '').trim();
                 localStorage.setItem('khls-user', JSON.stringify(state.user));
+            }
+            if (state.user) {
+                const users = store.getUsers();
+                const matched = users.find(u => 
+                    (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
+                    (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase())
+                );
+                if (matched && matched.password) {
+                    state.user.password = matched.password;
+                    localStorage.setItem('khls-user', JSON.stringify(state.user));
+                }
             }
         }
     } catch (e) {
