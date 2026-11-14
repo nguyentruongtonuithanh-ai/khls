@@ -4665,10 +4665,7 @@ function renderAdminPage(activeTab = 'users') {
                     <p style="font-size:0.85rem; color:var(--text-muted);">Danh sách cán bộ giáo viên được cấp quyền truy cập hệ thống</p>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <button class="btn btn-primary" onclick="openBatchUserModal()">
-                        👥 Tạo tài khoản hàng loạt (CSV)
-                    </button>
-                    <button class="btn btn-secondary" onclick="openEditUserModal(null)">
+                    <button class="btn btn-primary" onclick="openEditUserModal(null)">
                         ➕ Thêm 1 giáo viên
                     </button>
                 </div>
