@@ -2264,9 +2264,9 @@ function renderDetailPage(docId) {
             <div class="detail-aside">
                 <!-- Author Card -->
                 <div class="author-honor-card">
-                    <div class="author-honor-avatar">${doc.author_name.charAt(0)}</div>
+                    <div class="author-honor-avatar">${(getDocAuthorName(doc) || 'G').charAt(0).toUpperCase()}</div>
                     <div>
-                        <div style="font-weight:700;">${doc.author_name}</div>
+                        <div style="font-weight:700;">${getDocAuthorName(doc)}</div>
                         <div style="font-size:0.8rem; color:var(--text-muted);">${doc.author_dept || 'Trường TH Núi Thành'}</div>
                         <div class="badge-honor">🏆 Nhà giáo tích cực</div>
                     </div>
@@ -2280,7 +2280,6 @@ function renderDetailPage(docId) {
                         <li>⚖️ <strong>Dung lượng:</strong> ${formatFileSize(doc.file_size)}</li>
                         <li>☁️ <strong>Lưu trữ:</strong> ${driveId ? '<span style="color:#2563eb; font-weight:700;">Google Drive Trường</span>' : 'Bộ nhớ hệ thống'}</li>
                         <li>🏫 <strong>Trường:</strong> TH Núi Thành</li>
-                        <li>🛡️ <strong>Bản quyền:</strong> Giữ nguyên tên tác giả</li>
                         <li>✅ <strong>Kiểm duyệt:</strong> ${doc.approved_by || 'Đã kiểm duyệt'}</li>
                     </ul>
                 </div>
