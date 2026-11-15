@@ -1394,21 +1394,14 @@ function renderSidebar() {
                                 </li>
                             `;
                         } else {
-                            // Khối có thư mục con: Bấm vào tên khối để xem tất cả tài liệu khối, hoặc mở rộng để xem từng môn
+                            // Khối có thư mục con: Bấm vào để đóng/mở danh sách môn con
                             return `
                                 <li class="tree-item" data-grade="${g.id}">
                                     <div class="tree-link" onclick="toggleTreeItem(this.parentElement); event.stopPropagation();">
-                                        <a href="#/browse/${cat.id}/${g.id}" onclick="closeSidebarMobile(); event.stopPropagation();" style="display:flex; align-items:center; gap:6px; color:inherit; text-decoration:none; flex:1;">
-                                            <span>📂 ${g.name}</span>
-                                        </a>
+                                        <span>📂 ${g.name}</span>
                                         <svg class="tree-toggle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                                     </div>
                                     <ul class="sub-tree">
-                                        <li>
-                                            <a class="tree-link" href="#/browse/${cat.id}/${g.id}" onclick="closeSidebarMobile()" style="font-size:0.82rem; opacity:0.82;">
-                                                📂 Xem tất cả ${g.name}
-                                            </a>
-                                        </li>
                                         ${gradeSubjects.map(s => `
                                             <li>
                                                 <a class="tree-link" href="#/browse/${cat.id}/${g.id}/${s.id}" onclick="closeSidebarMobile()">
