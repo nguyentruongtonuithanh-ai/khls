@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=9.7">
+    <link rel="stylesheet" href="css/style.css?v=9.8">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -215,6 +215,26 @@
                 </div>
             </section>
 
+            <!-- Tài liệu mới nhất (Đưa lên đầu trang chủ, hiển thị kiểu detail) -->
+            <section class="recent-section" style="padding-top: var(--space-xl);">
+                <div class="container">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">🆕 Tài liệu mới nhất</h2>
+                            <p class="section-desc">Các học liệu số vừa được cập nhật và phê duyệt</p>
+                        </div>
+                        <a href="#/browse" class="section-link">Xem tất cả →</a>
+                    </div>
+                    <div class="browse-docs-container" id="recent-docs-grid">
+                        <!-- Sẽ render dạng bảng Details bằng JS -->
+                        <div class="empty-state" id="recent-empty">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <p>Chưa có tài liệu nào. Hãy là người đầu tiên đóng góp!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Danh mục chính -->
             <section class="categories-section">
                 <div class="container">
@@ -224,23 +244,6 @@
                     </div>
                     <div class="categories-grid" id="categories-grid">
                         <!-- Sẽ render bằng JS -->
-                    </div>
-                </div>
-            </section>
-
-            <!-- Tài liệu mới nhất -->
-            <section class="recent-section">
-                <div class="container">
-                    <div class="section-header">
-                        <h2 class="section-title">🆕 Tài liệu mới nhất</h2>
-                        <a href="#/browse" class="section-link">Xem tất cả →</a>
-                    </div>
-                    <div class="docs-grid" id="recent-docs-grid">
-                        <!-- Sẽ render bằng JS -->
-                        <div class="empty-state" id="recent-empty">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <p>Chưa có tài liệu nào. Hãy là người đầu tiên đóng góp!</p>
-                        </div>
                     </div>
                 </div>
             </section>
@@ -1454,6 +1457,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=9.7"></script>
+    <script src="js/app.js?v=9.8"></script>
 </body>
 </html>

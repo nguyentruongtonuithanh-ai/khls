@@ -1413,6 +1413,143 @@ function syncAllSelects() {
     syncSubjectSelects();
 }
 
+function handleHomeSort(col) {
+    if (state.homeSortCol === col) {
+        state.homeSortDir = state.homeSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.homeSortCol = col;
+        state.homeSortDir = (col === 'date' || col === 'week') ? 'desc' : 'asc';
+    }
+    renderHomePage();
+}
+window.handleHomeSort = handleHomeSort;
+
+function renderHomeRecentDetailsTable(docs, col = 'date', dir = 'desc') {
+    const arrow = dir === 'asc' ? '▲' : '▼';
+
+    return `
+        <div class="win-details-wrapper">
+            <table class="win-details-table win-profile-table">
+                <thead>
+                    <tr class="win-details-header">
+                        <th class="col-name" onclick="handleHomeSort('name')" title="Bấm để sắp xếp theo Tên tài liệu">
+                            <div class="th-content">
+                                <span>Tên tài liệu</span>
+                                <span class="sort-arrow">${col === 'name' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-category" onclick="handleHomeSort('category')" title="Bấm để sắp xếp theo Mục đăng">
+                            <div class="th-content">
+                                <span>Mục đăng / Khối / Môn</span>
+                                <span class="sort-arrow">${col === 'category' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-week th-center" onclick="handleHomeSort('week')" title="Bấm để sắp xếp theo Tuần">
+                            <div class="th-content th-center">
+                                <span>Tuần</span>
+                                <span class="sort-arrow">${col === 'week' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-author" onclick="handleHomeSort('author')" title="Bấm để sắp xếp theo Người soạn">
+                            <div class="th-content">
+                                <span>Người soạn</span>
+                                <span class="sort-arrow">${col === 'author' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-date th-center" onclick="handleHomeSort('date')" title="Bấm để sắp xếp theo Ngày đăng">
+                            <div class="th-content th-center">
+                                <span>Ngày đăng</span>
+                                <span class="sort-arrow">${col === 'date' ? arrow : ''}</span>
+                            </div>
+                        </th>
+                        <th class="col-btn-view th-center">Xem trước</th>
+                        <th class="col-btn-download th-center">Tải về</th>
+                        <th class="col-btn-edit th-center">Sửa</th>
+                        <th class="col-btn-delete th-center">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${docs.map(doc => {
+                        const weekNum = getDocWeek(doc);
+                        const canEdit = canUserEditDoc(doc);
+                        const canDelete = canUserDeleteDoc(doc);
+                        const isOwner = isDocOwner(doc);
+                        const isAdmin = state.user && state.user.role === 'admin';
+
+                        return `
+                            <tr class="win-details-row profile-details-row" id="doc-row-${doc.id}" onclick="navigate('#/detail/${doc.id}')" title="Nhấp vào dòng để xem chi tiết ${escapeHtml(doc.title)}">
+                                <td class="col-name">
+                                    <div class="win-file-cell">
+                                        <span class="win-file-icon ${getFileTypeClass(doc.file_name)}" title="${getFileTypeLabel(doc.file_name)}">
+                                            ${getFileTypeIcon(doc.file_name)}
+                                        </span>
+                                        <span class="win-file-title" title="${escapeHtml(doc.title)}">
+                                            ${escapeHtml(doc.title)}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="col-category">
+                                    <div class="win-category-text" title="${escapeHtml(getCategoryName(doc.category))}${doc.grade ? ` • Khối ${doc.grade}` : ''}${doc.subject ? ` • ${escapeHtml(getSubjectName(doc.subject))}` : ''}">
+                                        <span style="font-weight:600; color:var(--text-primary); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            ${escapeHtml(getCategoryName(doc.category))}
+                                        </span>
+                                        ${(doc.grade || doc.subject) ? `
+                                            <small style="display:block; font-size:0.75rem; color:var(--primary); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                ${doc.grade ? `Khối ${doc.grade}` : ''}${doc.grade && doc.subject ? ' • ' : ''}${doc.subject ? escapeHtml(getSubjectName(doc.subject)) : ''}
+                                            </small>
+                                        ` : ''}
+                                    </div>
+                                </td>
+                                <td class="col-week th-center">
+                                    <span class="win-week-badge">Tuần ${weekNum}</span>
+                                </td>
+                                <td class="col-author">
+                                    <span class="win-author-text" title="${escapeHtml(doc.author_name || 'Giáo viên')}">${escapeHtml(doc.author_name || 'Giáo viên')}</span>
+                                </td>
+                                <td class="col-date th-center">
+                                    <span class="win-date-text">${formatDocDate(doc.created_at)}</span>
+                                </td>
+                                <td class="col-btn-view th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-view" onclick="openPreviewModal('${doc.id}')" title="Mở file lên xem trực tuyến">
+                                        👁️ Xem
+                                    </button>
+                                </td>
+                                <td class="col-btn-download th-center" onclick="event.stopPropagation()">
+                                    <button type="button" class="win-btn win-btn-download" onclick="handleDownloadDoc('${doc.id}')" title="Tải file về máy">
+                                        ⬇️ Tải về
+                                    </button>
+                                </td>
+                                <td class="col-btn-edit th-center" onclick="event.stopPropagation()">
+                                    ${canEdit ? `
+                                        <button type="button" class="win-btn win-btn-edit" onclick="openEditDocModal('${doc.id}')" title="Sửa thông tin bài đăng này">
+                                            ✏️ Sửa
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng mới có quyền sửa bài này">
+                                            ✏️ Sửa
+                                        </button>
+                                    `}
+                                </td>
+                                <td class="col-btn-delete th-center" onclick="event.stopPropagation()">
+                                    ${canDelete ? `
+                                        <button type="button" class="win-btn win-btn-delete" onclick="handleDeleteDoc('${doc.id}')" title="${isAdmin && !isOwner ? 'Xóa bài này (Quyền Quản trị viên)' : 'Xóa bài đăng của bạn'}">
+                                            🗑️ Xóa
+                                        </button>
+                                    ` : `
+                                        <button type="button" class="win-btn win-btn-disabled" disabled title="Chỉ chủ nhân bài đăng hoặc Quản trị viên mới được xóa">
+                                            🗑️ Xóa
+                                        </button>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
 // ======================== PAGE: HOME ========================
 
 function renderHomePage() {
@@ -1435,18 +1572,36 @@ function renderHomePage() {
     if (downEl) { downEl.setAttribute('data-target', totalDownloads); downEl.textContent = totalDownloads.toLocaleString('vi-VN'); }
     if (starEl) { starEl.setAttribute('data-target', totalRatings); starEl.textContent = totalRatings.toLocaleString('vi-VN'); }
 
-    // 2. Recent Documents (Up to 6)
+    // 2. Recent Documents (Up to 10) - Hiển thị dạng bảng chi tiết (Details View)
     const recentGrid = document.getElementById('recent-docs-grid');
     if (recentGrid) {
-        const sortedDocs = [...docs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6);
-        if (sortedDocs.length === 0) {
+        if (docs.length === 0) {
             recentGrid.innerHTML = `
-                <div class="empty-state">
-                    <p>Chưa có tài liệu nào được phê duyệt. Hãy là người đầu tiên đóng góp!</p>
+                <div class="empty-state" style="padding: 40px 20px; text-align: center; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-color); margin-top: 16px;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">📁</div>
+                    <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto; line-height: 1.6;">Chưa có tài liệu nào được phê duyệt. Hãy là người đầu tiên đóng góp!</p>
                 </div>
             `;
         } else {
-            recentGrid.innerHTML = sortedDocs.map(renderDocCard).join('');
+            const col = state.homeSortCol || 'date';
+            const dir = state.homeSortDir || 'desc';
+            const sortDir = dir === 'desc' ? -1 : 1;
+
+            let sortedDocs = [...docs];
+            if (col === 'date') {
+                sortedDocs.sort((a, b) => (new Date(b.created_at) - new Date(a.created_at)) * (dir === 'desc' ? 1 : -1));
+            } else if (col === 'name') {
+                sortedDocs.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'vi') * sortDir);
+            } else if (col === 'category') {
+                sortedDocs.sort((a, b) => (getCategoryName(a.category) || '').localeCompare(getCategoryName(b.category) || '', 'vi') * sortDir);
+            } else if (col === 'week') {
+                sortedDocs.sort((a, b) => (getDocWeek(a) - getDocWeek(b)) * sortDir);
+            } else if (col === 'author') {
+                sortedDocs.sort((a, b) => (a.author_name || '').localeCompare(b.author_name || '', 'vi') * sortDir);
+            }
+
+            const recentDocs = sortedDocs.slice(0, 10);
+            recentGrid.innerHTML = renderHomeRecentDetailsTable(recentDocs, col, dir);
         }
     }
 
