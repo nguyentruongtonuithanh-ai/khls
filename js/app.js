@@ -1384,23 +1384,42 @@ function renderSidebar() {
                 <ul class="sub-tree">
                     ${catGrades.map(g => {
                         const gradeSubjects = store.getGradeSubjects(cat.id, g.id);
-                        return `
-                            <li class="tree-item" data-grade="${g.id}">
-                                <div class="tree-link" onclick="toggleTreeItem(this.parentElement); event.stopPropagation();">
-                                    <span>📂 ${g.name}</span>
-                                    <svg class="tree-toggle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-                                </div>
-                                <ul class="sub-tree">
-                                    ${gradeSubjects.map(s => `
+                        if (gradeSubjects.length === 0) {
+                            // Khối không có thư mục con: Bấm vào mở thẳng trang duyệt tài liệu của Khối đó!
+                            return `
+                                <li class="tree-item" data-grade="${g.id}">
+                                    <a class="tree-link" href="#/browse/${cat.id}/${g.id}" onclick="closeSidebarMobile()">
+                                        <span>📂 ${g.name}</span>
+                                    </a>
+                                </li>
+                            `;
+                        } else {
+                            // Khối có thư mục con: Bấm vào tên khối để xem tất cả tài liệu khối, hoặc mở rộng để xem từng môn
+                            return `
+                                <li class="tree-item" data-grade="${g.id}">
+                                    <div class="tree-link" onclick="toggleTreeItem(this.parentElement); event.stopPropagation();">
+                                        <a href="#/browse/${cat.id}/${g.id}" onclick="closeSidebarMobile(); event.stopPropagation();" style="display:flex; align-items:center; gap:6px; color:inherit; text-decoration:none; flex:1;">
+                                            <span>📂 ${g.name}</span>
+                                        </a>
+                                        <svg class="tree-toggle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </div>
+                                    <ul class="sub-tree">
                                         <li>
-                                            <a class="tree-link" href="#/browse/${cat.id}/${g.id}/${s.id}" onclick="closeSidebarMobile()">
-                                                📁 ${s.name}
+                                            <a class="tree-link" href="#/browse/${cat.id}/${g.id}" onclick="closeSidebarMobile()" style="font-size:0.82rem; opacity:0.82;">
+                                                📂 Xem tất cả ${g.name}
                                             </a>
                                         </li>
-                                    `).join('')}
-                                </ul>
-                            </li>
-                        `;
+                                        ${gradeSubjects.map(s => `
+                                            <li>
+                                                <a class="tree-link" href="#/browse/${cat.id}/${g.id}/${s.id}" onclick="closeSidebarMobile()">
+                                                    📁 ${s.name}
+                                                </a>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </li>
+                            `;
+                        }
                     }).join('')}
                 </ul>
             </li>
@@ -1565,18 +1584,38 @@ function handleGradeSelectChange(catSelectEl, gradeSelectEl, subjectSelectEl) {
     if (!subjectSelectEl) return;
     const catId = catSelectEl ? catSelectEl.value : '';
     const gradeId = gradeSelectEl ? gradeSelectEl.value : '';
-    const subjects = (catId && gradeId) ? store.getGradeSubjects(catId, gradeId) : store.getSubjects();
+    const subjects = (catId && gradeId) ? store.getGradeSubjects(catId, gradeId) : [];
     const curSubVal = subjectSelectEl.value;
 
-    subjectSelectEl.innerHTML = `
-        <option value="">-- Chọn môn học --</option>
-        ${subjects.map(s => `<option value="${s.id}">📁 ${s.name}</option>`).join('')}
-    `;
+    const subGroup = subjectSelectEl.closest('.form-group');
+    const subLabel = subGroup ? subGroup.querySelector('.form-label') : null;
+    const gradeName = (gradeSelectEl && gradeSelectEl.selectedIndex >= 0) ? gradeSelectEl.options[gradeSelectEl.selectedIndex]?.text : 'khối';
 
-    if (curSubVal && subjects.some(s => s.id === curSubVal)) {
-        subjectSelectEl.value = curSubVal;
-    } else if (subjects.length > 0) {
-        subjectSelectEl.value = subjects[0].id;
+    if (subjects.length === 0) {
+        // Khối này không có thư mục con -> Cho phép lưu trực tiếp vào khối lớp, KHÔNG bắt buộc chọn môn con!
+        subjectSelectEl.required = false;
+        subjectSelectEl.innerHTML = `
+            <option value="">📂 Lưu trực tiếp vào ${escapeHtml(gradeName)} (Không có thư mục con)</option>
+        `;
+        subjectSelectEl.value = '';
+        if (subLabel) {
+            subLabel.innerHTML = 'Thư mục con / Môn học <span style="font-weight:normal; font-size:0.8rem; color:var(--text-muted);">(Không bắt buộc)</span>';
+        }
+    } else {
+        // Khối này có các thư mục con -> Hiển thị danh sách môn con
+        subjectSelectEl.required = true;
+        subjectSelectEl.innerHTML = `
+            <option value="">-- Chọn môn học / thư mục con --</option>
+            ${subjects.map(s => `<option value="${s.id}">📁 ${s.name}</option>`).join('')}
+        `;
+        if (curSubVal && subjects.some(s => s.id === curSubVal)) {
+            subjectSelectEl.value = curSubVal;
+        } else {
+            subjectSelectEl.value = subjects[0].id;
+        }
+        if (subLabel) {
+            subLabel.innerHTML = 'Môn học / Thư mục con <span class="required">*</span>';
+        }
     }
 }
 
@@ -1609,6 +1648,19 @@ function syncAllSelects() {
     if (editGrade && !editGrade._hasDynamicListener) {
         editGrade.addEventListener('change', () => handleGradeSelectChange(editCat, editGrade, editSub));
         editGrade._hasDynamicListener = true;
+    }
+
+    // Gắn sự kiện cho form tải lên trang con (nếu có trên DOM)
+    const pageCat = document.getElementById('upload-category');
+    const pageGrade = document.getElementById('upload-grade');
+    const pageSubject = document.getElementById('upload-subject');
+    if (pageCat && !pageCat._hasDynamicListener) {
+        pageCat.addEventListener('change', () => handleCategorySelectChange(pageCat, pageGrade, pageSubject));
+        pageCat._hasDynamicListener = true;
+    }
+    if (pageGrade && !pageGrade._hasDynamicListener) {
+        pageGrade.addEventListener('change', () => handleGradeSelectChange(pageCat, pageGrade, pageSubject));
+        pageGrade._hasDynamicListener = true;
     }
 }
 
@@ -2178,9 +2230,10 @@ function openEditDocModal(docId) {
         editGradeEl.value = String(doc.grade || '1');
     }
     if (editCatEl && editGradeEl && editSubEl) {
-        const curSubs = store.getGradeSubjects(doc.category || 'khbd', doc.grade || '1');
-        editSubEl.innerHTML = curSubs.map(s => `<option value="${s.id}">📁 ${s.name}</option>`).join('');
-        editSubEl.value = doc.subject || (curSubs[0] ? curSubs[0].id : '');
+        handleGradeSelectChange(editCatEl, editGradeEl, editSubEl);
+        if (doc.subject) {
+            editSubEl.value = doc.subject;
+        }
     }
     
     const weekSelect = document.getElementById('edit-doc-week');
@@ -2239,15 +2292,23 @@ function handleSaveDoc(e) {
     const subject = document.getElementById('edit-doc-subject')?.value;
     const weekVal = document.getElementById('edit-doc-week')?.value;
 
+    const gradeSubs = (category && grade) ? store.getGradeSubjects(category, grade) : [];
+    const isSubjectRequired = gradeSubs.length > 0;
+
     if (!title) {
         showToast('Tiêu đề tài liệu không được để trống!', 'error');
+        return;
+    }
+
+    if (isSubjectRequired && !subject) {
+        showToast('Vui lòng chọn môn học / thư mục con!', 'error');
         return;
     }
 
     doc.title = title;
     if (category) doc.category = category;
     if (grade) doc.grade = grade;
-    if (subject) doc.subject = subject;
+    doc.subject = subject || '';
     if (weekVal) doc.week = parseInt(weekVal, 10) || 1;
 
     // Optional inputs (nếu có trong DOM thì cập nhật, không có thì giữ nguyên giá trị cũ)
@@ -2397,7 +2458,28 @@ function renderBrowsePage(cat = '', grade = '', subject = '', query = '') {
     const gridEl = document.getElementById('browse-docs-grid');
 
     if (gradeSelect) gradeSelect.value = grade;
-    if (subjectSelect) subjectSelect.value = subject;
+
+    // Cập nhật danh sách môn học của bộ lọc theo danh mục & khối lớp đang xem
+    if (subjectSelect) {
+        if (cat && grade) {
+            const currentGradeSubs = store.getGradeSubjects(cat, grade);
+            if (currentGradeSubs.length === 0) {
+                subjectSelect.innerHTML = '<option value="">(Khối không chia thư mục con)</option>';
+                subjectSelect.disabled = true;
+            } else {
+                subjectSelect.disabled = false;
+                subjectSelect.innerHTML = `
+                    <option value="">Tất cả môn học trong khối</option>
+                    ${currentGradeSubs.map(s => `<option value="${s.id}">📁 ${s.name}</option>`).join('')}
+                `;
+                subjectSelect.value = subject || '';
+            }
+        } else {
+            subjectSelect.disabled = false;
+            syncSubjectSelects();
+            subjectSelect.value = subject || '';
+        }
+    }
 
     let docs = store.getDocuments().filter(d => d.status === 'approved');
 
@@ -2678,7 +2760,7 @@ function renderDetailPage(docId) {
             <div class="detail-main">
                 <div class="detail-card">
                     <div>
-                        <span class="doc-badge-pill">${catObj?.icon || '📁'} ${catName} • Khối ${doc.grade} • ${getSubjectName(doc.subject)}</span>
+                        <span class="doc-badge-pill">${catObj?.icon || '📁'} ${catName}${doc.grade ? ` • Khối ${doc.grade}` : ''}${doc.subject ? ` • ${escapeHtml(getSubjectName(doc.subject))}` : ''}</span>
                     </div>
 
                     ${doc.status === 'rejected' ? `
@@ -7088,7 +7170,10 @@ function initUploadForm() {
         const subject = document.getElementById('upload-subject').value;
         const fileInput = document.getElementById('upload-file');
 
-        if (!title || !cat || !grade || !subject) {
+        const gradeSubs = (cat && grade) ? store.getGradeSubjects(cat, grade) : [];
+        const isSubjectRequired = gradeSubs.length > 0;
+
+        if (!title || !cat || !grade || (isSubjectRequired && !subject)) {
             showToast('Vui lòng điền đầy đủ các thông tin bắt buộc!', 'error');
             return;
         }
@@ -7158,7 +7243,7 @@ function initUploadForm() {
             description: desc,
             category: cat,
             grade: grade,
-            subject: subject,
+            subject: subject || '',
             file_name: fileName,
             file_size: fileSize,
             file_type: ext,
@@ -8796,7 +8881,10 @@ async function handleContributeSubmit(e) {
         return;
     }
 
-    if (!title || !category || !grade || !subject) {
+    const gradeSubs = (category && grade) ? store.getGradeSubjects(category, grade) : [];
+    const isSubjectRequired = gradeSubs.length > 0;
+
+    if (!title || !category || !grade || (isSubjectRequired && !subject)) {
         showToast('Vui lòng điền đầy đủ các mục bắt buộc (*)!', 'error');
         return;
     }
