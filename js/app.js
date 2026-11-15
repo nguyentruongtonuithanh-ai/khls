@@ -1605,6 +1605,12 @@ function renderHomePage() {
         }
     }
 
+    // 2b. Hiển thị nội dung thống kê chi tiết trên trang chủ (đồng bộ nội dung trang Thống kê)
+    const homeDashEl = document.getElementById('home-dashboard-content');
+    if (homeDashEl) {
+        homeDashEl.innerHTML = getDashboardHtml(true);
+    }
+
     // 3. Leaderboard Top 10 Teachers
     const leaderboardEl = document.getElementById('leaderboard');
     if (leaderboardEl) {
@@ -4661,12 +4667,9 @@ function renderProfilePage() {
     }
 }
 
-// ======================== PAGE: DASHBOARD (BAN GIÁM HIỆU) ========================
+// ======================== PAGE: DASHBOARD (BAN GIÁM HIỆU & TOÀN TRƯỜNG) ========================
 
-function renderDashboardPage() {
-    const content = document.getElementById('dashboard-content');
-    if (!content) return;
-
+function getDashboardHtml(showExportBtn = true) {
     const docs = store.getDocuments().filter(d => d.status === 'approved');
     const users = store.getUsers();
 
@@ -4689,15 +4692,17 @@ function renderDashboardPage() {
     const maxGradeCount = Math.max(1, ...Object.values(gradeCounts));
     const maxDeptCount = Math.max(1, ...Object.values(deptCounts));
 
-    content.innerHTML = `
+    return `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-lg); flex-wrap:wrap; gap:10px;">
             <div>
-                <h3>Báo cáo Tổng hợp Thi đua Chuyên môn</h3>
+                <h3 style="font-size:1.15rem; font-weight:700;">📊 Báo cáo Tổng hợp Thi đua Chuyên môn</h3>
                 <p style="font-size:0.85rem; color:var(--text-muted);">Trường Tiểu học Núi Thành - Dữ liệu thời gian thực</p>
             </div>
-            <button class="btn btn-success" onclick="exportThiDuaCSV()">
-                📥 Xuất file Excel / CSV Thi đua
-            </button>
+            ${showExportBtn ? `
+                <button class="btn btn-success btn-sm" onclick="exportThiDuaCSV()">
+                    📥 Xuất file Excel / CSV Thi đua
+                </button>
+            ` : ''}
         </div>
 
         <div class="dashboard-grid">
@@ -4749,37 +4754,52 @@ function renderDashboardPage() {
 
         <!-- Bảng xếp hạng chi tiết giáo viên thi đua -->
         <div class="admin-table-container" style="margin-top:var(--space-2xl);">
-            <div style="padding:var(--space-md); font-weight:700; border-bottom:1px solid var(--border-color);">
-                🏅 Bảng Theo Dõi Thi Đua Cá Nhân Giáo Viên
+            <div style="padding:var(--space-md); font-weight:700; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <span>🏅 Bảng Theo Dõi Thi Đua Cá Nhân Giáo Viên</span>
+                <span style="font-size:0.82rem; font-weight:normal; color:var(--text-muted);">Điểm thi đua = Lượt tải × 2 + Bài duyệt × 20</span>
             </div>
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>Hạng</th>
+                        <th style="width:60px;">Hạng</th>
                         <th>Họ và tên</th>
                         <th>Tổ chuyên môn</th>
-                        <th>Số học liệu duyệt</th>
-                        <th>Tổng lượt tải</th>
-                        <th>Điểm thi đua</th>
+                        <th style="text-align:center;">Số học liệu duyệt</th>
+                        <th style="text-align:center;">Tổng lượt tải</th>
+                        <th style="text-align:center;">Điểm thi đua</th>
                         <th>Danh hiệu</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${users.filter(u => u.role !== 'admin').sort((a,b) => b.total_downloads - a.total_downloads).map((u, i) => `
-                        <tr>
-                            <td><strong>${i + 1}</strong></td>
-                            <td><strong>${u.fullname}</strong></td>
-                            <td>${u.department}</td>
-                            <td><span class="badge" style="background:var(--primary-soft); color:var(--primary);">${u.total_uploads}</span></td>
-                            <td>${u.total_downloads}</td>
-                            <td><strong>${u.total_downloads * 2 + u.total_uploads * 20}</strong></td>
-                            <td><span class="badge-honor">✨ ${u.honor || 'Giáo viên tích cực'}</span></td>
-                        </tr>
-                    `).join('')}
+                    ${users.filter(u => u.role !== 'admin').sort((a,b) => {
+                        const scoreA = (a.total_downloads || 0) * 2 + (a.total_uploads || 0) * 20;
+                        const scoreB = (b.total_downloads || 0) * 2 + (b.total_uploads || 0) * 20;
+                        return scoreB - scoreA;
+                    }).map((u, i) => {
+                        const score = (u.total_downloads || 0) * 2 + (u.total_uploads || 0) * 20;
+                        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+                        return `
+                            <tr>
+                                <td><strong>${medal}</strong></td>
+                                <td><strong>${escapeHtml(u.fullname)}</strong></td>
+                                <td>${escapeHtml(u.department)}</td>
+                                <td style="text-align:center;"><span class="badge" style="background:var(--primary-soft); color:var(--primary); font-weight:700;">${u.total_uploads || 0}</span></td>
+                                <td style="text-align:center;">${u.total_downloads || 0}</td>
+                                <td style="text-align:center;"><strong>${score}</strong></td>
+                                <td><span class="badge-honor">✨ ${escapeHtml(u.honor || 'Giáo viên tích cực')}</span></td>
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
     `;
+}
+
+function renderDashboardPage() {
+    const content = document.getElementById('dashboard-content');
+    if (!content) return;
+    content.innerHTML = getDashboardHtml(true);
 }
 
 function exportThiDuaCSV() {
