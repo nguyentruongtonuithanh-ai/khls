@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=10.1">
+    <link rel="stylesheet" href="css/style.css?v=11.0">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -965,6 +965,12 @@
             </div>
             <form class="modal-body" id="edit-grade-form" style="display: flex; flex-direction: column; gap: 14px;">
                 <input type="hidden" id="edit-grade-original-id">
+                <input type="hidden" id="edit-grade-cat-id">
+
+                <div class="form-group" id="edit-grade-cat-group" style="display: none; margin-bottom: 0;">
+                    <label class="form-label" for="edit-grade-target-cat">Thuộc Danh mục chính <span class="required">*</span></label>
+                    <select class="form-input" id="edit-grade-target-cat"></select>
+                </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label class="form-label" for="edit-grade-id">Mã khối (ID) <span class="required">*</span></label>
@@ -1005,9 +1011,24 @@
             </div>
             <form class="modal-body" id="edit-subject-form" style="display: flex; flex-direction: column; gap: 14px;">
                 <input type="hidden" id="edit-subject-original-id">
+                <input type="hidden" id="edit-subject-cat-id">
+                <input type="hidden" id="edit-subject-grade-id">
+
+                <div class="form-group" id="edit-subject-location-group" style="display: none; margin-bottom: 0;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label class="form-label" for="edit-subject-target-cat">Thuộc Danh mục <span class="required">*</span></label>
+                            <select class="form-input" id="edit-subject-target-cat" onchange="syncEditSubjectModalGrades()"></select>
+                        </div>
+                        <div>
+                            <label class="form-label" for="edit-subject-target-grade">Thuộc Khối lớp <span class="required">*</span></label>
+                            <select class="form-input" id="edit-subject-target-grade"></select>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="edit-subject-id">Mã môn học (ID) <span class="required">*</span></label>
+                    <label class="form-label" for="edit-subject-id">Mã thư mục / môn học (ID) <span class="required">*</span></label>
                     <input type="text" class="form-input" id="edit-subject-id" placeholder="VD: toan, stem, tienganh..." required>
                     <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; display: block;">Mã viết liền không dấu, không khoảng trắng</small>
                 </div>
@@ -1422,6 +1443,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=10.1"></script>
+    <script src="js/app.js?v=11.0"></script>
 </body>
 </html>
