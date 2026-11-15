@@ -7062,26 +7062,18 @@ function updateUserUI() {
         const isAdmin = state.user.role === 'admin' || state.user.username === 'admin';
         const isLeader = state.user.role === 'leader';
 
+        // Nút Thống kê: hiển thị cho tất cả tài khoản đã đăng nhập (Admin, Tổ trưởng, Giáo viên)
+        if (btnHeaderDashboard) btnHeaderDashboard.style.display = 'inline-flex';
+        if (sidebarDashboardLink) sidebarDashboardLink.style.display = 'flex';
+        if (menuDashboard) menuDashboard.style.display = 'flex';
+
         if (isAdmin) {
-            if (btnHeaderDashboard) btnHeaderDashboard.style.display = 'inline-flex';
             if (btnHeaderAdmin) btnHeaderAdmin.style.display = 'inline-flex';
-            if (sidebarDashboardLink) sidebarDashboardLink.style.display = 'flex';
             if (sidebarAdminLink) sidebarAdminLink.style.display = 'flex';
-            if (menuDashboard) menuDashboard.style.display = 'flex';
             if (menuAdmin) menuAdmin.style.display = 'flex';
-        } else if (isLeader) {
-            if (btnHeaderDashboard) btnHeaderDashboard.style.display = 'inline-flex';
-            if (btnHeaderAdmin) btnHeaderAdmin.style.display = 'none';
-            if (sidebarDashboardLink) sidebarDashboardLink.style.display = 'flex';
-            if (sidebarAdminLink) sidebarAdminLink.style.display = 'none';
-            if (menuDashboard) menuDashboard.style.display = 'flex';
-            if (menuAdmin) menuAdmin.style.display = 'none';
         } else {
-            if (btnHeaderDashboard) btnHeaderDashboard.style.display = 'none';
             if (btnHeaderAdmin) btnHeaderAdmin.style.display = 'none';
-            if (sidebarDashboardLink) sidebarDashboardLink.style.display = 'none';
             if (sidebarAdminLink) sidebarAdminLink.style.display = 'none';
-            if (menuDashboard) menuDashboard.style.display = 'none';
             if (menuAdmin) menuAdmin.style.display = 'none';
         }
     } else {
