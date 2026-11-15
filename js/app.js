@@ -4450,7 +4450,7 @@ function renderProfilePage() {
 
     if (nameEl) nameEl.textContent = user.fullname;
     if (roleEl) roleEl.textContent = user.role === 'admin' ? 'Quản trị viên Hệ thống' : user.role === 'leader' ? 'Tổ trưởng Chuyên môn' : 'Giáo viên';
-    if (deptEl) deptEl.textContent = `${user.department} • ${user.honor || 'Giáo viên tích cực'}`;
+    if (deptEl) deptEl.textContent = user.department || '';
     if (letterEl) letterEl.textContent = (user.avatar_letter || (user.fullname ? (user.fullname.split(' ').pop() || user.fullname).charAt(0) : 'G')).toUpperCase();
 
     const totalDownloads = docs.reduce((acc, d) => acc + (d.download_count || 0), 0);
