@@ -5101,14 +5101,24 @@ function renderAdminPage(activeTab = 'users') {
         `;
     } else if (activeTab === 'categories') {
         const categories = store.getCategories();
-        const grades = store.getGrades();
-        const subjects = store.getSubjects();
         const docs = store.getDocuments();
 
-        // Xây dựng giao diện cây thư mục phân cấp trực quan: Danh mục -> Khối lớp -> Môn học (toàn bộ icon 📁 màu vàng)
+        let totalGradesCount = 0;
+        let totalSubsCount = 0;
+        categories.forEach(c => {
+            const cGrades = store.getCategoryGrades(c.id);
+            totalGradesCount += cGrades.length;
+            cGrades.forEach(g => {
+                totalSubsCount += (g.subjects || []).length;
+            });
+        });
+
+        // Xây dựng giao diện cây thư mục phân cấp ĐỘC LẬP: Danh mục -> Khối lớp -> Môn học (toàn bộ icon 📁 màu vàng)
         const treeHtml = categories.map((c, cIndex) => {
             const catDocs = docs.filter(d => d.category === c.id);
-            const isCatOpen = cIndex === 0; // Mặc định mở danh mục đầu tiên
+            const catGrades = store.getCategoryGrades(c.id);
+            // Tự động mở danh mục đầu tiên hoặc danh mục vừa được thêm/sửa
+            const isCatOpen = state.activeTreeCatId ? (state.activeTreeCatId === c.id) : (cIndex === 0);
 
             return `
                 <div class="admin-tree-node level-1-node collapsible ${isCatOpen ? 'open' : ''}" data-cat-id="${c.id}" data-search="${escapeHtml((c.name + ' ' + c.id).toLowerCase())}">
@@ -5121,18 +5131,21 @@ function renderAdminPage(activeTab = 'users') {
                             <span class="admin-tree-name">${escapeHtml(c.name)}</span>
                             <code class="admin-tree-code">${c.id}</code>
                             <span class="admin-tree-badge ${catDocs.length === 0 ? 'empty' : ''}">${catDocs.length} tài liệu</span>
+                            <span class="admin-tree-badge" style="background: rgba(34,211,238,0.12); color: var(--accent);">${catGrades.length} khối</span>
                         </div>
                         <div class="admin-tree-actions">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="openEditGradeModal(null)" title="Thêm khối lớp mới vào hệ thống">➕ Thêm khối</button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="openEditGradeModal('${c.id}', null)" title="Thêm khối lớp mới vào danh mục '${c.name}'">➕ Thêm khối</button>
                             <button type="button" class="btn btn-secondary btn-sm" onclick="openEditCategoryModal('${c.id}')" title="Sửa danh mục này">✏️ Sửa</button>
                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${c.id}')" title="Xóa danh mục này">🗑️ Xóa</button>
                         </div>
                     </div>
 
                     <div class="admin-tree-children">
-                        ${grades.map((g, gIndex) => {
+                        ${catGrades.map((g, gIndex) => {
                             const gradeDocs = catDocs.filter(d => String(d.grade) === String(g.id));
-                            const isGradeOpen = cIndex === 0 && gIndex === 0;
+                            const gradeSubjects = store.getGradeSubjects(c.id, g.id);
+                            // Tự động mở khối lớp vừa thêm/sửa hoặc khối lớp đầu tiên của danh mục mở
+                            const isGradeOpen = state.activeTreeGradeId ? (state.activeTreeCatId === c.id && String(state.activeTreeGradeId) === String(g.id)) : (isCatOpen && gIndex === 0);
 
                             return `
                                 <div class="admin-tree-node level-2-node collapsible ${isGradeOpen ? 'open' : ''}" data-grade-id="${g.id}" data-search="${escapeHtml((g.name + ' ' + g.id).toLowerCase())}">
@@ -5141,33 +5154,38 @@ function renderAdminPage(activeTab = 'users') {
                                             <button type="button" class="admin-tree-toggle" title="Đóng / Mở khối lớp">
                                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                                             </button>
-                                            <span class="admin-tree-icon">📁</span>
+                                            <span class="admin-tree-icon">📂</span>
                                             <span class="admin-tree-name">${escapeHtml(g.name)}</span>
                                             <code class="admin-tree-code">Khối ${g.id}</code>
                                             <span class="admin-tree-badge ${gradeDocs.length === 0 ? 'empty' : ''}">${gradeDocs.length} tài liệu</span>
+                                            <span class="admin-tree-badge" style="background: rgba(52,211,153,0.12); color: var(--success);">${gradeSubjects.length} thư mục</span>
                                         </div>
                                         <div class="admin-tree-actions">
-                                            <button type="button" class="btn btn-secondary btn-sm" onclick="openEditSubjectModal(null)" title="Thêm môn học mới">➕ Thêm môn</button>
-                                            <button type="button" class="btn btn-secondary btn-sm" onclick="openEditGradeModal('${g.id}')" title="Sửa tên khối lớp">✏️ Sửa</button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteGrade('${g.id}')" title="Xóa khối lớp này">🗑️ Xóa</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="openEditSubjectModal('${c.id}', '${g.id}', null)" title="Thêm thư mục mới vào ${g.name} (${c.name})">➕ Thêm thư mục</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="openEditGradeModal('${c.id}', '${g.id}')" title="Sửa tên khối lớp">✏️ Sửa</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteGrade('${c.id}', '${g.id}')" title="Xóa khối lớp này khỏi danh mục '${c.name}'">🗑️ Xóa</button>
                                         </div>
                                     </div>
 
                                     <div class="admin-tree-children">
-                                        ${subjects.map(s => {
+                                        ${gradeSubjects.length === 0 ? `
+                                            <div style="padding: 10px 16px 10px 38px; font-size: 0.82rem; color: var(--text-muted); font-style: italic;">
+                                                Chưa có thư mục con nào. Bấm nút <strong>➕ Thêm thư mục</strong> bên trên để tạo thư mục độc lập cho khối này.
+                                            </div>
+                                        ` : gradeSubjects.map(s => {
                                             const subDocs = gradeDocs.filter(d => d.subject === s.id);
                                             return `
                                                 <div class="admin-tree-row level-3" data-subject-id="${s.id}" data-search="${escapeHtml((s.name + ' ' + s.id).toLowerCase())}">
                                                     <div class="admin-tree-left">
                                                         <span class="admin-tree-leaf-bullet">└</span>
-                                                        <span class="admin-tree-icon" title="Thư mục môn học">📁</span>
-                                                        <span class="admin-tree-name">${escapeHtml(s.name)}</span>
+                                                        <span class="admin-tree-icon" title="Thư mục">📁</span>
+                                                        <span class="admin-tree-name"><strong>${escapeHtml(s.name)}</strong></span>
                                                         <code class="admin-tree-code">${s.id}</code>
                                                         ${subDocs.length > 0 ? `<span class="admin-tree-badge">${subDocs.length} bài</span>` : ''}
                                                     </div>
                                                     <div class="admin-tree-actions">
-                                                        <button type="button" class="btn btn-secondary btn-sm" onclick="openEditSubjectModal('${s.id}')" title="Sửa môn học">✏️ Sửa</button>
-                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSubject('${s.id}')" title="Xóa môn học này">🗑️ Xóa</button>
+                                                        <button type="button" class="btn btn-secondary btn-sm" onclick="openEditSubjectModal('${c.id}', '${g.id}', '${s.id}')" title="Sửa thư mục này">✏️ Sửa</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSubject('${c.id}', '${g.id}', '${s.id}')" title="Xóa thư mục '${s.name}' khỏi ${g.name} (${c.name})">🗑️ Xóa</button>
                                                     </div>
                                                 </div>
                                             `;
@@ -5188,8 +5206,8 @@ function renderAdminPage(activeTab = 'users') {
                         <span>📁 Quản lý Cây Thư mục & Danh mục Học liệu</span>
                     </h3>
                     <p style="font-size:0.88rem; color:var(--text-muted); margin:0; line-height:1.5;">
-                        Cây thư mục 3 cấp độ chuẩn: <strong>Danh mục chính (Cấp 1) ➔ Khối lớp (Cấp 2) ➔ Môn học (Cấp 3 - Thư mục vàng 📁)</strong>.<br>
-                        Nháy vào tên bất kỳ để mở/thu gọn và dùng trực tiếp các nút <strong>Thêm, Sửa, Xóa</strong> nhanh chóng.
+                        Cây thư mục 3 cấp độ độc lập: <strong>Danh mục chính (Cấp 1) ➔ Khối lớp (Cấp 2) ➔ Thư mục môn học (Cấp 3 - Thư mục vàng 📁)</strong>.<br>
+                        Mỗi danh mục và từng khối lớp có hệ thống thư mục hoàn toàn độc lập với nhau (ví dụ: Tin học có ở Kế hoạch bài dạy nhưng không bắt buộc ở Bài giảng điện tử).
                     </p>
                 </div>
                 <div class="admin-tree-actions-primary">
@@ -5199,11 +5217,11 @@ function renderAdminPage(activeTab = 'users') {
                     <button type="button" class="btn btn-primary btn-sm" onclick="openEditCategoryModal(null)">
                         ➕ Thêm Danh mục chính
                     </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="openEditGradeModal(null)">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openEditGradeModal(null, null)">
                         ➕ Thêm Khối lớp
                     </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="openEditSubjectModal(null)">
-                        ➕ Thêm Môn học
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openEditSubjectModal(null, null, null)">
+                        ➕ Thêm Môn / Thư mục
                     </button>
                 </div>
             </div>
@@ -5215,10 +5233,10 @@ function renderAdminPage(activeTab = 'users') {
                             📂 ${categories.length} danh mục
                         </span>
                         <span class="badge" style="background:rgba(34,211,238,0.12); color:var(--accent); font-size:0.82rem; font-weight:700; padding:5px 10px; border-radius:999px;">
-                            🏫 ${grades.length} khối lớp
+                            🏫 ${totalGradesCount} khối lớp
                         </span>
                         <span class="badge" style="background:rgba(52,211,153,0.12); color:var(--success); font-size:0.82rem; font-weight:700; padding:5px 10px; border-radius:999px;">
-                            📁 ${subjects.length} môn học
+                            📁 ${totalSubsCount} thư mục độc lập
                         </span>
                         <span class="badge" style="background:rgba(251,191,36,0.12); color:var(--warning); font-size:0.82rem; font-weight:700; padding:5px 10px; border-radius:999px;">
                             📄 ${docs.length} tài liệu
@@ -6034,6 +6052,22 @@ function openEditCategoryModal(catId) {
         if (deleteBtn) deleteBtn.style.display = 'none';
     }
 
+    // Tự động gợi ý mã ID khi người dùng gõ tên thư mục
+    if (nameInput && idInput && !nameInput._hasAutoSlug) {
+        nameInput.addEventListener('input', () => {
+            if (!origIdInput.value && (!idInput.value || idInput._isAutoFilled)) {
+                if (typeof removeVietnameseTones === 'function') {
+                    idInput.value = removeVietnameseTones(nameInput.value).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+                    idInput._isAutoFilled = true;
+                }
+            }
+        });
+        idInput.addEventListener('input', () => {
+            idInput._isAutoFilled = false;
+        });
+        nameInput._hasAutoSlug = true;
+    }
+
     modal.classList.add('active');
     setTimeout(() => {
         if (nameInput) nameInput.focus();
@@ -6683,21 +6717,27 @@ function handleSaveSubject(e) {
     }
 
     const origId = document.getElementById('edit-subject-original-id').value.trim();
-    let id = document.getElementById('edit-subject-id').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
     const name = document.getElementById('edit-subject-name').value.trim();
-    const icon = '📁'; // Thư mục màu vàng đồng bộ cho tất cả thư mục/môn học
+    let rawId = document.getElementById('edit-subject-id').value.trim();
 
-    if (!id) {
-        showToast('Vui lòng nhập mã thư mục (ID)!', 'error');
-        document.getElementById('edit-subject-id').focus();
-        return;
+    // Tự động chuyển đổi tiếng Việt có dấu thành mã ID chuẩn không dấu (VD: "Tin học" -> "tinhoc")
+    if (!rawId && name) {
+        rawId = typeof removeVietnameseTones === 'function' ? removeVietnameseTones(name) : name;
+    } else if (rawId && typeof removeVietnameseTones === 'function') {
+        rawId = removeVietnameseTones(rawId);
     }
+    let id = rawId.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+
     if (!name) {
-        showToast('Vui lòng nhập tên thư mục!', 'error');
+        showToast('Vui lòng nhập tên thư mục / môn học!', 'error');
         document.getElementById('edit-subject-name').focus();
         return;
     }
+    if (!id) {
+        id = 'sub_' + Date.now().toString(36);
+    }
 
+    const icon = '📁'; // Thư mục màu vàng đồng bộ cho tất cả thư mục/môn học
     const subjects = store.getGradeSubjects(catId, gradeId);
 
     if (origId) {
@@ -6732,7 +6772,7 @@ function handleSaveSubject(e) {
         showToast(`Đã cập nhật thư mục: "${name}" thành công! 🎉`, 'success');
     } else {
         if (subjects.some(sub => sub.id === id)) {
-            showToast(`Mã thư mục "${id}" đã tồn tại trong khối này. Vui lòng chọn mã khác!`, 'error');
+            showToast(`Thư mục "${name}" (${id}) đã có sẵn trong khối này!`, 'warning');
             document.getElementById('edit-subject-id').focus();
             return;
         }
@@ -6743,6 +6783,10 @@ function handleSaveSubject(e) {
         closeEditSubjectModal();
         showToast(`Đã thêm thành công thư mục: "${name}"! 🎉`, 'success');
     }
+
+    // Đánh dấu nhánh danh mục và khối lớp vừa thao tác để tự động mở rộng trên cây quản trị
+    state.activeTreeCatId = catId;
+    state.activeTreeGradeId = gradeId;
 
     renderSidebar();
     syncAllSelects();
@@ -8407,11 +8451,10 @@ async function syncDocumentsFromDrive(isManual = false) {
                 const curGrades = store.getGrades();
                 const curSubs = store.getSubjects();
 
-                const isDiff = JSON.stringify(cloudStruct.categories || []) !== JSON.stringify(curCats) ||
-                               JSON.stringify(cloudStruct.grades || []) !== JSON.stringify(curGrades) ||
-                               JSON.stringify(cloudStruct.subjects || []) !== JSON.stringify(curSubs);
+                // Chỉ nhận cấu trúc thư mục từ đám mây nếu đám mây thực sự MỚI HƠN bản sửa cục bộ
+                const isCloudNewer = maxTimestamp > localTime;
 
-                if (isDiff || maxTimestamp > localTime) {
+                if (isCloudNewer) {
                     if (Array.isArray(cloudStruct.categories) && cloudStruct.categories.length > 0) {
                         store.saveCategories(cloudStruct.categories);
                         CATEGORIES = store.getCategories();
