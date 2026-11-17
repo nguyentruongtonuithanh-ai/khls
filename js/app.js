@@ -2639,12 +2639,12 @@ function renderInPageDocViewer(doc) {
     let viewerBody = '';
 
     // 0A. Video YouTube Player (Khung phát video YouTube trực tiếp)
-    const ytId = doc.youtube_id || extractYouTubeId(doc.youtube_url) || extractYouTubeId(doc.file_url);
+    const ytId = resolveYouTubeId(doc);
     const isVideoCat = doc.category === 'video' || doc.file_type === 'youtube' || Boolean(ytId);
     
     // 0B. Interactive Game Viewer (Khung chơi trò chơi tương tác số HTML/iframe)
-    const isGameCat = doc.category === 'trochoi' || doc.file_type === 'html' || doc.file_type === 'game' || Boolean(doc.game_html);
-    const gameCode = doc.game_html || (doc.category === 'trochoi' ? doc.file_content_html : null);
+    const gameCode = resolveGameHtml(doc);
+    const isGameCat = doc.category === 'trochoi' || doc.file_type === 'html' || doc.file_type === 'game' || Boolean(gameCode);
 
     if (isVideoCat && ytId) {
         viewerBody = `
@@ -3052,7 +3052,7 @@ function handleDownloadDoc(docId) {
     store.saveDocuments(docs);
 
     // Mở video YouTube trực tiếp
-    const ytId = doc.youtube_id || extractYouTubeId(doc.youtube_url) || extractYouTubeId(doc.file_url);
+    const ytId = resolveYouTubeId(doc);
     if ((doc.category === 'video' || doc.file_type === 'youtube' || Boolean(ytId)) && ytId) {
         window.open(`https://www.youtube.com/watch?v=${ytId}`, '_blank');
         showToast(`Đang mở video "${doc.title}" trên YouTube! 🎬`, 'info');
@@ -3060,8 +3060,8 @@ function handleDownloadDoc(docId) {
     }
 
     // Tải về mã nguồn trò chơi tương tác HTML
-    const isGame = (doc.category === 'trochoi') || doc.game_html;
-    const gameCode = doc.game_html || (doc.category === 'trochoi' ? doc.file_content_html : null);
+    const gameCode = resolveGameHtml(doc);
+    const isGame = (doc.category === 'trochoi') || Boolean(gameCode);
     if (isGame && gameCode) {
         const prepared = buildGameIframeHtml(gameCode);
         const blob = new Blob([prepared], { type: 'text/html;charset=utf-8' });
@@ -4048,7 +4048,7 @@ function openPreviewModal(docId) {
         const isHttpUrl = doc.file_url && (doc.file_url.startsWith('http://') || doc.file_url.startsWith('https://'));
 
         // 0A. YouTube Video Quick Preview
-        const ytId = doc.youtube_id || extractYouTubeId(doc.youtube_url) || extractYouTubeId(doc.file_url);
+        const ytId = resolveYouTubeId(doc);
         if ((doc.category === 'video' || doc.file_type === 'youtube' || ytId) && ytId) {
             contentEl.innerHTML = `
                 <div style="width:100%; height:100%; display:flex; flex-direction:column; background:#000;">
@@ -4069,8 +4069,8 @@ function openPreviewModal(docId) {
         }
 
         // 0B. Interactive HTML Game Quick Preview
-        const isGameCat = doc.category === 'trochoi' || doc.file_type === 'html' || doc.file_type === 'game' || Boolean(doc.game_html);
-        const gameCode = doc.game_html || (doc.category === 'trochoi' ? doc.file_content_html : null);
+        const gameCode = resolveGameHtml(doc);
+        const isGameCat = doc.category === 'trochoi' || doc.file_type === 'html' || doc.file_type === 'game' || Boolean(gameCode);
         if (isGameCat && gameCode) {
             const prepared = buildGameIframeHtml(gameCode);
             const blobUrl = URL.createObjectURL(new Blob([prepared], { type: 'text/html;charset=utf-8' }));
@@ -9661,11 +9661,12 @@ function hydrateCloudDocMetadata(doc) {
         }
     }
 
-    // Dự phòng trích xuất YouTube ID từ tên tệp hoặc URL khi đồng bộ từ Drive
-    if ((doc.category === 'video' || doc.file_type === 'youtube') && !doc.youtube_id) {
+    // Dự phòng trích xuất YouTube ID từ tên tệp (_YT_...) hoặc URL/mô tả khi đồng bộ từ Drive
+    if (!doc.youtube_id) {
         const fromUrl = extractYouTubeId(doc.youtube_url) || extractYouTubeId(doc.file_url);
         const fromName = (doc.file_name || '').match(/_YT_([\w-]{11})/)?.[1] || null;
-        const ytId = fromUrl || fromName;
+        const fromDesc = (doc.category === 'video') ? extractYouTubeId(doc.description) : null;
+        const ytId = fromUrl || fromName || fromDesc;
         if (ytId) {
             doc.youtube_id = ytId;
             doc.youtube_url = doc.youtube_url || `https://www.youtube.com/watch?v=${ytId}`;
@@ -9686,6 +9687,22 @@ function hydrateCloudDocMetadata(doc) {
     }
 
     return changed;
+}
+
+function resolveYouTubeId(doc) {
+    if (!doc || typeof doc !== 'object') return null;
+    hydrateCloudDocMetadata(doc);
+    return doc.youtube_id
+        || extractYouTubeId(doc.youtube_url)
+        || extractYouTubeId(doc.file_url)
+        || ((doc.file_name || '').match(/_YT_([\w-]{11})/)?.[1] || null)
+        || (doc.category === 'video' ? extractYouTubeId(doc.description) : null);
+}
+
+function resolveGameHtml(doc) {
+    if (!doc || typeof doc !== 'object') return null;
+    hydrateCloudDocMetadata(doc);
+    return doc.game_html || (doc.category === 'trochoi' ? doc.file_content_html : null);
 }
 
 async function uploadDocToCloudDrive(payload) {
@@ -9794,9 +9811,6 @@ function getYouTubeThumbnail(urlOrId) {
 function buildGameIframeHtml(rawHtml) {
     if (!rawHtml) return '';
     const trimmed = rawHtml.trim();
-    if (trimmed.startsWith('<iframe') && trimmed.endsWith('</iframe>')) {
-        return trimmed;
-    }
     if (trimmed.toLowerCase().includes('<!doctype') || trimmed.toLowerCase().includes('<html')) {
         return trimmed;
     }
@@ -9807,7 +9821,7 @@ function buildGameIframeHtml(rawHtml) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         html, body { margin:0; padding:0; width:100%; height:100%; overflow:auto; background:#ffffff; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        iframe { width:100%; height:100%; min-height:480px; border:none; display:block; }
+        iframe { width:100% !important; height:100% !important; min-height:480px; border:none; display:block; }
     </style>
 </head>
 <body>
@@ -9965,7 +9979,7 @@ function updateCategoryInputMode(catSelectEl) {
 
 function getFileTypeIcon(filename = '', category = null, doc = null) {
     const cat = category || (doc ? doc.category : null);
-    if (cat === 'video' || (doc && (doc.youtube_url || doc.file_type === 'youtube'))) return '🎬';
+    if (cat === 'video' || (doc && (doc.youtube_id || doc.youtube_url || doc.file_type === 'youtube')) || /_YT_[\w-]{11}/.test(filename || '')) return '🎬';
     if (cat === 'trochoi' || (doc && (doc.game_html || doc.file_type === 'html' || doc.file_type === 'game'))) return '🎮';
 
     const ext = (filename || '').split('.').pop().toLowerCase();
@@ -9983,7 +9997,7 @@ function getFileTypeIcon(filename = '', category = null, doc = null) {
 
 function getFileTypeClass(filename = '', category = null, doc = null) {
     const cat = category || (doc ? doc.category : null);
-    if (cat === 'video' || (doc && (doc.youtube_url || doc.file_type === 'youtube'))) return 'doc-type-video';
+    if (cat === 'video' || (doc && (doc.youtube_id || doc.youtube_url || doc.file_type === 'youtube')) || /_YT_[\w-]{11}/.test(filename || '')) return 'doc-type-video';
     if (cat === 'trochoi' || (doc && (doc.game_html || doc.file_type === 'html' || doc.file_type === 'game'))) return 'doc-type-game';
 
     const ext = (filename || '').split('.').pop().toLowerCase();
@@ -10066,9 +10080,10 @@ function renderStars(rating = 0) {
 function renderDocCard(doc) {
     const catObj = CATEGORIES.find(c => c.id === doc.category);
     const driveId = extractGoogleDriveId(doc.file_url);
-    const ytId = doc.youtube_id || extractYouTubeId(doc.youtube_url) || extractYouTubeId(doc.file_url);
+    const ytId = resolveYouTubeId(doc);
+    const gameCode = resolveGameHtml(doc);
     const isYouTube = (doc.category === 'video' || doc.file_type === 'youtube' || Boolean(ytId)) && Boolean(ytId);
-    const isGame = doc.category === 'trochoi' || doc.file_type === 'html' || doc.file_type === 'game' || Boolean(doc.game_html);
+    const isGame = doc.category === 'trochoi' || doc.file_type === 'html' || doc.file_type === 'game' || Boolean(gameCode);
 
     const typeIcon = getFileTypeIcon(doc.file_name, doc.category, doc);
     const typeClass = getFileTypeClass(doc.file_name, doc.category, doc);
