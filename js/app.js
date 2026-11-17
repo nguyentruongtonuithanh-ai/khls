@@ -955,6 +955,9 @@ const store = {
                     d.week = getDocWeek(d);
                     updated = true;
                 }
+                if (typeof hydrateCloudDocMetadata === 'function' && hydrateCloudDocMetadata(d)) {
+                    updated = true;
+                }
             });
 
             const d1 = docs.find(d => d.id === 'doc-1');
@@ -7341,11 +7344,14 @@ function initUploadForm() {
         const subject = document.getElementById('upload-subject').value;
         const fileInput = document.getElementById('upload-file');
 
-        const pageYtUrl = document.getElementById('upload-youtube-url')?.value.trim() || '';
+        const rawPageYtUrl = document.getElementById('upload-youtube-url')?.value.trim() || '';
+        const pageYtUrl = normalizeYouTubeUrl(rawPageYtUrl);
         const pageGameHtml = document.getElementById('upload-game-html')?.value.trim() || '';
+        const isPageVideo = cat === 'video';
+        const isPageGame = cat === 'trochoi';
 
-        if (cat === 'video') {
-            if (!pageYtUrl) {
+        if (isPageVideo) {
+            if (!rawPageYtUrl) {
                 showToast('Vui lòng dán đường link video YouTube!', 'error');
                 document.getElementById('upload-youtube-url')?.focus();
                 return;
@@ -7355,7 +7361,7 @@ function initUploadForm() {
                 document.getElementById('upload-youtube-url')?.focus();
                 return;
             }
-        } else if (cat === 'trochoi') {
+        } else if (isPageGame) {
             if (!pageGameHtml) {
                 showToast('Vui lòng dán mã code HTML hoặc mã nhúng trò chơi!', 'error');
                 document.getElementById('upload-game-html')?.focus();
@@ -7380,15 +7386,16 @@ function initUploadForm() {
         const origBtnText = submitBtn ? submitBtn.innerHTML : 'Gửi học liệu';
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ Đang phân tích nội dung tệp...';
+            submitBtn.innerHTML = '⏳ Đang tải lên &amp; gửi duyệt...';
         }
 
         const file = fileInput.files[0] || uploadedFileCache.file;
         let ext = 'docx';
         let fileName = `${title}.docx`;
         let fileSize = 1850000;
+        let rawBase64 = '';
 
-        if (file) {
+        if (!isPageVideo && !isPageGame && file) {
             fileName = file.name;
             fileSize = file.size;
             ext = file.name.split('.').pop().toLowerCase();
@@ -7411,18 +7418,21 @@ function initUploadForm() {
                 }
             }
 
-            // Ensure Data URL is read if size allows
-            if (!uploadedFileCache.dataUrl && fileSize < 5000000) {
-                try {
+            // Ensure Data URL & raw base64 is read
+            try {
+                if (!uploadedFileCache.dataUrl) {
                     uploadedFileCache.dataUrl = await new Promise((resolve) => {
                         const r = new FileReader();
                         r.onload = () => resolve(r.result);
                         r.onerror = () => resolve(null);
                         r.readAsDataURL(file);
                     });
-                } catch (err) {
-                    console.warn('DataURL read error:', err);
                 }
+                if (uploadedFileCache.dataUrl) {
+                    rawBase64 = uploadedFileCache.dataUrl.includes(',') ? uploadedFileCache.dataUrl.split(',')[1] : uploadedFileCache.dataUrl;
+                }
+            } catch (err) {
+                console.warn('DataURL read error:', err);
             }
         }
 
@@ -7435,26 +7445,85 @@ function initUploadForm() {
             department: 'Tổ 1'
         };
 
-        const isPageVideo = cat === 'video';
-        const isPageGame = cat === 'trochoi';
         const pageYtId = isPageVideo ? extractYouTubeId(pageYtUrl) : null;
+        const resolvedWeek = getDocWeek({ title, file_name: fileName, description: desc }) || 1;
+        const docGeneratedId = 'doc-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        const safeSlug = buildSafeFileSlug(title, isPageVideo ? 'Video' : (isPageGame ? 'TroChoi' : 'HocLieu'));
+        const folderId = localStorage.getItem('khls_my_drive_folder_id') || '';
+
+        let cloudFileName = fileName;
+        let cloudFileType = (file && file.type) || 'application/octet-stream';
+        let cloudBase64 = rawBase64;
+        let cloudDescription = desc;
+
+        if (isPageVideo) {
+            cloudFileName = `${safeSlug}_YT_${pageYtId}.html`;
+            cloudFileType = 'text/html';
+            cloudBase64 = utf8ToBase64(buildYouTubePlayerHtml(title, pageYtId, pageYtUrl));
+            cloudDescription = encodeCloudDescription(desc, { yt_id: pageYtId, yt_url: pageYtUrl, week: resolvedWeek });
+        } else if (isPageGame) {
+            cloudFileName = `${safeSlug}.html`;
+            cloudFileType = 'text/html';
+            cloudBase64 = utf8ToBase64(buildGameIframeHtml(pageGameHtml));
+            const gameMeta = { is_game: true, week: resolvedWeek };
+            if (pageGameHtml.length <= 55000) {
+                gameMeta.game_b64 = utf8ToBase64(pageGameHtml);
+            }
+            cloudDescription = encodeCloudDescription(desc, gameMeta);
+        }
+
+        let driveResult = null;
+        let cloudFileUrl = null;
+        let driveId = null;
+
+        if (cloudBase64) {
+            const payload = {
+                action: 'upload',
+                docId: docGeneratedId,
+                title: title,
+                description: cloudDescription,
+                category: cat,
+                grade: grade,
+                subject: subject || '',
+                week: resolvedWeek,
+                fileName: cloudFileName,
+                fileType: cloudFileType,
+                base64Data: cloudBase64,
+                folderId: folderId,
+                author: currentUser.fullname,
+                authorId: currentUser.id,
+                department: currentUser.department || 'Tổ Chuyên Môn'
+            };
+            if (isPageVideo) {
+                payload.youtubeUrl = pageYtUrl;
+                payload.youtubeId = pageYtId;
+            } else if (isPageGame && pageGameHtml.length <= 55000) {
+                payload.gameHtml = pageGameHtml;
+            }
+            const cloudRes = await uploadDocToCloudDrive(payload);
+            driveResult = cloudRes.driveResult;
+            cloudFileUrl = cloudRes.fileUrl;
+            driveId = cloudRes.driveId;
+        }
 
         const newDoc = {
-            id: 'doc-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+            id: (driveResult && driveResult.doc && driveResult.doc.id) ? driveResult.doc.id : docGeneratedId,
             title: title,
             description: desc,
             category: cat,
             grade: grade,
             subject: subject || '',
+            week: resolvedWeek,
             file_name: isPageVideo ? `${title}.mp4` : (isPageGame ? `${title}.html` : fileName),
             file_size: isPageVideo ? 0 : (isPageGame ? new Blob([pageGameHtml]).size : fileSize),
             file_type: isPageVideo ? 'youtube' : (isPageGame ? 'html' : ext),
-            file_url: isPageVideo ? pageYtUrl : onlineFileUrl,
+            file_url: isPageVideo ? pageYtUrl : (cloudFileUrl || onlineFileUrl),
             youtube_url: isPageVideo ? pageYtUrl : null,
             youtube_id: pageYtId,
             thumbnail_url: pageYtId ? getYouTubeThumbnail(pageYtId) : null,
             game_html: isPageGame ? pageGameHtml : null,
-            file_data_url: (isPageVideo || isPageGame) ? null : (uploadedFileCache.dataUrl || null),
+            drive_id: driveId,
+            file_data_url: (!isPageVideo && !isPageGame && fileSize < 5000000 && !cloudFileUrl) ? (uploadedFileCache.dataUrl || null) : null,
             file_content_html: isPageGame ? pageGameHtml : (uploadedFileCache.htmlContent || null),
             author_id: currentUser.id,
             author_name: currentUser.fullname,
@@ -7483,10 +7552,11 @@ function initUploadForm() {
         const notifs = store.getNotifications();
         notifs.unshift({
             id: 'notif-' + Date.now(),
-            title: 'Tài liệu mới chờ duyệt',
+            doc_id: newDoc.id,
+            title: isPageVideo ? 'Video bài giảng mới chờ duyệt' : (isPageGame ? 'Trò chơi tương tác mới chờ duyệt' : 'Tài liệu mới chờ duyệt'),
             text: `${currentUser.fullname} (${currentUser.department || 'Giáo viên'}) vừa nộp: ${title}`,
             time: 'Vừa xong',
-            icon: '📋',
+            icon: isPageVideo ? '🎬' : (isPageGame ? '🎮' : '📋'),
             type: 'review',
             grade: newDoc.grade,
             subject: newDoc.subject,
@@ -7503,8 +7573,15 @@ function initUploadForm() {
 
         form.reset();
         uploadedFileCache = { file: null, dataUrl: null, htmlContent: null };
-        document.getElementById('upload-file-preview').style.display = 'none';
-        document.getElementById('upload-dropzone').style.display = '';
+        const upPrev = document.getElementById('upload-file-preview');
+        const upDrop = document.getElementById('upload-dropzone');
+        if (upPrev) upPrev.style.display = 'none';
+        if (upDrop) upDrop.style.display = '';
+        const upYtPrev = document.getElementById('upload-youtube-preview');
+        if (upYtPrev) { upYtPrev.style.display = 'none'; upYtPrev.innerHTML = ''; }
+        const upGamePrev = document.getElementById('upload-game-preview');
+        if (upGamePrev) { upGamePrev.style.display = 'none'; upGamePrev.innerHTML = ''; }
+        updateCategoryInputMode(document.getElementById('upload-category'));
 
         updatePendingBadge();
         showToast('🎉 Gửi học liệu thành công! Tài liệu đã được gửi tới Tổ trưởng / Ban Giám Hiệu chờ phê duyệt.', 'success');
@@ -8346,6 +8423,7 @@ function openContributeModal(preselectedFile = null) {
         if (dropzone) dropzone.style.display = 'block';
     }
 
+    updateCategoryInputMode(document.getElementById('modal-upload-category'));
     modal.classList.add('active');
 }
 
@@ -8829,7 +8907,9 @@ async function syncDocumentsFromDrive(isManual = false) {
                 hasChanges = true;
             }
 
+            let notifAdded = false;
             validCloudDocs.forEach(cloudDoc => {
+                hydrateCloudDocMetadata(cloudDoc);
                 // Nhận dạng tài liệu DUY NHẤT theo ID hệ thống hoặc Google Drive File ID:
                 // TUYỆT ĐỐI KHÔNG nhận dạng nhầm theo file_name / file_size / title
                 const existingIdx = localDocs.findIndex(d => 
@@ -8838,31 +8918,51 @@ async function syncDocumentsFromDrive(isManual = false) {
                 );
 
                 if (existingIdx >= 0) {
+                    const localDoc = localDocs[existingIdx];
+                    if (hydrateCloudDocMetadata(localDoc)) {
+                        hasChanges = true;
+                    }
                     // 1. Luôn đồng bộ ID từ Cloud về Local để 2 bên khớp tuyệt đối
-                    if (cloudDoc.id && localDocs[existingIdx].id !== cloudDoc.id) {
-                        localDocs[existingIdx].id = cloudDoc.id;
+                    if (cloudDoc.id && localDoc.id !== cloudDoc.id) {
+                        localDoc.id = cloudDoc.id;
+                        hasChanges = true;
+                    }
+                    if (cloudDoc.youtube_id && !localDoc.youtube_id) {
+                        localDoc.youtube_id = cloudDoc.youtube_id;
+                        localDoc.youtube_url = cloudDoc.youtube_url || localDoc.youtube_url;
+                        localDoc.thumbnail_url = cloudDoc.thumbnail_url || localDoc.thumbnail_url;
+                        localDoc.file_type = 'youtube';
+                        hasChanges = true;
+                    }
+                    if (cloudDoc.game_html && !localDoc.game_html) {
+                        localDoc.game_html = cloudDoc.game_html;
+                        localDoc.file_content_html = cloudDoc.game_html;
+                        localDoc.file_type = 'html';
                         hasChanges = true;
                     }
 
                     // 2. Nhận trạng thái duyệt mới nhất từ Cloud:
                     // ĐẶC BIỆT: Nếu máy này vừa duyệt (approved) hoặc từ chối (rejected),
                     // mà Cloud vẫn còn đang là pending (do trễ mạng), TUYỆT ĐỐI KHÔNG hạ cấp bài đã duyệt về lại pending!
-                    if (cloudDoc.status && localDocs[existingIdx].status !== cloudDoc.status) {
-                        const localStatus = localDocs[existingIdx].status;
+                    if (cloudDoc.status && localDoc.status !== cloudDoc.status) {
+                        const localStatus = localDoc.status;
                         const isLocalProcessed = localStatus === 'approved' || localStatus === 'rejected';
                         const isCloudPending = cloudDoc.status === 'pending';
 
                         if (isLocalProcessed && isCloudPending) {
                             // Giữ nguyên quyết định duyệt của Admin/Tổ trưởng trên máy, không bị kéo lùi về pending
                         } else {
-                            const oldStatus = localDocs[existingIdx].status;
                             const newStatus = cloudDoc.status;
-                            localDocs[existingIdx].status = newStatus;
-                            localDocs[existingIdx].approved_by = cloudDoc.approved_by || localDocs[existingIdx].approved_by;
+                            localDoc.status = newStatus;
+                            localDoc.approved_by = cloudDoc.approved_by || localDoc.approved_by;
                             if (cloudDoc.reject_reason) {
-                                localDocs[existingIdx].reject_reason = cloudDoc.reject_reason;
+                                localDoc.reject_reason = cloudDoc.reject_reason;
                             }
                             hasChanges = true;
+
+                            if (newStatus === 'pending') {
+                                if (ensurePendingReviewNotif(localDoc)) notifAdded = true;
+                            }
 
                             // NẾU TÀI LIỆU NÀY CÓ TRẠNG THÁI APPROVED HOẶC REJECTED -> TẠO THÔNG BÁO CHO TÁC GIẢ
                             if (newStatus === 'approved' || newStatus === 'rejected') {
@@ -8919,10 +9019,12 @@ async function syncDocumentsFromDrive(isManual = false) {
                                 }
                             }
                         }
+                    } else if (localDoc.status === 'pending') {
+                        if (ensurePendingReviewNotif(localDoc)) notifAdded = true;
                     }
 
-                    if (cloudDoc.file_url && !localDocs[existingIdx].file_url) {
-                        localDocs[existingIdx].file_url = cloudDoc.file_url;
+                    if (cloudDoc.file_url && !localDoc.file_url) {
+                        localDoc.file_url = cloudDoc.file_url;
                         hasChanges = true;
                     }
                 } else {
@@ -8931,24 +9033,7 @@ async function syncDocumentsFromDrive(isManual = false) {
                     newDocsCount++;
 
                     if (cloudDoc.status === 'pending') {
-                        const notifs = store.getNotifications();
-                        const existsNotif = notifs.some(n => n.link && n.link.includes(cloudDoc.id));
-                        if (!existsNotif) {
-                            notifs.unshift({
-                                id: 'notif-cloud-' + cloudDoc.id,
-                                title: 'Học liệu mới chờ duyệt (từ Google Drive)',
-                                text: `${cloudDoc.author_name || 'Giáo viên'} vừa nộp: ${cloudDoc.title}`,
-                                time: 'Mới cập nhật',
-                                icon: '☁️',
-                                type: 'review',
-                                grade: cloudDoc.grade,
-                                subject: cloudDoc.subject,
-                                department: cloudDoc.author_dept,
-                                link: '#/review?doc=' + cloudDoc.id,
-                                unread: true
-                            });
-                            store.saveNotifications(notifs);
-                        }
+                        if (ensurePendingReviewNotif(cloudDoc)) notifAdded = true;
                     } else if (cloudDoc.status === 'rejected') {
                         const notifs = store.getNotifications();
                         const existsNotif = notifs.some(n => n.doc_id === cloudDoc.id && n.type === 'rejected');
@@ -8975,6 +9060,10 @@ async function syncDocumentsFromDrive(isManual = false) {
                     }
                 }
             });
+
+            if (notifAdded && !hasChanges) {
+                updatePendingBadge();
+            }
 
             if (hasChanges) {
                 store.saveDocuments(localDocs);
@@ -9093,23 +9182,25 @@ async function handleContributeSubmit(e) {
         department: authorDept
     };
 
-    const ytUrl = document.getElementById('modal-upload-youtube-url')?.value.trim() || '';
+    const rawYtUrl = document.getElementById('modal-upload-youtube-url')?.value.trim() || '';
+    const ytUrl = normalizeYouTubeUrl(rawYtUrl);
     const gameHtml = document.getElementById('modal-upload-game-html')?.value.trim() || '';
+    const isVideo = category === 'video';
+    const isGame = category === 'trochoi';
 
     // Kiểm tra tính hợp lệ riêng theo loại học liệu (Video YouTube / Trò chơi tương tác HTML / Tệp thông thường)
-    if (category === 'video') {
-        if (!ytUrl) {
+    if (isVideo) {
+        if (!rawYtUrl) {
             showToast('Vui lòng dán đường link video YouTube!', 'error');
             document.getElementById('modal-upload-youtube-url')?.focus();
             return;
         }
-        const ytId = extractYouTubeId(ytUrl);
-        if (!ytId) {
+        if (!extractYouTubeId(ytUrl)) {
             showToast('Đường link YouTube không đúng định dạng! Vui lòng dán link dạng https://www.youtube.com/watch?v=... hoặc https://youtu.be/...', 'error');
             document.getElementById('modal-upload-youtube-url')?.focus();
             return;
         }
-    } else if (category === 'trochoi') {
+    } else if (isGame) {
         if (!gameHtml) {
             showToast('Vui lòng dán mã code HTML hoặc mã nhúng <iframe> của trò chơi!', 'error');
             document.getElementById('modal-upload-game-html')?.focus();
@@ -9149,274 +9240,136 @@ async function handleContributeSubmit(e) {
         submitBtn.innerHTML = '⏳ Đang xử lý tải lên...';
     }
 
-    const myGas = localStorage.getItem('khls_my_drive_gas_url');
-    const settings = store.getSettings();
-    const activeGas = myGas || settings.drive_gas_url;
     const folderId = localStorage.getItem('khls_my_drive_folder_id') || '';
 
     try {
-        let driveResult = null;
-        let fileUrl = null;
-        let driveId = null;
-
-        // XỬ LÝ NHANH CHO VIDEO YOUTUBE
-        if (category === 'video') {
-            updateProgress(60, 'Đang trích xuất dữ liệu video YouTube...');
-            const ytId = extractYouTubeId(ytUrl);
-            const docGeneratedId = 'doc-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-            updateProgress(100, 'Hoàn tất! Đang lưu video...');
-
-            const newDoc = {
-                id: docGeneratedId,
-                title: title,
-                description: desc,
-                category: 'video',
-                grade: grade,
-                subject: subject || '',
-                week: (weekVal ? parseInt(weekVal, 10) : getDocWeek({ title, file_name: title + '.mp4', description: desc })) || 1,
-                file_name: `${title}.mp4`,
-                file_size: 0,
-                file_type: 'youtube',
-                file_url: ytUrl,
-                youtube_url: ytUrl,
-                youtube_id: ytId,
-                thumbnail_url: getYouTubeThumbnail(ytId),
-                drive_id: null,
-                file_data_url: null,
-                file_content_html: null,
-                author_id: currentUser.id,
-                author_name: authorName,
-                author_dept: authorDept,
-                status: 'pending',
-                avg_rating: 5.0,
-                rating_count: 1,
-                download_count: 0,
-                view_count: 1,
-                created_at: new Date().toISOString(),
-                approved_by: null,
-                comments: []
-            };
-
-            const docs = store.getDocuments();
-            docs.unshift(newDoc);
-            store.saveDocuments(docs);
-
-            const notifs = store.getNotifications();
-            notifs.unshift({
-                id: 'notif-' + Date.now(),
-                title: 'Video bài giảng mới chờ duyệt',
-                text: `${authorName} vừa đóng góp video: ${title}`,
-                time: 'Vừa xong',
-                icon: '🎬',
-                type: 'review',
-                grade: newDoc.grade,
-                subject: newDoc.subject,
-                department: authorDept,
-                link: `#/review?doc=${newDoc.id}`,
-                unread: true
-            });
-            store.saveNotifications(notifs);
-
-            updatePendingBadge();
-            closeContributeModal();
-            resetContributeForm();
-            showToast(`🎉 Đóng góp Video bài giảng "${title}" thành công! Học liệu đã được gửi để duyệt.`, 'success');
-
-            if (window.location.hash.startsWith('#/review')) renderReviewPage();
-            else if (window.location.hash.startsWith('#/browse')) renderBrowsePage();
-            else renderHomePage();
-
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Tải lên</span>';
-            }
-            return;
-        }
-
-        // XỬ LÝ NHANH CHO TRÒ CHƠI TƯƠNG TÁC HTML
-        if (category === 'trochoi') {
-            updateProgress(60, 'Đang lưu mã nguồn trò chơi tương tác...');
-            const docGeneratedId = 'doc-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-            updateProgress(100, 'Hoàn tất! Đang lưu trò chơi...');
-
-            const newDoc = {
-                id: docGeneratedId,
-                title: title,
-                description: desc,
-                category: 'trochoi',
-                grade: grade,
-                subject: subject || '',
-                week: (weekVal ? parseInt(weekVal, 10) : getDocWeek({ title, file_name: title + '.html', description: desc })) || 1,
-                file_name: `${title}.html`,
-                file_size: new Blob([gameHtml]).size,
-                file_type: 'html',
-                file_url: null,
-                game_html: gameHtml,
-                file_content_html: gameHtml,
-                drive_id: null,
-                file_data_url: null,
-                author_id: currentUser.id,
-                author_name: authorName,
-                author_dept: authorDept,
-                status: 'pending',
-                avg_rating: 5.0,
-                rating_count: 1,
-                download_count: 0,
-                view_count: 1,
-                created_at: new Date().toISOString(),
-                approved_by: null,
-                comments: []
-            };
-
-            const docs = store.getDocuments();
-            docs.unshift(newDoc);
-            store.saveDocuments(docs);
-
-            const notifs = store.getNotifications();
-            notifs.unshift({
-                id: 'notif-' + Date.now(),
-                title: 'Trò chơi tương tác mới chờ duyệt',
-                text: `${authorName} vừa đóng góp trò chơi: ${title}`,
-                time: 'Vừa xong',
-                icon: '🎮',
-                type: 'review',
-                grade: newDoc.grade,
-                subject: newDoc.subject,
-                department: authorDept,
-                link: `#/review?doc=${newDoc.id}`,
-                unread: true
-            });
-            store.saveNotifications(notifs);
-
-            updatePendingBadge();
-            closeContributeModal();
-            resetContributeForm();
-            showToast(`🎉 Đóng góp Trò chơi tương tác "${title}" thành công! Học liệu đã được gửi để duyệt.`, 'success');
-
-            if (window.location.hash.startsWith('#/review')) renderReviewPage();
-            else if (window.location.hash.startsWith('#/browse')) renderBrowsePage();
-            else renderHomePage();
-
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Tải lên</span>';
-            }
-            return;
-        }
-
-        updateProgress(15, 'Đang chuẩn bị tệp tin...');
-
-        // Convert file to base64
-        const base64Data = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const res = reader.result;
-                resolve(res.includes(',') ? res.split(',')[1] : res);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-
-        // Also extract HTML / text content for rich local preview
-        const ext = file.name.split('.').pop().toLowerCase();
-        let htmlContent = null;
-        if (ext === 'docx' && window.mammoth) {
-            try {
-                const ab = await file.arrayBuffer();
-                const res = await window.mammoth.convertToHtml({ arrayBuffer: ab });
-                htmlContent = res.value;
-            } catch (mErr) {
-                console.warn('Mammoth preview error:', mErr);
-            }
-        } else if (['txt', 'md', 'html'].includes(ext)) {
-            try {
-                const text = await file.text();
-                htmlContent = `<pre style="white-space:pre-wrap; font-family:inherit;">${escapeHtml(text)}</pre>`;
-            } catch (tErr) {}
-        }
-
-        // If Google Apps Script is configured: upload to Drive!
-        let gasUploadFailed = false;
         const docGeneratedId = 'doc-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-        if (activeGas) {
-            updateProgress(40, 'Đang tải tệp vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com)...');
-            const payload = {
-                action: 'upload',
-                docId: docGeneratedId,
-                title: title,
-                description: desc,
-                category: category,
-                grade: grade,
-                subject: subject,
-                fileName: file.name,
-                fileType: file.type || 'application/octet-stream',
-                base64Data: base64Data,
-                folderId: folderId,
-                author: authorName,
-                authorId: currentUser.id,
-                department: authorDept
-            };
+        const safeSlug = buildSafeFileSlug(title, isVideo ? 'Video' : (isGame ? 'TroChoi' : 'HocLieu'));
+        const ytId = isVideo ? extractYouTubeId(ytUrl) : null;
+        const resolvedWeek = (weekVal ? parseInt(weekVal, 10) : getDocWeek({ title, file_name: file ? file.name : title, description: desc })) || 1;
 
-            updateProgress(65, 'Đang lưu vào Drive Quản trị và tạo liên kết...');
+        let uploadFileName = '';
+        let uploadFileType = '';
+        let base64Data = '';
+        let gasDescription = desc;
+        let localFileName = '';
+        let localFileSize = 0;
+        let localFileType = '';
+        let htmlContent = null;
 
-            try {
-                const resp = await fetch(activeGas, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (resp.ok) {
-                    try {
-                        const rawText = await resp.text();
-                        try {
-                            driveResult = JSON.parse(rawText);
-                        } catch (parseErr) {
-                            console.warn('Google Apps Script raw text:', rawText);
-                        }
-                    } catch (readErr) {
-                        console.warn('Lỗi đọc phản hồi Google Apps Script:', readErr);
-                    }
-
-                    if (driveResult && (driveResult.status === 'success' || driveResult.fileId)) {
-                        fileUrl = driveResult.fileUrl || driveResult.previewUrl || (driveResult.fileId ? `https://drive.google.com/file/d/${driveResult.fileId}/view?usp=sharing` : null);
-                        driveId = driveResult.fileId;
-                        updateProgress(95, 'Đã lưu vào Drive Quản trị nguyentruongtonuithanh@gmail.com!');
-                    } else {
-                        console.warn('Google Apps Script phản hồi:', driveResult);
-                        gasUploadFailed = true;
-                    }
-                } else {
-                    console.warn(`Google Apps Script trả về HTTP ${resp.status}`);
-                    gasUploadFailed = true;
-                }
-            } catch (netErr) {
-                console.warn('Không thể gửi đến Google Apps Script, chuyển sang lưu trữ an toàn nội bộ:', netErr);
-                gasUploadFailed = true;
+        if (isVideo) {
+            updateProgress(20, 'Đang chuẩn bị dữ liệu video YouTube...');
+            const playerHtml = buildYouTubePlayerHtml(title, ytId, ytUrl);
+            uploadFileName = `${safeSlug}_YT_${ytId}.html`;
+            uploadFileType = 'text/html';
+            base64Data = utf8ToBase64(playerHtml);
+            gasDescription = encodeCloudDescription(desc, { yt_id: ytId, yt_url: ytUrl, week: resolvedWeek });
+            localFileName = `${title}.mp4`;
+            localFileSize = 0;
+            localFileType = 'youtube';
+        } else if (isGame) {
+            updateProgress(20, 'Đang đóng gói mã nguồn trò chơi tương tác...');
+            const preparedGameHtml = buildGameIframeHtml(gameHtml);
+            uploadFileName = `${safeSlug}.html`;
+            uploadFileType = 'text/html';
+            base64Data = utf8ToBase64(preparedGameHtml);
+            const gameMeta = { is_game: true, week: resolvedWeek };
+            if (gameHtml.length <= 55000) {
+                gameMeta.game_b64 = utf8ToBase64(gameHtml);
             }
+            gasDescription = encodeCloudDescription(desc, gameMeta);
+            localFileName = `${title}.html`;
+            localFileSize = new Blob([gameHtml]).size;
+            localFileType = 'html';
+            htmlContent = gameHtml;
+        } else {
+            updateProgress(15, 'Đang chuẩn bị tệp tin...');
+            base64Data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const res = reader.result;
+                    resolve(res.includes(',') ? res.split(',')[1] : res);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'docx' && window.mammoth) {
+                try {
+                    const ab = await file.arrayBuffer();
+                    const res = await window.mammoth.convertToHtml({ arrayBuffer: ab });
+                    htmlContent = res.value;
+                } catch (mErr) {
+                    console.warn('Mammoth preview error:', mErr);
+                }
+            } else if (['txt', 'md', 'html'].includes(ext)) {
+                try {
+                    const text = await file.text();
+                    htmlContent = `<pre style="white-space:pre-wrap; font-family:inherit;">${escapeHtml(text)}</pre>`;
+                } catch (tErr) {}
+            }
+
+            uploadFileName = file.name;
+            uploadFileType = file.type || 'application/octet-stream';
+            localFileName = file.name;
+            localFileSize = file.size;
+            localFileType = ext;
         }
 
-        if (!fileUrl) {
+        const payload = {
+            action: 'upload',
+            docId: docGeneratedId,
+            title: title,
+            description: gasDescription,
+            category: category,
+            grade: grade,
+            subject: subject || '',
+            week: resolvedWeek,
+            fileName: uploadFileName,
+            fileType: uploadFileType,
+            base64Data: base64Data,
+            folderId: folderId,
+            author: authorName,
+            authorId: currentUser.id,
+            department: authorDept
+        };
+        if (isVideo) {
+            payload.youtubeUrl = ytUrl;
+            payload.youtubeId = ytId;
+        } else if (isGame && gameHtml.length <= 55000) {
+            payload.gameHtml = gameHtml;
+        }
+
+        updateProgress(55, 'Đang đồng bộ học liệu lên hệ thống kiểm duyệt trường...');
+        const { activeGas, driveResult, fileUrl, driveId, gasUploadFailed } = await uploadDocToCloudDrive(payload);
+
+        if (fileUrl) {
+            updateProgress(95, 'Đã đồng bộ lên Google Drive Quản trị!');
+        } else {
             updateProgress(85, 'Đang lưu an toàn vào kho dữ liệu hệ thống...');
         }
 
-        updateProgress(100, 'Hoàn tất! Đang lưu thông tin...');
+        updateProgress(100, 'Hoàn tất! Đang gửi chờ duyệt...');
 
-        // Create new doc object
         const newDoc = {
             id: (driveResult && driveResult.doc && driveResult.doc.id) ? driveResult.doc.id : docGeneratedId,
             title: title,
             description: desc,
             category: category,
             grade: grade,
-            subject: subject,
-            week: (weekVal ? parseInt(weekVal, 10) : getDocWeek({ title, file_name: file.name, description: desc })) || 1,
-            file_name: file.name,
-            file_size: file.size,
-            file_type: ext,
-            file_url: fileUrl,
+            subject: subject || '',
+            week: resolvedWeek,
+            file_name: localFileName,
+            file_size: localFileSize,
+            file_type: localFileType,
+            file_url: isVideo ? ytUrl : fileUrl,
+            youtube_url: isVideo ? ytUrl : null,
+            youtube_id: ytId,
+            thumbnail_url: ytId ? getYouTubeThumbnail(ytId) : null,
+            game_html: isGame ? gameHtml : null,
             drive_id: driveId,
-            file_data_url: (file.size < 5000000 && !fileUrl) ? ('data:' + (file.type || 'application/octet-stream') + ';base64,' + base64Data) : null,
+            file_data_url: (!isVideo && !isGame && file && file.size < 5000000 && !fileUrl) ? ('data:' + (file.type || 'application/octet-stream') + ';base64,' + base64Data) : null,
             file_content_html: htmlContent,
             author_id: currentUser.id,
             author_name: authorName,
@@ -9440,14 +9393,19 @@ async function handleContributeSubmit(e) {
             store.saveDocuments(docs);
         }
 
-        // Add notification
+        // Tạo thông báo kiểm duyệt ngay lập tức
+        const notifTitle = isVideo
+            ? 'Video bài giảng mới chờ duyệt'
+            : (isGame ? 'Trò chơi tương tác mới chờ duyệt' : 'Học liệu mới nộp chờ duyệt');
+        const notifIcon = isVideo ? '🎬' : (isGame ? '🎮' : '📋');
         const notifs = store.getNotifications();
         notifs.unshift({
             id: 'notif-' + Date.now(),
-            title: 'Học liệu mới nộp chờ duyệt',
+            doc_id: newDoc.id,
+            title: notifTitle,
             text: `${authorName} vừa đóng góp: ${title}`,
             time: 'Vừa xong',
-            icon: '📋',
+            icon: notifIcon,
             type: 'review',
             grade: newDoc.grade,
             subject: newDoc.subject,
@@ -9459,13 +9417,14 @@ async function handleContributeSubmit(e) {
 
         updatePendingBadge();
         closeContributeModal();
+        resetContributeForm();
 
         if (activeGas && fileUrl) {
-            showToast(`🎉 Đã tải lên thành công! Tệp đã được chuyển vào Google Drive Quản trị (nguyentruongtonuithanh@gmail.com).`, 'success');
+            showToast(`🎉 Đã gửi "${title}" thành công và đồng bộ lên hệ thống chờ duyệt!`, 'success');
         } else if (activeGas && gasUploadFailed) {
-            showToast(`🎉 Đóng góp học liệu thành công! (Đã lưu an toàn vào hệ thống).`, 'info');
+            showToast(`🎉 Đóng góp "${title}" thành công! (Đã lưu an toàn vào hệ thống chờ duyệt).`, 'info');
         } else {
-            showToast(`🎉 Đóng góp học liệu thành công! (Tài liệu đã gửi tới Tổ trưởng / Ban Giám Hiệu chờ phê duyệt).`, 'success');
+            showToast(`🎉 Đóng góp "${title}" thành công! (Học liệu đã gửi tới Tổ trưởng / Ban Giám Hiệu chờ phê duyệt).`, 'success');
         }
 
         if (canUserAccessReview(state.user)) {
@@ -9590,6 +9549,227 @@ function showToast(message, type = 'info') {
 }
 
 // ======================== HELPER & UTILITY FUNCTIONS ========================
+
+// ======================== CLOUD METADATA & UPLOAD HELPERS ========================
+
+function utf8ToBase64(str) {
+    const bytes = new TextEncoder().encode(str || '');
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) {
+        bin += String.fromCharCode(bytes[i]);
+    }
+    return btoa(bin);
+}
+
+function base64ToUtf8(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) {
+        bytes[i] = bin.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+}
+
+function normalizeYouTubeUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function buildSafeFileSlug(title, fallback = 'HocLieu') {
+    const base = typeof removeVietnameseTones === 'function' ? removeVietnameseTones(title || '') : (title || '');
+    return base.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48) || fallback;
+}
+
+function buildYouTubePlayerHtml(title, ytId, ytUrl) {
+    const safeTitle = escapeHtml(title || 'Video bài giảng YouTube');
+    const safeUrl = escapeHtml(ytUrl || `https://www.youtube.com/watch?v=${ytId}`);
+    return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${safeTitle}</title>
+    <style>
+        body { margin:0; padding:24px; background:#0f172a; color:#f8fafc; font-family:system-ui,-apple-system,sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; box-sizing:border-box; }
+        .wrap { width:100%; max-width:920px; }
+        h1 { font-size:1.25rem; margin:0 0 12px; }
+        .frame { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:12px; overflow:hidden; }
+        iframe { position:absolute; inset:0; width:100%; height:100%; border:none; }
+        .link { margin-top:12px; font-size:0.9rem; }
+        a { color:#38bdf8; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>🎬 ${safeTitle}</h1>
+        <div class="frame">
+            <iframe src="https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1" allowfullscreen></iframe>
+        </div>
+        <p class="link">Xem trên YouTube: <a href="${safeUrl}" target="_blank" rel="noopener">${safeUrl}</a></p>
+    </div>
+</body>
+</html>`;
+}
+
+function encodeCloudDescription(cleanDesc, metaObj) {
+    const base = (cleanDesc || '').trim();
+    if (!metaObj || Object.keys(metaObj).length === 0) return base;
+    try {
+        const b64 = utf8ToBase64(JSON.stringify(metaObj));
+        return base ? `${base}\n\n[KHLS_META]${b64}[/KHLS_META]` : `[KHLS_META]${b64}[/KHLS_META]`;
+    } catch (e) {
+        return base;
+    }
+}
+
+function hydrateCloudDocMetadata(doc) {
+    if (!doc || typeof doc !== 'object') return false;
+    let changed = false;
+
+    if (typeof doc.description === 'string') {
+        const metaRegex = /\s*\[KHLS_META\]([A-Za-z0-9+/=]+)\[\/KHLS_META\]\s*/;
+        const match = doc.description.match(metaRegex);
+        if (match) {
+            try {
+                const meta = JSON.parse(base64ToUtf8(match[1]));
+                if (meta && typeof meta === 'object') {
+                    if (meta.week && !doc.week) doc.week = Number(meta.week) || 1;
+                    if (meta.yt_id) {
+                        doc.youtube_id = meta.yt_id;
+                        doc.youtube_url = meta.yt_url || `https://www.youtube.com/watch?v=${meta.yt_id}`;
+                        doc.thumbnail_url = doc.thumbnail_url || getYouTubeThumbnail(meta.yt_id);
+                        doc.file_type = 'youtube';
+                    }
+                    if (meta.game_b64) {
+                        const decodedGame = base64ToUtf8(meta.game_b64);
+                        if (decodedGame) {
+                            doc.game_html = decodedGame;
+                            doc.file_content_html = decodedGame;
+                            doc.file_type = 'html';
+                        }
+                    } else if (meta.is_game) {
+                        doc.file_type = 'html';
+                    }
+                }
+            } catch (e) {
+                console.warn('KHLS_META parse error:', e);
+            }
+            doc.description = doc.description.replace(metaRegex, '').trim();
+            changed = true;
+        }
+    }
+
+    // Dự phòng trích xuất YouTube ID từ tên tệp hoặc URL khi đồng bộ từ Drive
+    if ((doc.category === 'video' || doc.file_type === 'youtube') && !doc.youtube_id) {
+        const fromUrl = extractYouTubeId(doc.youtube_url) || extractYouTubeId(doc.file_url);
+        const fromName = (doc.file_name || '').match(/_YT_([\w-]{11})/)?.[1] || null;
+        const ytId = fromUrl || fromName;
+        if (ytId) {
+            doc.youtube_id = ytId;
+            doc.youtube_url = doc.youtube_url || `https://www.youtube.com/watch?v=${ytId}`;
+            doc.thumbnail_url = doc.thumbnail_url || getYouTubeThumbnail(ytId);
+            doc.file_type = 'youtube';
+            changed = true;
+        }
+    }
+
+    if (doc.youtube_id && !doc.thumbnail_url) {
+        doc.thumbnail_url = getYouTubeThumbnail(doc.youtube_id);
+        changed = true;
+    }
+
+    if ((doc.category === 'trochoi' || doc.file_type === 'html') && doc.game_html && !doc.file_content_html) {
+        doc.file_content_html = doc.game_html;
+        changed = true;
+    }
+
+    return changed;
+}
+
+async function uploadDocToCloudDrive(payload) {
+    const myGas = localStorage.getItem('khls_my_drive_gas_url');
+    const settings = store.getSettings();
+    const activeGas = myGas || settings.drive_gas_url;
+    let driveResult = null;
+    let fileUrl = null;
+    let driveId = null;
+    let gasUploadFailed = false;
+
+    if (!activeGas) {
+        return { activeGas: null, driveResult, fileUrl, driveId, gasUploadFailed };
+    }
+
+    try {
+        const resp = await fetch(activeGas, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+
+        if (resp.ok) {
+            try {
+                const rawText = await resp.text();
+                try {
+                    driveResult = JSON.parse(rawText);
+                } catch (parseErr) {
+                    console.warn('Google Apps Script raw text:', rawText);
+                }
+            } catch (readErr) {
+                console.warn('Lỗi đọc phản hồi Google Apps Script:', readErr);
+            }
+
+            if (driveResult && (driveResult.status === 'success' || driveResult.fileId)) {
+                fileUrl = driveResult.fileUrl || driveResult.previewUrl || (driveResult.fileId ? `https://drive.google.com/file/d/${driveResult.fileId}/view?usp=sharing` : null);
+                driveId = driveResult.fileId;
+            } else {
+                console.warn('Google Apps Script phản hồi:', driveResult);
+                gasUploadFailed = true;
+            }
+        } else {
+            console.warn(`Google Apps Script trả về HTTP ${resp.status}`);
+            gasUploadFailed = true;
+        }
+    } catch (netErr) {
+        console.warn('Không thể gửi đến Google Apps Script, chuyển sang lưu trữ an toàn nội bộ:', netErr);
+        gasUploadFailed = true;
+    }
+
+    return { activeGas, driveResult, fileUrl, driveId, gasUploadFailed };
+}
+
+function ensurePendingReviewNotif(doc) {
+    if (!doc || doc.status !== 'pending') return false;
+    const notifs = store.getNotifications();
+    const docIdStr = String(doc.id);
+    const existsNotif = notifs.some(n =>
+        (n.doc_id && String(n.doc_id) === docIdStr && n.type === 'review') ||
+        (n.link && n.link.includes(docIdStr))
+    );
+    if (existsNotif) return false;
+
+    const icon = doc.category === 'video' ? '🎬' : (doc.category === 'trochoi' ? '🎮' : '📋');
+    const title = doc.category === 'video'
+        ? 'Video bài giảng mới chờ duyệt'
+        : (doc.category === 'trochoi' ? 'Trò chơi tương tác mới chờ duyệt' : 'Học liệu mới chờ duyệt');
+    notifs.unshift({
+        id: 'notif-cloud-' + doc.id,
+        doc_id: doc.id,
+        title: title,
+        text: `${doc.author_name || 'Giáo viên'} vừa nộp: ${doc.title}`,
+        time: 'Mới cập nhật',
+        icon: icon,
+        type: 'review',
+        grade: doc.grade,
+        subject: doc.subject,
+        department: doc.author_dept,
+        link: `#/review?doc=${doc.id}`,
+        unread: true
+    });
+    store.saveNotifications(notifs);
+    return true;
+}
 
 // ======================== YOUTUBE & GAME HELPERS ========================
 
@@ -9912,7 +10092,7 @@ function renderDocCard(doc) {
                         <span>📅 ${timeAgo(doc.created_at)}</span>
                         ${isYouTube ? `<span class="badge-youtube" title="Video YouTube" style="display:inline-flex; align-items:center; gap:3px; background:rgba(239,68,68,0.12); color:#ef4444; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:700;">▶ YouTube</span>` : ''}
                         ${isGame ? `<span class="badge-game" title="Trò chơi tương tác" style="display:inline-flex; align-items:center; gap:3px; background:rgba(168,85,247,0.12); color:#a855f7; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:700;">🎮 Trò chơi</span>` : ''}
-                        ${driveId ? `<span class="badge-drive" title="Lưu trữ trên Google Drive" style="display:inline-flex; align-items:center; gap:3px; background:rgba(37,99,235,0.12); color:#2563eb; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:600;"><svg width="11" height="11" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg> Drive</span>` : ''}
+                        ${(!isYouTube && !isGame && driveId) ? `<span class="badge-drive" title="Lưu trữ trên Google Drive" style="display:inline-flex; align-items:center; gap:3px; background:rgba(37,99,235,0.12); color:#2563eb; font-size:0.7rem; padding:1px 6px; border-radius:4px; font-weight:600;"><svg width="11" height="11" viewBox="0 0 87.3 78" fill="none"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5l-20.4-35.35c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8z" fill="#2684fc"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l-20.85-36.1-13.75 23.8 9.3 16.1c1.35.8 2.9 1.2 4.5 1.2h14.2c1.35 0 2.5-.4 3.3-1.7z" fill="#ffba00"/></svg> Drive</span>` : ''}
                     </div>
                 </div>
             </div>

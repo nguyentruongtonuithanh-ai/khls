@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=12.1">
+    <link rel="stylesheet" href="css/style.css?v=12.2">
 </head>
 <body>
     <!-- ============ HEADER ============ -->
@@ -370,7 +370,7 @@
                     <!-- Vùng nhập link YouTube trên trang tải lên -->
                     <div class="form-group" id="upload-youtube-group" style="display:none;">
                         <label class="form-label" for="upload-youtube-url">🎬 Đường link Video YouTube <span class="required">*</span></label>
-                        <input type="url" class="form-input" id="upload-youtube-url" placeholder="Dán link YouTube tại đây (VD: https://www.youtube.com/watch?v=... hoặc https://youtu.be/...)">
+                        <input type="text" class="form-input" id="upload-youtube-url" placeholder="Dán link YouTube tại đây (VD: https://www.youtube.com/watch?v=... hoặc https://youtu.be/...)">
                         <div id="upload-youtube-preview" style="display:none; margin-top:10px; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border-color); background:var(--bg-surface);"></div>
                         <small style="color:var(--text-muted); font-size:0.8rem; margin-top:5px; display:block;">
                             🎬 Dán đường link video từ YouTube để phát trực tuyến ngay trong kho học liệu.
@@ -1165,7 +1165,7 @@
                         <span>🎬 Đường link Video YouTube <span class="required">*</span></span>
                         <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">YouTube Video hoặc YouTube Shorts</span>
                     </label>
-                    <input type="url" class="form-input" id="modal-upload-youtube-url" placeholder="Dán link YouTube tại đây (VD: https://www.youtube.com/watch?v=... hoặc https://youtu.be/...)">
+                    <input type="text" class="form-input" id="modal-upload-youtube-url" placeholder="Dán link YouTube tại đây (VD: https://www.youtube.com/watch?v=... hoặc https://youtu.be/...)">
                     <div id="modal-youtube-preview" style="display:none; margin-top:10px; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border-color); background:var(--bg-surface);"></div>
                     <small style="color:var(--text-muted); font-size:0.8rem; margin-top:5px; display:block;">
                         💡 <strong>Hướng dẫn:</strong> Thầy/Cô sao chép link video từ YouTube rồi dán vào ô trên. Hệ thống sẽ phát trực tiếp trong kho học liệu.
@@ -1415,7 +1415,7 @@
                 <!-- Nhập link YouTube khi sửa video -->
                 <div class="form-group" id="edit-doc-youtube-group" style="display:none; margin-bottom:0;">
                     <label class="form-label" for="edit-doc-youtube-url">🎬 Đường link Video YouTube <span class="required">*</span></label>
-                    <input type="url" class="form-input" id="edit-doc-youtube-url" placeholder="VD: https://www.youtube.com/watch?v=... hoặc https://youtu.be/...">
+                    <input type="text" class="form-input" id="edit-doc-youtube-url" placeholder="VD: https://www.youtube.com/watch?v=... hoặc https://youtu.be/...">
                     <div id="edit-doc-youtube-preview" style="display:none; margin-top:8px; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border-color); background:var(--bg-surface);"></div>
                 </div>
 
@@ -1517,6 +1517,6 @@
     <!-- ============ SCRIPTS ============ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
-    <script src="js/app.js?v=12.1"></script>
+    <script src="js/app.js?v=12.2"></script>
 </body>
 </html>
