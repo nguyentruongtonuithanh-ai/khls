@@ -1225,7 +1225,31 @@ body.sidebar-collapsed .footer {
 .doc-type-pptx { background: rgba(239, 68, 68, 0.15); }
 .doc-type-pdf { background: rgba(220, 38, 38, 0.15); }
 .doc-type-video { background: rgba(168, 85, 247, 0.15); }
+.doc-type-game { background: rgba(16, 185, 129, 0.18); }
 .doc-type-other { background: rgba(107, 114, 128, 0.15); }
+
+.badge-youtube {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    font-size: 0.72rem;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+.badge-game {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+    font-size: 0.72rem;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+}
 
 .doc-card-info { flex: 1; min-width: 0; }
 
