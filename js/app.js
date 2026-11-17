@@ -7786,8 +7786,24 @@ function loginAs(user) {
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
+    } else if (state.currentPage === 'profile') {
+        renderProfilePage();
     } else if (state.currentPage === 'review') {
-        renderReviewPage();
+        if (canUserAccessReview(user)) {
+            renderReviewPage();
+        } else {
+            navigate('#/');
+        }
+    } else if (state.currentPage === 'admin') {
+        if (user && user.role === 'admin') {
+            renderAdminPage();
+        } else {
+            navigate('#/');
+        }
+    } else if (state.currentPage === 'dashboard') {
+        renderDashboardPage();
+    } else if (state.currentPage === 'detail' && state.currentDocId) {
+        renderDetailPage(state.currentDocId);
     } else if (state.currentPage === 'home') {
         renderHomePage();
     }
@@ -7815,7 +7831,9 @@ function handleLogout() {
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
-    } else if (state.currentPage === 'review' || state.currentPage === 'admin' || state.currentPage === 'dashboard') {
+    } else if (state.currentPage === 'detail' && state.currentDocId) {
+        renderDetailPage(state.currentDocId);
+    } else if (state.currentPage === 'review' || state.currentPage === 'admin' || state.currentPage === 'dashboard' || state.currentPage === 'profile' || state.currentPage === 'upload') {
         navigate('#/');
     } else if (state.currentPage === 'home') {
         renderHomePage();
@@ -8936,6 +8954,9 @@ async function syncDocumentsFromDrive(isManual = false) {
                                         state.user = { ...state.user, ...curInMerged };
                                         localStorage.setItem('khls-user', JSON.stringify(state.user));
                                         updateUserUI();
+                                        if (state.currentPage === 'profile') {
+                                            renderProfilePage();
+                                        }
                                     }
                                 }
                             }
