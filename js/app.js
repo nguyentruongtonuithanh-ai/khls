@@ -1314,6 +1314,19 @@ function handleRoute() {
 
     const queryParams = new URLSearchParams(queryPart || '');
 
+    // Dừng mọi video/trò chơi đang phát khi chuyển trang hoặc đóng modal xem trước
+    if (page !== 'detail') {
+        const detailContainer = document.getElementById('detail-container');
+        if (detailContainer) detailContainer.innerHTML = '';
+    }
+    if (page !== 'upload') {
+        const upYtPrev = document.getElementById('upload-youtube-preview');
+        if (upYtPrev) { upYtPrev.innerHTML = ''; upYtPrev.style.display = 'none'; }
+        const upGamePrev = document.getElementById('upload-game-preview');
+        if (upGamePrev) { upGamePrev.innerHTML = ''; upGamePrev.style.display = 'none'; }
+    }
+    closePreviewModal();
+
     // Hide all pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
 
@@ -2306,6 +2319,10 @@ function openEditDocModal(docId) {
 function closeEditDocModal() {
     const modal = document.getElementById('edit-doc-modal');
     if (modal) modal.classList.remove('active');
+    const ytPrev = document.getElementById('edit-doc-youtube-preview');
+    if (ytPrev) { ytPrev.innerHTML = ''; ytPrev.style.display = 'none'; }
+    const gamePrev = document.getElementById('edit-doc-game-preview');
+    if (gamePrev) { gamePrev.innerHTML = ''; gamePrev.style.display = 'none'; }
 }
 
 function handleSaveDoc(e) {
@@ -2637,6 +2654,7 @@ function renderInPageDocViewer(doc) {
     const ext = (doc.file_type || '').toLowerCase();
 
     let viewerBody = '';
+    let viewerBodyExtraClass = '';
 
     // 0A. Video YouTube Player (Khung phát video YouTube trực tiếp)
     const ytId = resolveYouTubeId(doc);
@@ -2647,14 +2665,14 @@ function renderInPageDocViewer(doc) {
     const isGameCat = doc.category === 'trochoi' || doc.file_type === 'html' || doc.file_type === 'game' || Boolean(gameCode);
 
     if (isVideoCat && ytId) {
+        viewerBodyExtraClass = 'doc-viewer-body-video';
         viewerBody = `
-            <div class="doc-viewer-frame-inner doc-viewer-youtube" style="position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:var(--radius-md); overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.35);">
+            <div class="doc-viewer-youtube-box">
                 <iframe src="https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1" 
-                        style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                         allowfullscreen></iframe>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--bg-surface); border-radius:var(--radius-md); margin-top:10px; border:1px solid var(--border-color); flex-wrap:wrap; gap:8px;">
+            <div class="doc-viewer-youtube-footer">
                 <div style="font-size:0.85rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
                     <span>🎬</span> <strong>Video bài giảng trực tuyến YouTube</strong>
                 </div>
@@ -2666,10 +2684,11 @@ function renderInPageDocViewer(doc) {
         `;
     }
     else if (isGameCat && gameCode) {
+        viewerBodyExtraClass = 'doc-viewer-body-game';
         const prepared = buildGameIframeHtml(gameCode);
         const blobUrl = URL.createObjectURL(new Blob([prepared], { type: 'text/html;charset=utf-8' }));
         viewerBody = `
-            <div class="doc-viewer-frame-inner doc-viewer-game" id="game-player-wrapper-${doc.id}" style="width:100%; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border-color); background:var(--bg-surface);">
+            <div class="doc-viewer-game" id="game-player-wrapper-${doc.id}" style="width:100%; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border-color); background:var(--bg-surface);">
                 <div style="display:flex; justify-content:space-between; align-items:center; background:#1e293b; padding:10px 16px; border-bottom:1px solid #334155; color:#f8fafc;">
                     <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.95rem;">
                         <span>🎮</span>
@@ -2681,8 +2700,8 @@ function renderInPageDocViewer(doc) {
                         </button>
                     </div>
                 </div>
-                <div style="width:100%; height:620px; background:#fff; position:relative;">
-                    <iframe id="game-player-frame-${doc.id}" src="${blobUrl}" style="width:100%; height:100%; border:none; display:block;" allow="fullscreen; autoplay; microphone; camera" allowfullscreen></iframe>
+                <div class="doc-viewer-game-stage">
+                    <iframe id="game-player-frame-${doc.id}" src="${blobUrl}" allow="fullscreen; autoplay; microphone; camera" allowfullscreen></iframe>
                 </div>
             </div>
         `;
@@ -2780,21 +2799,25 @@ ${escapeHtml(docText)}
         `;
     }
 
+    const toolbarFileName = (isVideoCat && ytId) ? (doc.title || 'Video YouTube') : ((isGameCat && gameCode) ? (doc.title || 'Trò chơi tương tác') : (doc.file_name || ''));
+    const toolbarBadge = (isVideoCat && ytId) ? 'YouTube' : ((isGameCat && gameCode) ? 'HTML5 Game' : formatFileSize(doc.file_size));
+    const toolbarBtnLabel = (isVideoCat && ytId) ? '↗ Mở trên YouTube' : ((isGameCat && gameCode) ? '⬇️ Tải game' : '⬇️ Tải về');
+
     return `
         <div class="doc-viewer-wrapper" id="doc-viewer-wrapper">
             <div class="doc-viewer-toolbar">
                 <div class="doc-viewer-toolbar-left">
-                    <span class="doc-viewer-file-icon">${getFileTypeIcon(doc.file_name)}</span>
-                    <span class="doc-viewer-file-name" title="${escapeHtml(doc.file_name)}">${escapeHtml(doc.file_name)}</span>
-                    <span class="doc-viewer-size-badge">${formatFileSize(doc.file_size)}</span>
+                    <span class="doc-viewer-file-icon">${getFileTypeIcon(doc.file_name, doc.category, doc)}</span>
+                    <span class="doc-viewer-file-name" title="${escapeHtml(toolbarFileName)}">${escapeHtml(toolbarFileName)}</span>
+                    <span class="doc-viewer-size-badge">${toolbarBadge}</span>
                 </div>
                 <div class="doc-viewer-toolbar-right">
-                    <button type="button" class="btn btn-sm btn-primary doc-viewer-btn" onclick="handleDownloadDoc('${doc.id}')" title="Tải tệp tin về máy">
-                        <span>⬇️ Tải về</span>
+                    <button type="button" class="btn btn-sm btn-primary doc-viewer-btn" onclick="handleDownloadDoc('${doc.id}')" title="Tải hoặc mở học liệu">
+                        <span>${toolbarBtnLabel}</span>
                     </button>
                 </div>
             </div>
-            <div class="doc-viewer-body" id="doc-viewer-body">
+            <div class="doc-viewer-body ${viewerBodyExtraClass}" id="doc-viewer-body">
                 ${viewerBody}
             </div>
         </div>
@@ -4051,16 +4074,18 @@ function openPreviewModal(docId) {
         const ytId = resolveYouTubeId(doc);
         if ((doc.category === 'video' || doc.file_type === 'youtube' || ytId) && ytId) {
             contentEl.innerHTML = `
-                <div style="width:100%; height:100%; display:flex; flex-direction:column; background:#000;">
-                    <div style="padding:10px 16px; background:#111; color:#fff; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333;">
-                        <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.95rem;">
+                <div style="width:100%; height:100%; display:flex; flex-direction:column; background:#090d16;">
+                    <div style="padding:12px 72px 12px 16px; background:#111827; color:#fff; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1f2937; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.95rem; min-width:0;">
                             <span>🎬</span>
-                            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60vw;">${escapeHtml(doc.title)}</span>
+                            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(doc.title)}</span>
                         </div>
-                        <a href="https://www.youtube.com/watch?v=${ytId}" target="_blank" class="btn btn-sm btn-secondary" style="font-size:0.78rem;">Mở trên YouTube ↗</a>
+                        <a href="https://www.youtube.com/watch?v=${ytId}" target="_blank" class="btn btn-sm btn-secondary" style="font-size:0.78rem; flex-shrink:0;">Mở trên YouTube ↗</a>
                     </div>
-                    <div style="flex:1; position:relative; min-height:480px;">
-                        <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:16px; overflow:hidden; min-height:0;">
+                        <div style="position:relative; width:min(100%, calc((98vh - 100px) * 16 / 9), 1100px); aspect-ratio:16/9; background:#000; border-radius:10px; overflow:hidden; box-shadow:0 10px 35px rgba(0,0,0,0.6);">
+                            <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0" style="position:absolute; inset:0; width:100%; height:100%; border:none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
                     </div>
                 </div>
             `;
@@ -4076,15 +4101,15 @@ function openPreviewModal(docId) {
             const blobUrl = URL.createObjectURL(new Blob([prepared], { type: 'text/html;charset=utf-8' }));
             contentEl.innerHTML = `
                 <div style="width:100%; height:100%; display:flex; flex-direction:column; background:#fff;" id="preview-game-wrapper">
-                    <div style="padding:10px 16px; background:#1e293b; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.95rem;">
+                    <div style="padding:12px 72px 12px 16px; background:#1e293b; color:#fff; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.95rem; min-width:0;">
                             <span>🎮</span>
-                            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60vw;">${escapeHtml(doc.title)}</span>
+                            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(doc.title)}</span>
                         </div>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleGameFullscreen('preview-game-wrapper')" style="font-size:0.78rem;">⛶ Toàn màn hình</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleGameFullscreen('preview-game-wrapper')" style="font-size:0.78rem; flex-shrink:0;">⛶ Toàn màn hình</button>
                     </div>
-                    <div style="flex:1; position:relative; min-height:550px;">
-                        <iframe id="preview-game-frame" src="${blobUrl}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; display:block;" allow="fullscreen; autoplay; microphone; camera" allowfullscreen></iframe>
+                    <div style="flex:1; position:relative; min-height:300px; overflow:hidden;">
+                        <iframe id="preview-game-frame" src="${blobUrl}" style="position:absolute; inset:0; width:100%; height:100%; border:none; display:block;" allow="fullscreen; autoplay; microphone; camera" allowfullscreen></iframe>
                     </div>
                 </div>
             `;
@@ -4262,6 +4287,11 @@ function changeSlide(direction) {
 function closePreviewModal() {
     const modal = document.getElementById('preview-modal');
     if (modal) modal.classList.remove('active');
+    const contentEl = document.getElementById('preview-modal-content');
+    if (contentEl) contentEl.innerHTML = '';
+    if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+    }
 }
 
 // ======================== MODAL: REPORT ========================
@@ -7944,8 +7974,18 @@ function initEventListeners() {
     // Close on overlay click
     ['login-modal', 'auth-required-modal', 'preview-modal', 'report-modal', 'batch-user-modal', 'edit-user-modal', 'change-password-modal', 'reset-password-modal', 'edit-category-modal', 'edit-grade-modal', 'edit-subject-modal', 'category-subfolders-modal', 'contribute-modal', 'drive-setup-modal', 'edit-doc-modal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+            if (e.target !== e.currentTarget) return;
+            if (id === 'preview-modal') closePreviewModal();
+            else if (id === 'contribute-modal') closeContributeModal();
+            else if (id === 'edit-doc-modal') closeEditDocModal();
+            else e.currentTarget.classList.remove('active');
         });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('preview-modal')?.classList.contains('active')) {
+            closePreviewModal();
+        }
     });
 
     document.getElementById('login-form')?.addEventListener('submit', handleLogin);
@@ -9896,7 +9936,7 @@ function handleGamePreviewClick(textareaEl, previewElId) {
     previewEl.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; background:#1e293b; padding:8px 12px; color:#f8fafc; font-size:0.82rem;">
             <span>🎮 <strong>Khung xem thử trò chơi</strong> (Chơi thử bên dưới)</span>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('${previewElId}').style.display='none'" style="font-size:0.75rem; padding:2px 8px;">✕ Đóng</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="const p = document.getElementById('${previewElId}'); if(p){ p.innerHTML=''; p.style.display='none'; }" style="font-size:0.75rem; padding:2px 8px;">✕ Đóng</button>
         </div>
         <div style="width:100%; height:450px; background:#fff;">
             <iframe src="${blobUrl}" style="width:100%; height:100%; border:none; display:block;" allow="fullscreen; autoplay; microphone; camera" allowfullscreen></iframe>
