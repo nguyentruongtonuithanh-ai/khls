@@ -5129,9 +5129,6 @@ function renderProfilePage() {
                     <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto; line-height: 1.6;">
                         Hãy bắt đầu đóng góp học liệu để cùng chia sẻ với đồng nghiệp nhé!
                     </p>
-                    <a href="#/upload" class="btn btn-primary" style="margin-top:1rem; display:inline-flex; align-items:center; gap:6px;">
-                        <span>📤 Đóng góp ngay</span>
-                    </a>
                 </div>
             `;
         } else {
