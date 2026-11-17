@@ -889,11 +889,11 @@ const store = {
             return INITIAL_USERS.filter(u => !this.isUserDeleted(u.id, u.username));
         }
     },
-    saveUsers(users, syncTimestamp = null) {
+    saveUsers(users, syncTimestamp = null, touchStructureTimestamp = false) {
         localStorage.setItem('khls_users_v2', JSON.stringify(users));
         if (syncTimestamp) {
             localStorage.setItem('khls_structure_timestamp', String(syncTimestamp));
-        } else {
+        } else if (touchStructureTimestamp) {
             localStorage.setItem('khls_structure_timestamp', String(Date.now()));
         }
     },
@@ -5845,7 +5845,10 @@ function handleSaveUser(e) {
             users[userIndex].password = password;
         }
 
-        store.saveUsers(users);
+        if (store.removeDeletedUserId) {
+            store.removeDeletedUserId(users[userIndex].id, users[userIndex].username);
+        }
+        store.saveUsers(users, null, true);
 
         // Đồng bộ phiên đăng nhập nếu tài khoản đang sửa chính là tài khoản hiện tại
         if (state.user && (state.user.id === targetId || String(state.user.id) === String(targetId))) {
@@ -5873,9 +5876,7 @@ function handleSaveUser(e) {
         renderAdminPage('users');
 
         // ĐỒNG BỘ NGAY LẬP TỨC LÊN GOOGLE DRIVE
-        setTimeout(() => {
-            pushStructureToCloud(false);
-        }, 150);
+        pushStructureToCloud(false);
     } else {
         // Thêm tài khoản mới
         const conflict = users.find(u => u.username.toLowerCase() === username);
@@ -5905,16 +5906,14 @@ function handleSaveUser(e) {
         }
 
         users.push(newUser);
-        store.saveUsers(users);
+        store.saveUsers(users, null, true);
 
         closeEditUserModal();
         showToast(`Đã thêm thành công giáo viên: ${fullname}! 🎉`, 'success');
         renderAdminPage('users');
 
-        // Đồng bộ người dùng mới lên Google Drive
-        setTimeout(() => {
-            pushStructureToCloud(false);
-        }, 150);
+        // Đồng bộ ngay người dùng mới lên Google Drive
+        pushStructureToCloud(false);
     }
 }
 
@@ -5945,15 +5944,13 @@ function deleteUser(userId) {
             store.addDeletedUserId(user.id, user.username);
         }
         const filtered = users.filter(u => u.id !== user.id && String(u.id) !== String(user.id) && u.username !== user.username);
-        store.saveUsers(filtered);
+        store.saveUsers(filtered, null, true);
         closeEditUserModal();
         showToast(`✅ Đã xóa vĩnh viễn tài khoản giáo viên "${user.fullname}"! 🗑️`, 'success');
         renderAdminPage('users');
 
         // ĐỒNG BỘ NGAY LẬP TỨC LÊN GOOGLE DRIVE để Admin B và mọi tài khoản/thiết bị khác nhận được việc xóa!
-        setTimeout(() => {
-            pushStructureToCloud(false);
-        }, 150);
+        pushStructureToCloud(false);
     }
 }
 window.deleteUser = deleteUser;
@@ -7660,22 +7657,13 @@ function closeLoginModal() {
     if (modal) modal.classList.remove('active');
 }
 
-function handleLogin(e) {
-    e.preventDefault();
-    const rawInput = (document.getElementById('login-email')?.value || '').trim();
-    const password = (document.getElementById('login-password')?.value || '').trim();
-
-    if (!rawInput || !password) {
-        showToast('Vui lòng nhập tên đăng nhập và mật khẩu!', 'error');
-        return;
-    }
-
+function findLoginUser(rawInput, users) {
+    if (!rawInput || !Array.isArray(users)) return null;
     const inputLower = rawInput.toLowerCase();
     const inputClean = removeVietnameseTones(rawInput).split('@')[0].replace(/\s+/g, '');
-    const users = store.getUsers();
 
     // 1. Tìm kiếm tài khoản thông minh theo username, email hoặc họ tên (hỗ trợ không dấu, viết liền, bỏ @...)
-    let candidateUsers = users.filter(u => {
+    const candidateUsers = users.filter(u => {
         if (!u) return false;
         const uUser = (u.username || '').toLowerCase().trim();
         const uUserClean = removeVietnameseTones(uUser).replace(/\s+/g, '');
@@ -7695,11 +7683,11 @@ function handleLogin(e) {
     });
 
     // Ưu tiên tài khoản có quyền Quản trị viên hoặc Tổ trưởng nếu có nhiều tài khoản trùng tên
-    let matchedUser = candidateUsers.find(u => u.role === 'admin') 
-                   || candidateUsers.find(u => u.role === 'leader') 
+    let matchedUser = candidateUsers.find(u => u.role === 'admin')
+                   || candidateUsers.find(u => u.role === 'leader')
                    || candidateUsers[0];
 
-    // Fallback demo tài khoản mẫu
+    // Fallback tài khoản mẫu
     if (!matchedUser) {
         if (inputClean === 'admin') {
             matchedUser = users.find(u => u.role === 'admin') || users[0];
@@ -7712,24 +7700,63 @@ function handleLogin(e) {
         }
     }
 
+    return matchedUser || null;
+}
+
+function checkLoginPassword(matchedUser, password) {
+    if (!matchedUser || !password) return false;
+    const expectedPass = matchedUser.password || '123456';
+    return (password === expectedPass) ||
+           (password === '123456') ||
+           ((matchedUser.username === 'admin' || matchedUser.role === 'admin') && password === 'admin');
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const rawInput = (document.getElementById('login-email')?.value || '').trim();
+    const password = (document.getElementById('login-password')?.value || '').trim();
+
+    if (!rawInput || !password) {
+        showToast('Vui lòng nhập tên đăng nhập và mật khẩu!', 'error');
+        return;
+    }
+
+    let users = store.getUsers();
+    let matchedUser = findLoginUser(rawInput, users);
+    let isValidPass = checkLoginPassword(matchedUser, password);
+
+    // Nếu chưa tìm thấy tài khoản trên máy (hoặc vừa được Admin tạo/cấp lại trên máy khác), tự động đồng bộ từ Google Drive rồi thử lại
+    if (!matchedUser || !isValidPass) {
+        const submitBtn = e.target?.querySelector('button[type="submit"]');
+        const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ Đang kiểm tra tài khoản...';
+        }
+        try {
+            await syncDocumentsFromDrive(false);
+            users = store.getUsers();
+            matchedUser = findLoginUser(rawInput, users);
+            isValidPass = checkLoginPassword(matchedUser, password);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origBtnHtml;
+            }
+        }
+    }
+
     if (!matchedUser) {
         showToast(`❌ Không tìm thấy tài khoản "${rawInput}" trên hệ thống! Vui lòng kiểm tra lại tên đăng nhập.`, 'error');
         return;
     }
-
-    // 2. Kiểm tra mật khẩu (hỗ trợ cả 123456 và mật khẩu đã lưu hoặc admin)
-    const expectedPass = matchedUser.password || '123456';
-    const isValidPass = (password === expectedPass) || 
-                        (password === '123456') || 
-                        ((matchedUser.username === 'admin' || matchedUser.role === 'admin') && password === 'admin');
 
     if (!isValidPass) {
         showToast('❌ Mật khẩu không chính xác! Mật khẩu mặc định là 123456.', 'error');
         return;
     }
 
-    // Luôn đảm bảo tài khoản lưu mật khẩu chuẩn
-    if (matchedUser.password !== password && password) {
+    if (!matchedUser.password) {
         matchedUser.password = password;
         store.saveUsers(users);
     }
@@ -8142,17 +8169,22 @@ Hồ Xuân Hương, huong.hx@nuithanh.edu.vn, teacher, Tổ Thể chất`;
                 const email = parts[1];
                 const role = parts[2] || 'teacher';
                 const dept = parts[3] || 'Tổ Chuyên Môn';
-                const username = email.split('@')[0];
+                const username = email.split('@')[0].trim().toLowerCase().replace(/\s+/g, '');
 
-                if (!users.some(u => u.username === username)) {
+                if (username && !users.some(u => (u.username || '').toLowerCase() === username)) {
+                    const newId = Date.now() + Math.floor(Math.random() * 1000);
+                    if (store.removeDeletedUserId) {
+                        store.removeDeletedUserId(newId, username);
+                    }
                     users.push({
-                        id: Date.now() + Math.floor(Math.random() * 1000),
+                        id: newId,
                         username: username,
                         fullname: fullname,
+                        password: '123456',
                         role: role,
                         department: dept,
                         honor: 'Giáo viên trường Núi Thành',
-                        avatar_letter: fullname.charAt(0),
+                        avatar_letter: fullname.charAt(0).toUpperCase(),
                         total_uploads: 0,
                         total_downloads: 0,
                         total_stars: 0,
@@ -8163,15 +8195,13 @@ Hồ Xuân Hương, huong.hx@nuithanh.edu.vn, teacher, Tổ Thể chất`;
             }
         });
 
-        store.saveUsers(users);
+        store.saveUsers(users, null, true);
         closeBatchUserModal();
         showToast(`Đã thêm thành công ${addedCount} tài khoản giáo viên mới! 🎉`, 'success');
         renderAdminPage('users');
 
         // Đồng bộ lên Google Drive
-        setTimeout(() => {
-            pushStructureToCloud(false);
-        }, 150);
+        pushStructureToCloud(false);
     });
 
     // File Dropzone handlers
@@ -8778,6 +8808,10 @@ async function syncDocumentsFromDrive(isManual = false) {
 
             if (cloudStruct) {
                 const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
+                const isCloudNewer = maxTimestamp > localTime;
+                const cloudDeletedList = Array.isArray(cloudStruct.deleted_user_ids)
+                    ? cloudStruct.deleted_user_ids.map(x => String(x || '').trim().toLowerCase()).filter(Boolean)
+                    : [];
 
                 // 1a. Nhận danh sách các tài liệu đã bị Admin xóa từ Google Drive
                 if (Array.isArray(cloudStruct.deleted_doc_ids) && cloudStruct.deleted_doc_ids.length > 0) {
@@ -8786,9 +8820,23 @@ async function syncDocumentsFromDrive(isManual = false) {
                     });
                 }
 
-                // 1b. Nhận danh sách các tài khoản giáo viên đã bị Admin xóa từ Google Drive
+                // 1b. Chỉ đồng bộ danh sách xóa người dùng từ Drive khi bản trên Drive mới hơn bản cục bộ
+                // (tránh bản cloud cũ ghi đè/xóa nhầm tài khoản vừa mới tạo hoặc khôi phục lại)
+                const localDeletedList = store.getDeletedUserIds ? store.getDeletedUserIds().map(x => String(x || '').trim().toLowerCase()) : [];
+                if (Array.isArray(cloudStruct.users) && store.removeDeletedUserId) {
+                    cloudStruct.users.forEach(cu => {
+                        if (!cu) return;
+                        const cuId = cu.id !== undefined && cu.id !== null ? String(cu.id).trim().toLowerCase() : '';
+                        const cuUname = (cu.username || '').trim().toLowerCase();
+                        const inCloudDeleted = (cuId && cloudDeletedList.includes(cuId)) || (cuUname && cloudDeletedList.includes(cuUname));
+                        if (!inCloudDeleted && (isCloudNewer || (cuId && !localDeletedList.includes(cuId)))) {
+                            store.removeDeletedUserId(cu.id, cu.username);
+                        }
+                    });
+                }
+
                 let userDeletionsUpdated = false;
-                if (Array.isArray(cloudStruct.deleted_user_ids) && cloudStruct.deleted_user_ids.length > 0) {
+                if (isCloudNewer && Array.isArray(cloudStruct.deleted_user_ids) && cloudStruct.deleted_user_ids.length > 0) {
                     const prevCount = store.getDeletedUserIds ? store.getDeletedUserIds().length : 0;
                     cloudStruct.deleted_user_ids.forEach(delUId => {
                         if (store.addDeletedUserId) store.addDeletedUserId(delUId);
@@ -8815,54 +8863,88 @@ async function syncDocumentsFromDrive(isManual = false) {
                 }
 
                 // 1c. Đồng bộ danh sách tài khoản người dùng từ Google Drive
-                if (Array.isArray(cloudStruct.users) && cloudStruct.users.length > 0 && maxTimestamp > localTime) {
-                    const validCloudUsers = cloudStruct.users.filter(u => u && !store.isUserDeleted(u.id, u.username));
+                if (Array.isArray(cloudStruct.users) && cloudStruct.users.length > 0) {
+                    const validCloudUsers = cloudStruct.users.filter(u => {
+                        if (!u) return false;
+                        const uId = u.id !== undefined && u.id !== null ? String(u.id).trim().toLowerCase() : '';
+                        const uName = (u.username || '').trim().toLowerCase();
+                        if ((uId && cloudDeletedList.includes(uId)) || (uName && cloudDeletedList.includes(uName))) return false;
+                        return !store.isUserDeleted(u.id, u.username);
+                    });
                     if (validCloudUsers.length > 0) {
-                        // Hợp nhất thông minh: Nếu tài khoản cục bộ có thời gian cập nhật (updated_at) mới hơn đám mây, bảo toàn phiên bản cục bộ
                         const localUsers = store.getUsers();
-                        const mergedUsers = [...validCloudUsers];
-                        localUsers.forEach(lUser => {
-                            if (!lUser) return;
-                            const cIdx = mergedUsers.findIndex(cUser => 
-                                (cUser.id && lUser.id && String(cUser.id) === String(lUser.id)) ||
-                                (cUser.username && lUser.username && cUser.username.toLowerCase() === lUser.username.toLowerCase())
-                            );
-                            if (cIdx !== -1) {
-                                const lTime = Number(lUser.updated_at || 0);
-                                const cTime = Number(mergedUsers[cIdx].updated_at || 0);
-                                if (lTime > cTime) {
-                                    mergedUsers[cIdx] = lUser; // Giữ nguyên bản sửa cục bộ mới hơn
-                                }
-                            } else {
-                                if (!store.isUserDeleted(lUser.id, lUser.username)) {
+                        let usersChanged = false;
+                        let mergedUsers;
+
+                        if (isCloudNewer) {
+                            // Hợp nhất thông minh: Nếu tài khoản cục bộ có thời gian cập nhật (updated_at) mới hơn đám mây, bảo toàn phiên bản cục bộ
+                            mergedUsers = [...validCloudUsers];
+                            localUsers.forEach(lUser => {
+                                if (!lUser) return;
+                                const cIdx = mergedUsers.findIndex(cUser => 
+                                    (cUser.id && lUser.id && String(cUser.id) === String(lUser.id)) ||
+                                    (cUser.username && lUser.username && cUser.username.toLowerCase() === lUser.username.toLowerCase())
+                                );
+                                if (cIdx !== -1) {
+                                    const lTime = Number(lUser.updated_at || 0);
+                                    const cTime = Number(mergedUsers[cIdx].updated_at || 0);
+                                    if (lTime > cTime) {
+                                        mergedUsers[cIdx] = lUser;
+                                    }
+                                } else if (!store.isUserDeleted(lUser.id, lUser.username)) {
                                     mergedUsers.push(lUser);
                                 }
-                            }
-                        });
-
-                        store.saveUsers(mergedUsers, maxTimestamp);
-
-                        // Đồng bộ phiên đăng nhập của state.user nếu được cập nhật từ đám mây
-                        if (state.user) {
-                            const curInMerged = mergedUsers.find(u => 
-                                (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
-                                (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase())
-                            );
-                            if (curInMerged) {
-                                const curLocalTime = Number(state.user.updated_at || 0);
-                                const curMergedTime = Number(curInMerged.updated_at || 0);
-                                if (curMergedTime >= curLocalTime && (state.user.fullname !== curInMerged.fullname || state.user.department !== curInMerged.department || state.user.role !== curInMerged.role)) {
-                                    state.user = { ...state.user, ...curInMerged };
-                                    localStorage.setItem('khls-user', JSON.stringify(state.user));
-                                    updateUserUI();
+                            });
+                            usersChanged = true;
+                        } else {
+                            // Vẫn tiếp nhận tài khoản mới hoặc bản cập nhật mới hơn từ cloud dù localTime không nhỏ hơn
+                            mergedUsers = [...localUsers];
+                            validCloudUsers.forEach(cUser => {
+                                const lIdx = mergedUsers.findIndex(lUser =>
+                                    lUser && (
+                                        (cUser.id && lUser.id && String(cUser.id) === String(lUser.id)) ||
+                                        (cUser.username && lUser.username && cUser.username.toLowerCase() === lUser.username.toLowerCase())
+                                    )
+                                );
+                                if (lIdx === -1) {
+                                    mergedUsers.push(cUser);
+                                    usersChanged = true;
+                                } else {
+                                    const lTime = Number(mergedUsers[lIdx].updated_at || 0);
+                                    const cTime = Number(cUser.updated_at || 0);
+                                    if (cTime > lTime) {
+                                        mergedUsers[lIdx] = cUser;
+                                        usersChanged = true;
+                                    }
                                 }
-                            }
+                            });
                         }
 
-                        if (state.currentPage === 'admin') {
-                            const activeTab = document.querySelector('.admin-tab.active')?.getAttribute('data-tab') || 'users';
-                            if (activeTab === 'users') {
-                                renderAdminPage('users');
+                        if (usersChanged) {
+                            store.saveUsers(mergedUsers, isCloudNewer ? maxTimestamp : null);
+
+                            // Đồng bộ phiên đăng nhập của state.user nếu được cập nhật từ đám mây
+                            if (state.user) {
+                                const curInMerged = mergedUsers.find(u => 
+                                    (u.id && state.user.id && String(u.id) === String(state.user.id)) ||
+                                    (u.username && state.user.username && u.username.toLowerCase() === state.user.username.toLowerCase())
+                                );
+                                if (curInMerged) {
+                                    const curLocalTime = Number(state.user.updated_at || 0);
+                                    const curMergedTime = Number(curInMerged.updated_at || 0);
+                                    if (curMergedTime >= curLocalTime && (state.user.fullname !== curInMerged.fullname || state.user.department !== curInMerged.department || state.user.role !== curInMerged.role)) {
+                                        state.user = { ...state.user, ...curInMerged };
+                                        localStorage.setItem('khls-user', JSON.stringify(state.user));
+                                        updateUserUI();
+                                    }
+                                }
+                            }
+
+                            if (state.currentPage === 'admin') {
+                                const activeTab = document.querySelector('.admin-tab.active')?.getAttribute('data-tab') || 'users';
+                                if (activeTab === 'users') {
+                                    renderAdminPage('users');
+                                }
                             }
                         }
                     }
@@ -8873,8 +8955,6 @@ async function syncDocumentsFromDrive(isManual = false) {
                 const curSubs = store.getSubjects();
 
                 // Chỉ nhận cấu trúc thư mục từ đám mây nếu đám mây thực sự MỚI HƠN bản sửa cục bộ
-                const isCloudNewer = maxTimestamp > localTime;
-
                 if (isCloudNewer) {
                     if (Array.isArray(cloudStruct.categories) && cloudStruct.categories.length > 0) {
                         store.saveCategories(cloudStruct.categories);
