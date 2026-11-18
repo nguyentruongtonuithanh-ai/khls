@@ -1895,25 +1895,24 @@ function renderHomePage() {
     // 3. Leaderboard Top 10 Teachers
     const leaderboardEl = document.getElementById('leaderboard');
     if (leaderboardEl) {
-        const sortedUsers = [...users]
-            .filter(u => u.role !== 'admin')
-            .sort((a, b) => (b.total_downloads + b.total_uploads * 10) - (a.total_downloads + a.total_uploads * 10))
-            .slice(0, 10);
+        const { teacherRows } = computeDashboardStats();
+        const sortedUsers = teacherRows.slice(0, 10);
 
-        leaderboardEl.innerHTML = sortedUsers.map((u, idx) => {
+        leaderboardEl.innerHTML = sortedUsers.map((row, idx) => {
+            const u = row.user;
             const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : 'rank-other';
             const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
             return `
                 <div class="leaderboard-item">
                     <div class="leaderboard-rank ${rankClass}">${medal}</div>
-                    <div class="leaderboard-avatar">${u.avatar_letter || u.fullname.charAt(0)}</div>
+                    <div class="leaderboard-avatar">${u.avatar_letter || (u.fullname ? u.fullname.charAt(0) : 'G')}</div>
                     <div class="leaderboard-info">
-                        <div class="leaderboard-name">${u.fullname}</div>
-                        <div class="leaderboard-dept">${u.department} ${u.honor ? `• <span class="badge-honor">✨ ${u.honor}</span>` : ''}</div>
+                        <div class="leaderboard-name">${escapeHtml(u.fullname)}</div>
+                        <div class="leaderboard-dept">${escapeHtml(u.department || '')}</div>
                     </div>
                     <div class="leaderboard-score">
-                        <span class="leaderboard-score-number">${u.total_downloads}</span>
-                        <span class="leaderboard-score-label">lượt tải (${u.total_uploads} bài)</span>
+                        <span class="leaderboard-score-number">⭐ ${row.totalStars}</span>
+                        <span class="leaderboard-score-label">${row.docCount} bài • ${row.downloadCount} lượt tải</span>
                     </div>
                 </div>
             `;
@@ -5183,38 +5182,150 @@ function renderProfilePage() {
 
 // ======================== PAGE: DASHBOARD (BAN GIÁM HIỆU & TOÀN TRƯỜNG) ========================
 
-function getDashboardHtml(showExportBtn = true) {
-    const docs = store.getDocuments().filter(d => d.status === 'approved');
+function normalizeDeptLabel(dept) {
+    const raw = String(dept || '').trim();
+    if (!raw || raw === 'Tổ Chuyên Môn') return 'Khác';
+    if (raw.includes('Tin học') || raw.includes('Ngoại ngữ')) return 'Tổ Tin học - Ngoại ngữ';
+    if (raw.includes('Âm nhạc') || raw.includes('Mỹ thuật')) return 'Tổ Âm nhạc - Mỹ thuật';
+    if (raw.includes('Thể chất') || raw.toUpperCase() === 'GDTC') return 'Tổ Thể chất';
+    return raw;
+}
+
+function resolveDocOwnerUser(doc, users) {
+    if (!doc || !Array.isArray(users) || users.length === 0) return null;
+    const norm = (name) => String(name || '').replace(/^(Thầy|Cô)\s+/i, '').trim().toLowerCase();
+    const docAuthor = norm(doc.author_name);
+    const idMatch = (doc.author_id !== undefined && doc.author_id !== null && doc.author_id !== '')
+        ? users.find(u => String(u.id) === String(doc.author_id))
+        : null;
+
+    if (idMatch) {
+        if (!docAuthor) return idMatch;
+        const idFull = norm(idMatch.fullname);
+        const idUname = norm(idMatch.username);
+        if ((idFull && (docAuthor === idFull || docAuthor.includes(idFull) || idFull.includes(docAuthor))) ||
+            (idUname && (docAuthor === idUname || docAuthor.includes(idUname) || idUname.includes(docAuthor)))) {
+            return idMatch;
+        }
+    }
+
+    if (docAuthor) {
+        const exactNameMatch = users.find(u => norm(u.fullname) === docAuthor || norm(u.username) === docAuthor);
+        if (exactNameMatch) return exactNameMatch;
+        const partialMatch = users.find(u => {
+            const uf = norm(u.fullname);
+            const uu = norm(u.username);
+            return (uf && (docAuthor.includes(uf) || uf.includes(docAuthor))) ||
+                   (uu && (docAuthor.includes(uu) || uu.includes(docAuthor)));
+        });
+        if (partialMatch) return partialMatch;
+    }
+
+    return idMatch || null;
+}
+
+function computeDashboardStats() {
+    const allDocs = store.getDocuments();
+    const docs = allDocs.filter(d => d.status === 'approved');
+    const pendingDocs = allDocs.filter(d => d.status === 'pending');
     const users = store.getUsers();
 
-    // Data by Grade
-    const gradeCounts = {};
-    GRADES.forEach(g => {
-        gradeCounts[g.id] = docs.filter(d => d.grade === g.id).length;
+    // 1. Thống kê theo Khối lớp (đảm bảo tổng bằng docs.length)
+    const gradeEntries = GRADES.map(g => ({
+        id: g.id,
+        name: g.name,
+        count: docs.filter(d => String(d.grade) === String(g.id)).length
+    }));
+    const matchedGradeTotal = gradeEntries.reduce((s, item) => s + item.count, 0);
+    if (docs.length > matchedGradeTotal) {
+        gradeEntries.push({
+            id: 'other',
+            name: 'Khối khác / Chung',
+            count: docs.length - matchedGradeTotal
+        });
+    }
+
+    // 2. Ghép tài liệu thực tế với từng giáo viên
+    const docsByUserId = {};
+    const pendingByUserId = {};
+    users.forEach(u => {
+        docsByUserId[String(u.id)] = [];
+        pendingByUserId[String(u.id)] = [];
     });
 
-    // Data by Department
     const deptCounts = {
-        'Tổ 1': docs.filter(d => d.author_dept === 'Tổ 1').length,
-        'Tổ 3': docs.filter(d => d.author_dept === 'Tổ 3').length,
-        'Tổ 4': docs.filter(d => d.author_dept === 'Tổ 4').length,
-        'Tổ 5': docs.filter(d => d.author_dept === 'Tổ 5').length,
-        'Tổ Tin học - Ngoại ngữ': docs.filter(d => d.author_dept && d.author_dept.includes('Tin học')).length,
-        'Tổ Âm nhạc - Mỹ thuật': docs.filter(d => d.author_dept && d.author_dept.includes('Mỹ thuật')).length
+        'Tổ 1': 0,
+        'Tổ 2': 0,
+        'Tổ 3': 0,
+        'Tổ 4': 0,
+        'Tổ 5': 0,
+        'Tổ Tin học - Ngoại ngữ': 0,
+        'Tổ Âm nhạc - Mỹ thuật': 0
     };
 
-    const maxGradeCount = Math.max(1, ...Object.values(gradeCounts));
+    docs.forEach(doc => {
+        const owner = resolveDocOwnerUser(doc, users);
+        if (owner) {
+            docsByUserId[String(owner.id)].push(doc);
+        }
+        const deptName = normalizeDeptLabel((owner && owner.department) || doc.author_dept);
+        deptCounts[deptName] = (deptCounts[deptName] || 0) + 1;
+    });
+
+    pendingDocs.forEach(doc => {
+        const owner = resolveDocOwnerUser(doc, users);
+        if (owner) {
+            pendingByUserId[String(owner.id)].push(doc);
+        }
+    });
+
+    // 3. Bảng điểm sao từng giáo viên: mỗi học liệu = 2 sao, mỗi lượt tải = 1 sao
+    const teacherRows = users
+        .map(u => {
+            const userDocs = docsByUserId[String(u.id)] || [];
+            const userPending = pendingByUserId[String(u.id)] || [];
+            const docCount = userDocs.length;
+            const downloadCount = userDocs.reduce((sum, d) => sum + (Number(d.download_count) || 0), 0);
+            const docStars = docCount * 2;
+            const downloadStars = downloadCount * 1;
+            const totalStars = docStars + downloadStars;
+            return {
+                user: u,
+                docs: userDocs,
+                pendingDocs: userPending,
+                docCount,
+                downloadCount,
+                docStars,
+                downloadStars,
+                totalStars
+            };
+        })
+        .filter(row => row.user.role !== 'admin' || row.docCount > 0)
+        .sort((a, b) => {
+            if (b.totalStars !== a.totalStars) return b.totalStars - a.totalStars;
+            if (b.docCount !== a.docCount) return b.docCount - a.docCount;
+            if (b.downloadCount !== a.downloadCount) return b.downloadCount - a.downloadCount;
+            return (a.user.fullname || '').localeCompare(b.user.fullname || '', 'vi');
+        });
+
+    return { docs, users, gradeEntries, deptCounts, teacherRows };
+}
+
+function getDashboardHtml(showExportBtn = true) {
+    const { docs, gradeEntries, deptCounts, teacherRows } = computeDashboardStats();
+
+    const maxGradeCount = Math.max(1, ...gradeEntries.map(g => g.count));
     const maxDeptCount = Math.max(1, ...Object.values(deptCounts));
 
     return `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-lg); flex-wrap:wrap; gap:10px;">
             <div>
-                <h3 style="font-size:1.15rem; font-weight:700;">📊 Báo cáo Tổng hợp Thi đua Chuyên môn</h3>
+                <h3 style="font-size:1.15rem; font-weight:700;">📊 Báo cáo Tổng hợp Chuyên môn</h3>
                 <p style="font-size:0.85rem; color:var(--text-muted);">Trường Tiểu học Núi Thành - Dữ liệu thời gian thực</p>
             </div>
             ${showExportBtn ? `
                 <button class="btn btn-success btn-sm" onclick="exportThiDuaCSV()">
-                    📥 Xuất file Excel / CSV Thi đua
+                    📥 Xuất file Excel / CSV Thống kê
                 </button>
             ` : ''}
         </div>
@@ -5226,14 +5337,13 @@ function getDashboardHtml(showExportBtn = true) {
                     <span>Học liệu theo Khối lớp</span>
                     <span style="font-size:0.8rem; color:var(--text-muted);">${docs.length} bài tổng cộng</span>
                 </div>
-                ${GRADES.map(g => {
-                    const count = gradeCounts[g.id] || 0;
-                    const percent = Math.round((count / maxGradeCount) * 100);
+                ${gradeEntries.map(g => {
+                    const percent = Math.round((g.count / maxGradeCount) * 100);
                     return `
                         <div class="bar-row">
                             <div class="bar-label-group">
-                                <span>${g.name}</span>
-                                <strong>${count} tài liệu</strong>
+                                <span>${escapeHtml(g.name)}</span>
+                                <strong>${g.count} tài liệu</strong>
                             </div>
                             <div class="bar-track">
                                 <div class="bar-fill bar-fill-grade" style="width: ${percent}%;"></div>
@@ -5247,14 +5357,14 @@ function getDashboardHtml(showExportBtn = true) {
             <div class="chart-box">
                 <div class="chart-box-title">
                     <span>Đóng góp theo Tổ Chuyên môn</span>
-                    <span style="font-size:0.8rem; color:var(--text-muted);">Xếp hạng thi đua</span>
+                    <span style="font-size:0.8rem; color:var(--text-muted);">${docs.length} bài tổng cộng</span>
                 </div>
                 ${Object.entries(deptCounts).map(([dept, count]) => {
                     const percent = Math.round((count / maxDeptCount) * 100);
                     return `
                         <div class="bar-row">
                             <div class="bar-label-group">
-                                <span>${dept}</span>
+                                <span>${escapeHtml(dept)}</span>
                                 <strong>${count} bài</strong>
                             </div>
                             <div class="bar-track">
@@ -5266,11 +5376,11 @@ function getDashboardHtml(showExportBtn = true) {
             </div>
         </div>
 
-        <!-- Bảng xếp hạng chi tiết giáo viên thi đua -->
+        <!-- Bảng thống kê sao cá nhân giáo viên -->
         <div class="admin-table-container" style="margin-top:var(--space-2xl);">
             <div style="padding:var(--space-md); font-weight:700; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <span>🏅 Bảng Theo Dõi Thi Đua Cá Nhân Giáo Viên</span>
-                <span style="font-size:0.82rem; font-weight:normal; color:var(--text-muted);">Điểm thi đua = Lượt tải × 2 + Bài duyệt × 20</span>
+                <span>⭐ Bảng Theo Dõi Số Sao Cá Nhân Giáo Viên</span>
+                <span style="font-size:0.82rem; font-weight:normal; color:var(--text-muted);">Tổng số sao = Số học liệu × 2 ⭐ + Lượt tải × 1 ⭐</span>
             </div>
             <table class="admin-table">
                 <thead>
@@ -5278,29 +5388,34 @@ function getDashboardHtml(showExportBtn = true) {
                         <th style="width:60px;">Hạng</th>
                         <th>Họ và tên</th>
                         <th>Tổ chuyên môn</th>
-                        <th style="text-align:center;">Số học liệu duyệt</th>
+                        <th style="text-align:center;">Số học liệu</th>
                         <th style="text-align:center;">Tổng lượt tải</th>
-                        <th style="text-align:center;">Điểm thi đua</th>
-                        <th>Danh hiệu</th>
+                        <th style="text-align:center;">Tổng số sao</th>
+                        <th style="text-align:center;">Chi tiết</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${users.filter(u => u.role !== 'admin').sort((a,b) => {
-                        const scoreA = (a.total_downloads || 0) * 2 + (a.total_uploads || 0) * 20;
-                        const scoreB = (b.total_downloads || 0) * 2 + (b.total_uploads || 0) * 20;
-                        return scoreB - scoreA;
-                    }).map((u, i) => {
-                        const score = (u.total_downloads || 0) * 2 + (u.total_uploads || 0) * 20;
+                    ${teacherRows.map((row, i) => {
+                        const u = row.user;
                         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+                        const safeUserId = String(u.id).replace(/'/g, "\\'");
                         return `
                             <tr>
                                 <td><strong>${medal}</strong></td>
                                 <td><strong>${escapeHtml(u.fullname)}</strong></td>
-                                <td>${escapeHtml(u.department)}</td>
-                                <td style="text-align:center;"><span class="badge" style="background:var(--primary-soft); color:var(--primary); font-weight:700;">${u.total_uploads || 0}</span></td>
-                                <td style="text-align:center;">${u.total_downloads || 0}</td>
-                                <td style="text-align:center;"><strong>${score}</strong></td>
-                                <td><span class="badge-honor">✨ ${escapeHtml(u.honor || 'Giáo viên tích cực')}</span></td>
+                                <td>${escapeHtml(u.department || '')}</td>
+                                <td style="text-align:center;">
+                                    <span style="display:inline-flex; align-items:center; justify-content:center; min-width:30px; padding:3px 10px; border-radius:999px; background:var(--primary-soft); color:var(--primary); font-weight:700; font-size:0.85rem;">${row.docCount}</span>
+                                </td>
+                                <td style="text-align:center;">${row.downloadCount}</td>
+                                <td style="text-align:center;">
+                                    <strong style="color:#fbbf24;">⭐ ${row.totalStars}</strong>
+                                </td>
+                                <td style="text-align:center;">
+                                    <button type="button" class="btn btn-sm btn-outline" onclick="openTeacherStarDetail('${safeUserId}')" style="padding:4px 12px; font-size:0.8rem;">
+                                        👁️ Xem
+                                    </button>
+                                </td>
                             </tr>
                         `;
                     }).join('')}
@@ -5310,6 +5425,133 @@ function getDashboardHtml(showExportBtn = true) {
     `;
 }
 
+function openTeacherStarDetail(userId) {
+    const { teacherRows } = computeDashboardStats();
+    const rowIdx = teacherRows.findIndex(r => String(r.user.id) === String(userId));
+    if (rowIdx === -1) {
+        showToast('Không tìm thấy thông tin chi tiết của giáo viên này!', 'warning');
+        return;
+    }
+
+    const row = teacherRows[rowIdx];
+    const u = row.user;
+
+    let modal = document.getElementById('teacher-star-detail-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'teacher-star-detail-modal';
+        modal.innerHTML = `
+            <div class="modal modal-lg">
+                <button class="modal-close" id="teacher-star-modal-close" aria-label="Đóng">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <div class="modal-header">
+                    <h2 class="modal-title" id="teacher-star-modal-title">⭐ Chi tiết số sao giáo viên</h2>
+                    <p class="modal-desc" id="teacher-star-modal-desc"></p>
+                </div>
+                <div class="modal-body" id="teacher-star-modal-body" style="max-height:70vh; overflow-y:auto;"></div>
+                <div class="modal-footer" style="display:flex; justify-content:flex-end; padding-top:12px;">
+                    <button type="button" class="btn btn-secondary" id="teacher-star-modal-ok">Đóng</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeFn = () => modal.classList.remove('active');
+        modal.querySelector('#teacher-star-modal-close')?.addEventListener('click', closeFn);
+        modal.querySelector('#teacher-star-modal-ok')?.addEventListener('click', closeFn);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeFn();
+        });
+    }
+
+    const titleEl = modal.querySelector('#teacher-star-modal-title');
+    const descEl = modal.querySelector('#teacher-star-modal-desc');
+    const bodyEl = modal.querySelector('#teacher-star-modal-body');
+
+    if (titleEl) titleEl.textContent = `⭐ Chi tiết số sao: ${u.fullname}`;
+    if (descEl) descEl.textContent = `${u.department || 'Giáo viên'} • Hạng #${rowIdx + 1} • Tổng cộng: ${row.totalStars} sao`;
+
+    const docsHtml = row.docs.length > 0
+        ? `
+            <div class="admin-table-container" style="margin-top:12px;">
+                <table class="admin-table" style="font-size:0.84rem;">
+                    <thead>
+                        <tr>
+                            <th style="width:44px;">STT</th>
+                            <th>Tên học liệu</th>
+                            <th style="text-align:center;">Sao bài đăng</th>
+                            <th style="text-align:center;">Lượt tải</th>
+                            <th style="text-align:center;">Tổng sao</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${row.docs.map((doc, idx) => {
+                            const dlCount = Number(doc.download_count) || 0;
+                            const docTotalStars = 2 + dlCount;
+                            const metaText = [
+                                getCategoryName(doc.category),
+                                doc.grade ? getGradeName(doc.grade, doc.category) : '',
+                                doc.subject ? getSubjectName(doc.subject, doc.category, doc.grade) : ''
+                            ].filter(Boolean).join(' • ');
+                            return `
+                                <tr>
+                                    <td>${idx + 1}</td>
+                                    <td>
+                                        <div style="font-weight:600; color:var(--text-primary);">${escapeHtml(doc.title || doc.file_name || 'Học liệu')}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(metaText)}</div>
+                                    </td>
+                                    <td style="text-align:center; color:#fbbf24; font-weight:600;">+2 ⭐</td>
+                                    <td style="text-align:center;">${dlCount} lượt <span style="color:#fbbf24; font-weight:600;">(+${dlCount} ⭐)</span></td>
+                                    <td style="text-align:center; font-weight:700; color:#fbbf24;">${docTotalStars} ⭐</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `
+        : `
+            <div style="padding:20px; text-align:center; background:var(--bg-surface); border:1px dashed var(--border-color); border-radius:var(--radius-md); color:var(--text-muted); margin-top:12px;">
+                Chưa có học liệu nào được phê duyệt để tính sao.
+            </div>
+        `;
+
+    const pendingNoteHtml = row.pendingDocs.length > 0
+        ? `<div style="margin-top:12px; padding:10px 14px; border-radius:var(--radius-md); background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.28); font-size:0.83rem; color:var(--text-secondary);">
+            ⏳ Ngoài ra thầy/cô hiện có <strong>${row.pendingDocs.length}</strong> học liệu đang chờ duyệt (mỗi bài sẽ được cộng <strong>+2 ⭐</strong> sau khi Ban Giám Hiệu phê duyệt).
+           </div>`
+        : '';
+
+    if (bodyEl) {
+        bodyEl.innerHTML = `
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin-bottom:14px;">
+                <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px;">
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:4px;">📚 Sao từ Học liệu (×2 ⭐)</div>
+                    <div style="font-size:1.15rem; font-weight:700; color:var(--text-primary);">${row.docStars} ⭐</div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary);">${row.docCount} học liệu × 2 sao</div>
+                </div>
+                <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px;">
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:4px;">⬇️ Sao từ Lượt tải (×1 ⭐)</div>
+                    <div style="font-size:1.15rem; font-weight:700; color:var(--text-primary);">${row.downloadStars} ⭐</div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary);">${row.downloadCount} lượt tải × 1 sao</div>
+                </div>
+                <div style="background:rgba(245, 158, 11, 0.12); border:1px solid rgba(245, 158, 11, 0.35); border-radius:var(--radius-md); padding:12px;">
+                    <div style="font-size:0.78rem; color:#fbbf24; font-weight:600; margin-bottom:4px;">🏆 Tổng số sao đạt được</div>
+                    <div style="font-size:1.25rem; font-weight:800; color:#fbbf24;">⭐ ${row.totalStars}</div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary);">(${row.docStars} + ${row.downloadStars}) sao</div>
+                </div>
+            </div>
+            <div style="font-weight:700; font-size:0.92rem; margin-top:8px;">📋 Chi tiết từng học liệu đóng góp:</div>
+            ${docsHtml}
+            ${pendingNoteHtml}
+        `;
+    }
+
+    modal.classList.add('active');
+}
+
 function renderDashboardPage() {
     const content = document.getElementById('dashboard-content');
     if (!content) return;
@@ -5317,21 +5559,21 @@ function renderDashboardPage() {
 }
 
 function exportThiDuaCSV() {
-    const users = store.getUsers().filter(u => u.role !== 'admin');
-    let csv = "\uFEFFHạng,Họ và tên,Tổ chuyên môn,Số bài đóng góp,Lượt tải,Điểm thi đua,Danh hiệu\n";
-    users.sort((a, b) => b.total_downloads - a.total_downloads).forEach((u, i) => {
-        const score = u.total_downloads * 2 + u.total_uploads * 20;
-        csv += `${i + 1},"${u.fullname}","${u.department}",${u.total_uploads},${u.total_downloads},${score},"${u.honor || ''}"\n`;
+    const { teacherRows } = computeDashboardStats();
+    let csv = "\uFEFFHạng,Họ và tên,Tổ chuyên môn,Số học liệu,Sao học liệu (x2),Tổng lượt tải,Sao lượt tải (x1),Tổng số sao\n";
+    teacherRows.forEach((row, i) => {
+        const u = row.user;
+        csv += `${i + 1},"${u.fullname || ''}","${u.department || ''}",${row.docCount},${row.docStars},${row.downloadCount},${row.downloadStars},${row.totalStars}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `Bao_Cao_Thi_Dua_KHL_Nuithanh_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `Thong_Ke_So_Sao_KHLS_Nuithanh_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    showToast('Đã xuất thành công tệp Excel/CSV báo cáo thi đua! 📊', 'success');
+    showToast('Đã xuất thành công tệp Excel/CSV báo cáo số sao! 📊', 'success');
 }
 
 // ======================== PAGE: ADMIN ========================
