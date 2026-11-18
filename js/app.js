@@ -9653,8 +9653,38 @@ async function handleContributeSubmit(e) {
             payload.gameHtml = gameHtml;
         }
 
-        updateProgress(55, 'Đang đồng bộ học liệu lên hệ thống kiểm duyệt trường...');
-        const { activeGas, driveResult, fileUrl, driveId, gasUploadFailed } = await uploadDocToCloudDrive(payload);
+        updateProgress(55, 'Đang kết nối máy chủ Google Drive Quản trị...');
+        let syncProgress = 55;
+        const syncTimer = setInterval(() => {
+            if (syncProgress < 72) {
+                syncProgress += 3;
+            } else if (syncProgress < 85) {
+                syncProgress += 2;
+            } else if (syncProgress < 92) {
+                syncProgress += 1;
+            }
+            if (syncProgress > 92) syncProgress = 92;
+
+            let statusMsg = 'Đang kết nối máy chủ Google Drive Quản trị...';
+            if (syncProgress < 66) {
+                statusMsg = 'Đang gửi dữ liệu học liệu lên Google Drive...';
+            } else if (syncProgress < 78) {
+                statusMsg = 'Đang sắp xếp vào thư mục Danh mục / Khối / Môn học...';
+            } else if (syncProgress < 88) {
+                statusMsg = 'Đang lưu tệp và cấp quyền xem trên Drive...';
+            } else {
+                statusMsg = 'Đang cập nhật hệ thống kiểm duyệt toàn trường...';
+            }
+            updateProgress(syncProgress, statusMsg);
+        }, 320);
+
+        let uploadResult;
+        try {
+            uploadResult = await uploadDocToCloudDrive(payload);
+        } finally {
+            clearInterval(syncTimer);
+        }
+        const { activeGas, driveResult, fileUrl, driveId, gasUploadFailed } = uploadResult;
 
         if (fileUrl) {
             updateProgress(95, 'Đã đồng bộ lên Google Drive Quản trị!');
