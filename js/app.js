@@ -2820,6 +2820,9 @@ ${escapeHtml(docText)}
     const toolbarFileName = (isVideoCat && ytId) ? (doc.title || 'Video YouTube') : ((isGameCat && gameCode) ? (doc.title || 'Trò chơi tương tác') : (doc.file_name || ''));
     const toolbarBadge = (isVideoCat && ytId) ? 'YouTube' : ((isGameCat && gameCode) ? 'HTML5 Game' : formatFileSize(doc.file_size));
     const toolbarBtnLabel = (isVideoCat && ytId) ? '↗ Mở trên YouTube' : ((isGameCat && gameCode) ? '⬇️ Tải game' : '⬇️ Tải về');
+    const userGift = getDocUserStarGift(doc, state.user);
+    const giftCountTotal = getDocGiftedStarsTotal(doc);
+    const safeDocId = String(doc.id).replace(/'/g, "\\'");
 
     return `
         <div class="doc-viewer-wrapper" id="doc-viewer-wrapper">
@@ -2829,17 +2832,162 @@ ${escapeHtml(docText)}
                     <span class="doc-viewer-file-name" title="${escapeHtml(toolbarFileName)}">${escapeHtml(toolbarFileName)}</span>
                     <span class="doc-viewer-size-badge">${toolbarBadge}</span>
                 </div>
-                <div class="doc-viewer-toolbar-right">
-                    <button type="button" class="btn btn-sm btn-primary doc-viewer-btn" onclick="handleDownloadDoc('${doc.id}')" title="Tải hoặc mở học liệu">
+                <div class="doc-viewer-toolbar-right" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn btn-sm ${userGift ? 'doc-gift-btn-done' : 'doc-gift-btn'}" onclick="toggleStarGiftBar('${safeDocId}')" title="${userGift ? `Bạn đã tặng ${userGift.stars} sao cho học liệu này` : 'Tặng từ 1 đến 5 sao cho tác giả'}">
+                        <span>${userGift ? `⭐ Đã tặng ${userGift.stars} sao` : `⭐ Tặng sao${giftCountTotal > 0 ? ` (${giftCountTotal})` : ''}`}</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary doc-viewer-btn" onclick="handleDownloadDoc('${safeDocId}')" title="Tải hoặc mở học liệu">
                         <span>${toolbarBtnLabel}</span>
                     </button>
                 </div>
+            </div>
+            <div class="doc-star-gift-bar" id="doc-star-gift-bar-${escapeHtml(String(doc.id))}" style="display:none;">
+                <span style="font-size:0.86rem; font-weight:600; color:var(--text-primary);">🌟 Tặng sao cho tác giả (1 - 5 sao):</span>
+                <div class="doc-gift-stars-picker" id="doc-gift-stars-picker-${escapeHtml(String(doc.id))}" onmouseleave="previewGiftStars('${safeDocId}', 0)">
+                    ${[1, 2, 3, 4, 5].map(s => `
+                        <button type="button" class="gift-star-btn" data-gift-star="${s}" onmouseenter="previewGiftStars('${safeDocId}', ${s})" onclick="submitDocStarGift('${safeDocId}', ${s})" title="Tặng ${s} sao">
+                            ★
+                        </button>
+                    `).join('')}
+                </div>
+                <span id="doc-gift-preview-label-${escapeHtml(String(doc.id))}" style="font-size:0.82rem; font-weight:600; color:#fbbf24; min-width:88px;">Chọn số sao</span>
+                <button type="button" class="btn btn-sm btn-outline" onclick="toggleStarGiftBar('${safeDocId}', false)" style="padding:2px 8px; font-size:0.76rem; margin-left:auto;">✕ Đóng</button>
             </div>
             <div class="doc-viewer-body ${viewerBodyExtraClass}" id="doc-viewer-body">
                 ${viewerBody}
             </div>
         </div>
     `;
+}
+
+function getDocStarGifts(doc) {
+    if (!doc || !Array.isArray(doc.star_gifts)) return [];
+    const seen = new Map();
+    doc.star_gifts.forEach(g => {
+        if (!g) return;
+        const stars = Math.min(5, Math.max(1, parseInt(g.stars, 10) || 0));
+        if (!stars) return;
+        const key = g.user_id !== undefined && g.user_id !== null && g.user_id !== ''
+            ? `id:${String(g.user_id).trim().toLowerCase()}`
+            : (g.username ? `un:${String(g.username).trim().toLowerCase()}` : `fn:${String(g.fullname || '').trim().toLowerCase()}`);
+        if (!key || key.endsWith(':')) return;
+        if (!seen.has(key)) {
+            seen.set(key, {
+                user_id: g.user_id ?? '',
+                username: g.username || '',
+                fullname: g.fullname || g.username || 'Giáo viên',
+                department: g.department || '',
+                stars,
+                created_at: g.created_at || new Date().toISOString()
+            });
+        }
+    });
+    return Array.from(seen.values());
+}
+
+function getDocGiftedStarsTotal(doc) {
+    return getDocStarGifts(doc).reduce((sum, g) => sum + (Number(g.stars) || 0), 0);
+}
+
+function getDocUserStarGift(doc, user = state.user) {
+    if (!doc || !user) return null;
+    const gifts = getDocStarGifts(doc);
+    const uid = user.id !== undefined && user.id !== null ? String(user.id).trim().toLowerCase() : '';
+    const uname = String(user.username || '').trim().toLowerCase();
+    const ufull = String(user.fullname || '').trim().toLowerCase();
+    return gifts.find(g => {
+        const gid = g.user_id !== undefined && g.user_id !== null ? String(g.user_id).trim().toLowerCase() : '';
+        const guname = String(g.username || '').trim().toLowerCase();
+        const gfull = String(g.fullname || '').trim().toLowerCase();
+        if (uid && gid && uid === gid) return true;
+        if (uname && guname && uname === guname) return true;
+        if (!uid && !uname && ufull && gfull && ufull === gfull) return true;
+        return false;
+    }) || null;
+}
+
+function mergeStarGifts(listA, listB) {
+    return getDocStarGifts({ star_gifts: [...(Array.isArray(listA) ? listA : []), ...(Array.isArray(listB) ? listB : [])] });
+}
+
+function toggleStarGiftBar(docId, forceState = null) {
+    if (!state.user) {
+        openAuthRequiredModal();
+        showToast('Vui lòng đăng nhập để tặng sao cho tác giả!', 'info');
+        return;
+    }
+    const doc = store.getDocuments().find(d => String(d.id) === String(docId));
+    if (!doc) return;
+    const existing = getDocUserStarGift(doc, state.user);
+    if (existing) {
+        showToast(`Thầy/Cô đã tặng ${existing.stars} sao cho học liệu này rồi (mỗi người dùng chỉ tặng 1 lần).`, 'info');
+        return;
+    }
+    const bar = document.getElementById(`doc-star-gift-bar-${docId}`);
+    if (!bar) return;
+    const shouldOpen = forceState !== null ? forceState : (bar.style.display === 'none' || !bar.style.display);
+    bar.style.display = shouldOpen ? 'flex' : 'none';
+    if (shouldOpen) previewGiftStars(docId, 5);
+}
+
+function previewGiftStars(docId, count) {
+    const picker = document.getElementById(`doc-gift-stars-picker-${docId}`);
+    const label = document.getElementById(`doc-gift-preview-label-${docId}`);
+    if (picker) {
+        picker.querySelectorAll('.gift-star-btn').forEach(btn => {
+            const s = parseInt(btn.getAttribute('data-gift-star'), 10);
+            btn.classList.toggle('active', s <= count);
+        });
+    }
+    if (label) {
+        label.textContent = count > 0 ? `${count}/5 sao` : 'Chọn số sao';
+    }
+}
+
+function submitDocStarGift(docId, stars) {
+    if (!state.user) {
+        openAuthRequiredModal();
+        showToast('Vui lòng đăng nhập để tặng sao cho tác giả!', 'info');
+        return;
+    }
+    const starVal = Math.min(5, Math.max(1, parseInt(stars, 10) || 0));
+    if (!starVal) return;
+
+    const docs = store.getDocuments();
+    const doc = docs.find(d => String(d.id) === String(docId));
+    if (!doc) return;
+
+    const existing = getDocUserStarGift(doc, state.user);
+    if (existing) {
+        showToast(`Thầy/Cô đã tặng ${existing.stars} sao cho học liệu này rồi (mỗi người dùng chỉ tặng 1 lần).`, 'warning');
+        renderDetailPage(doc.id, true);
+        return;
+    }
+
+    const giftRecord = {
+        user_id: state.user.id,
+        username: state.user.username || '',
+        fullname: state.user.fullname || state.user.username || 'Giáo viên',
+        department: state.user.department || '',
+        stars: starVal,
+        created_at: new Date().toISOString()
+    };
+
+    if (!Array.isArray(doc.star_gifts)) doc.star_gifts = [];
+    doc.star_gifts.push(giftRecord);
+    doc.star_gifts = getDocStarGifts(doc);
+    store.saveDocuments(docs);
+
+    showToast(`🌟 Đã tặng ${starVal} sao cho tác giả ${getDocAuthorName(doc)}!`, 'success');
+    renderDetailPage(doc.id, true);
+
+    uploadDocToCloudDrive({
+        action: 'gift_star',
+        docId: doc.id,
+        driveId: doc.drive_id || '',
+        gift: giftRecord,
+        folderId: localStorage.getItem('khls_my_drive_folder_id') || ''
+    }).catch(() => {});
 }
 
 // ======================== PAGE: DETAIL ========================
@@ -2867,7 +3015,7 @@ function getDocAuthorName(doc) {
     return (name || 'Giáo viên').replace(/^(Thầy|Cô)\s+/i, '').trim();
 }
 
-function renderDetailPage(docId) {
+function renderDetailPage(docId, skipViewIncrement = false) {
     const container = document.getElementById('detail-container');
     const titleBreadcrumb = document.getElementById('detail-breadcrumb-title');
     if (!container) return;
@@ -2885,8 +3033,10 @@ function renderDetailPage(docId) {
     }
 
     // Increment views
-    doc.view_count = (doc.view_count || 0) + 1;
-    store.saveDocuments(store.getDocuments().map(d => d.id === doc.id ? doc : d));
+    if (!skipViewIncrement) {
+        doc.view_count = (doc.view_count || 0) + 1;
+        store.saveDocuments(store.getDocuments().map(d => d.id === doc.id ? doc : d));
+    }
 
     if (titleBreadcrumb) titleBreadcrumb.textContent = doc.title;
 
@@ -2929,6 +3079,7 @@ function renderDetailPage(docId) {
                         <span>📅 ${timeAgo(doc.created_at)}</span>
                         <span>👁️ ${doc.view_count} xem</span>
                         <span>⬇️ ${doc.download_count || 0} tải</span>
+                        <span>🎁 ${getDocGiftedStarsTotal(doc)} sao tặng (${getDocStarGifts(doc).length} lượt)</span>
                         <span>⭐ ${doc.avg_rating ? doc.avg_rating.toFixed(1) : '5.0'} (${doc.rating_count || 0} đánh giá)</span>
                     </div>
 
@@ -3091,6 +3242,12 @@ function handleDownloadDoc(docId) {
 
     doc.download_count = (doc.download_count || 0) + 1;
     store.saveDocuments(docs);
+    uploadDocToCloudDrive({
+        action: 'download',
+        docId: doc.id,
+        driveId: doc.drive_id || '',
+        folderId: localStorage.getItem('khls_my_drive_folder_id') || ''
+    }).catch(() => {});
 
     // Mở video YouTube trực tiếp
     const ytId = resolveYouTubeId(doc);
@@ -5279,7 +5436,7 @@ function computeDashboardStats() {
         }
     });
 
-    // 3. Bảng điểm sao từng giáo viên: mỗi học liệu = 2 sao, mỗi lượt tải = 1 sao
+    // 3. Bảng điểm sao từng giáo viên: mỗi học liệu = 2 sao, mỗi lượt tải = 1 sao, cộng sao được đồng nghiệp tặng
     const teacherRows = users
         .map(u => {
             const userDocs = docsByUserId[String(u.id)] || [];
@@ -5288,7 +5445,24 @@ function computeDashboardStats() {
             const downloadCount = userDocs.reduce((sum, d) => sum + (Number(d.download_count) || 0), 0);
             const docStars = docCount * 2;
             const downloadStars = downloadCount * 1;
-            const totalStars = docStars + downloadStars;
+            const giftEvents = [];
+            userDocs.forEach(d => {
+                getDocStarGifts(d).forEach(g => {
+                    giftEvents.push({
+                        docId: d.id,
+                        docTitle: d.title || d.file_name || 'Học liệu',
+                        user_id: g.user_id,
+                        username: g.username,
+                        fullname: g.fullname || 'Giáo viên',
+                        department: g.department || '',
+                        stars: g.stars,
+                        created_at: g.created_at
+                    });
+                });
+            });
+            giftEvents.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            const giftedStars = giftEvents.reduce((sum, g) => sum + (Number(g.stars) || 0), 0);
+            const totalStars = docStars + downloadStars + giftedStars;
             return {
                 user: u,
                 docs: userDocs,
@@ -5297,6 +5471,9 @@ function computeDashboardStats() {
                 downloadCount,
                 docStars,
                 downloadStars,
+                giftedStars,
+                giftCount: giftEvents.length,
+                giftEvents,
                 totalStars
             };
         })
@@ -5380,7 +5557,7 @@ function getDashboardHtml(showExportBtn = true) {
         <div class="admin-table-container" style="margin-top:var(--space-2xl);">
             <div style="padding:var(--space-md); font-weight:700; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <span>⭐ Bảng Theo Dõi Số Sao Cá Nhân Giáo Viên</span>
-                <span style="font-size:0.82rem; font-weight:normal; color:var(--text-muted);">Tổng số sao = Số học liệu × 2 ⭐ + Lượt tải × 1 ⭐</span>
+                <span style="font-size:0.82rem; font-weight:normal; color:var(--text-muted);">Tổng số sao = Số học liệu × 2 ⭐ + Lượt tải × 1 ⭐ + Sao được tặng ⭐</span>
             </div>
             <table class="admin-table">
                 <thead>
@@ -5410,6 +5587,7 @@ function getDashboardHtml(showExportBtn = true) {
                                 <td style="text-align:center;">${row.downloadCount}</td>
                                 <td style="text-align:center;">
                                     <strong style="color:#fbbf24;">⭐ ${row.totalStars}</strong>
+                                    ${row.giftedStars > 0 ? `<div style="font-size:0.72rem; color:var(--text-muted);">(+${row.giftedStars} sao tặng)</div>` : ''}
                                 </td>
                                 <td style="text-align:center;">
                                     <button type="button" class="btn btn-sm btn-outline" onclick="openTeacherStarDetail('${safeUserId}')" style="padding:4px 12px; font-size:0.8rem;">
@@ -5483,13 +5661,16 @@ function openTeacherStarDetail(userId) {
                             <th>Tên học liệu</th>
                             <th style="text-align:center;">Sao bài đăng</th>
                             <th style="text-align:center;">Lượt tải</th>
+                            <th style="text-align:center;">Sao được tặng</th>
                             <th style="text-align:center;">Tổng sao</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${row.docs.map((doc, idx) => {
                             const dlCount = Number(doc.download_count) || 0;
-                            const docTotalStars = 2 + dlCount;
+                            const docGifts = getDocGiftedStarsTotal(doc);
+                            const docGiftUsers = getDocStarGifts(doc).length;
+                            const docTotalStars = 2 + dlCount + docGifts;
                             const metaText = [
                                 getCategoryName(doc.category),
                                 doc.grade ? getGradeName(doc.grade, doc.category) : '',
@@ -5504,6 +5685,7 @@ function openTeacherStarDetail(userId) {
                                     </td>
                                     <td style="text-align:center; color:#fbbf24; font-weight:600;">+2 ⭐</td>
                                     <td style="text-align:center;">${dlCount} lượt <span style="color:#fbbf24; font-weight:600;">(+${dlCount} ⭐)</span></td>
+                                    <td style="text-align:center;">${docGifts > 0 ? `<span style="color:#fbbf24; font-weight:600;">+${docGifts} ⭐</span> <span style="font-size:0.74rem; color:var(--text-muted);">(${docGiftUsers} người)</span>` : '<span style="color:var(--text-muted);">0 ⭐</span>'}</td>
                                     <td style="text-align:center; font-weight:700; color:#fbbf24;">${docTotalStars} ⭐</td>
                                 </tr>
                             `;
@@ -5518,6 +5700,41 @@ function openTeacherStarDetail(userId) {
             </div>
         `;
 
+    const giftsHistoryHtml = row.giftEvents.length > 0
+        ? `
+            <div class="admin-table-container" style="margin-top:10px;">
+                <table class="admin-table" style="font-size:0.84rem;">
+                    <thead>
+                        <tr>
+                            <th style="width:44px;">STT</th>
+                            <th>Người tặng sao</th>
+                            <th>Tổ chuyên môn</th>
+                            <th>Học liệu được tặng</th>
+                            <th style="text-align:center;">Số sao tặng</th>
+                            <th style="text-align:center;">Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${row.giftEvents.map((g, idx) => `
+                            <tr>
+                                <td>${idx + 1}</td>
+                                <td><strong>${escapeHtml(g.fullname)}</strong></td>
+                                <td>${escapeHtml(g.department || '—')}</td>
+                                <td>${escapeHtml(g.docTitle)}</td>
+                                <td style="text-align:center; color:#fbbf24; font-weight:700; white-space:nowrap;">${'★'.repeat(g.stars)} <span style="font-weight:600;">(${g.stars} ⭐)</span></td>
+                                <td style="text-align:center; font-size:0.78rem; color:var(--text-muted);">${timeAgo(g.created_at)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `
+        : `
+            <div style="padding:14px; text-align:center; background:var(--bg-surface); border:1px dashed var(--border-color); border-radius:var(--radius-md); color:var(--text-muted); margin-top:8px; font-size:0.84rem;">
+                Chưa có đồng nghiệp nào tặng sao cho học liệu của thầy/cô này.
+            </div>
+        `;
+
     const pendingNoteHtml = row.pendingDocs.length > 0
         ? `<div style="margin-top:12px; padding:10px 14px; border-radius:var(--radius-md); background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.28); font-size:0.83rem; color:var(--text-secondary);">
             ⏳ Ngoài ra thầy/cô hiện có <strong>${row.pendingDocs.length}</strong> học liệu đang chờ duyệt (mỗi bài sẽ được cộng <strong>+2 ⭐</strong> sau khi Ban Giám Hiệu phê duyệt).
@@ -5526,7 +5743,7 @@ function openTeacherStarDetail(userId) {
 
     if (bodyEl) {
         bodyEl.innerHTML = `
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin-bottom:14px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:14px;">
                 <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px;">
                     <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:4px;">📚 Sao từ Học liệu (×2 ⭐)</div>
                     <div style="font-size:1.15rem; font-weight:700; color:var(--text-primary);">${row.docStars} ⭐</div>
@@ -5537,14 +5754,21 @@ function openTeacherStarDetail(userId) {
                     <div style="font-size:1.15rem; font-weight:700; color:var(--text-primary);">${row.downloadStars} ⭐</div>
                     <div style="font-size:0.78rem; color:var(--text-secondary);">${row.downloadCount} lượt tải × 1 sao</div>
                 </div>
+                <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px;">
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:4px;">🎁 Sao được tặng</div>
+                    <div style="font-size:1.15rem; font-weight:700; color:#fbbf24;">${row.giftedStars} ⭐</div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary);">${row.giftCount} lượt đồng nghiệp tặng</div>
+                </div>
                 <div style="background:rgba(245, 158, 11, 0.12); border:1px solid rgba(245, 158, 11, 0.35); border-radius:var(--radius-md); padding:12px;">
                     <div style="font-size:0.78rem; color:#fbbf24; font-weight:600; margin-bottom:4px;">🏆 Tổng số sao đạt được</div>
                     <div style="font-size:1.25rem; font-weight:800; color:#fbbf24;">⭐ ${row.totalStars}</div>
-                    <div style="font-size:0.78rem; color:var(--text-secondary);">(${row.docStars} + ${row.downloadStars}) sao</div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary);">(${row.docStars} + ${row.downloadStars} + ${row.giftedStars}) sao</div>
                 </div>
             </div>
             <div style="font-weight:700; font-size:0.92rem; margin-top:8px;">📋 Chi tiết từng học liệu đóng góp:</div>
             ${docsHtml}
+            <div style="font-weight:700; font-size:0.92rem; margin-top:16px;">🎁 Danh sách ai đã tặng sao (${row.giftCount} lượt):</div>
+            ${giftsHistoryHtml}
             ${pendingNoteHtml}
         `;
     }
@@ -5560,10 +5784,10 @@ function renderDashboardPage() {
 
 function exportThiDuaCSV() {
     const { teacherRows } = computeDashboardStats();
-    let csv = "\uFEFFHạng,Họ và tên,Tổ chuyên môn,Số học liệu,Sao học liệu (x2),Tổng lượt tải,Sao lượt tải (x1),Tổng số sao\n";
+    let csv = "\uFEFFHạng,Họ và tên,Tổ chuyên môn,Số học liệu,Sao học liệu (x2),Tổng lượt tải,Sao lượt tải (x1),Sao được tặng,Tổng số sao\n";
     teacherRows.forEach((row, i) => {
         const u = row.user;
-        csv += `${i + 1},"${u.fullname || ''}","${u.department || ''}",${row.docCount},${row.docStars},${row.downloadCount},${row.downloadStars},${row.totalStars}\n`;
+        csv += `${i + 1},"${u.fullname || ''}","${u.department || ''}",${row.docCount},${row.docStars},${row.downloadCount},${row.downloadStars},${row.giftedStars},${row.totalStars}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -8793,6 +9017,45 @@ function doPost(e) {
         doc: targetDoc || null
       });
     }
+
+    // 1e. Ghi nhận lượt tặng sao (1-5 sao, mỗi người 1 lần) hoặc lượt tải về trên Drive
+    if (data.action === "gift_star" || data.action === "download") {
+      var allDocs = loadDocuments(folder);
+      var targetDoc = allDocs.find(function(d) {
+        return (data.docId && String(d.id) === String(data.docId)) ||
+               (data.driveId && String(d.drive_id) === String(data.driveId));
+      });
+      if (targetDoc) {
+        if (data.action === "download") {
+          targetDoc.download_count = (Number(targetDoc.download_count) || 0) + 1;
+        } else if (data.action === "gift_star" && data.gift) {
+          if (!Array.isArray(targetDoc.star_gifts)) targetDoc.star_gifts = [];
+          var g = data.gift;
+          var gKey = (g.user_id !== undefined && g.user_id !== null && g.user_id !== "")
+            ? "id:" + String(g.user_id).trim().toLowerCase()
+            : "un:" + String(g.username || g.fullname || "").trim().toLowerCase();
+          var exists = targetDoc.star_gifts.some(function(item) {
+            var k = (item.user_id !== undefined && item.user_id !== null && item.user_id !== "")
+              ? "id:" + String(item.user_id).trim().toLowerCase()
+              : "un:" + String(item.username || item.fullname || "").trim().toLowerCase();
+            return k && k === gKey;
+          });
+          if (!exists) {
+            targetDoc.star_gifts.push({
+              user_id: g.user_id || "",
+              username: g.username || "",
+              fullname: g.fullname || "Giáo viên",
+              department: g.department || "",
+              stars: Math.min(5, Math.max(1, parseInt(g.stars, 10) || 1)),
+              created_at: g.created_at || new Date().toISOString()
+            });
+          }
+        }
+        saveDocumentsDb(folder, allDocs);
+        return responseJSON({ status: "success", message: "Đã đồng bộ tương tác học liệu", doc: targetDoc });
+      }
+      return responseJSON({ status: "error", message: "Không tìm thấy mã học liệu: " + data.docId });
+    }
     
     // 2. Tải lên tệp học liệu mới (Chỉ tạo thư mục Danh mục -> Khối -> Môn khi có tệp được đăng)
     var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
@@ -9578,6 +9841,20 @@ async function syncDocumentsFromDrive(isManual = false) {
                         localDoc.file_url = cloudDoc.file_url;
                         hasChanges = true;
                     }
+                    const cloudDownloads = Number(cloudDoc.download_count) || 0;
+                    const localDownloads = Number(localDoc.download_count) || 0;
+                    if (cloudDownloads > localDownloads) {
+                        localDoc.download_count = cloudDownloads;
+                        hasChanges = true;
+                    }
+                    if (Array.isArray(cloudDoc.star_gifts) && cloudDoc.star_gifts.length > 0) {
+                        const mergedGifts = mergeStarGifts(localDoc.star_gifts, cloudDoc.star_gifts);
+                        const prevGiftCount = Array.isArray(localDoc.star_gifts) ? localDoc.star_gifts.length : 0;
+                        if (mergedGifts.length > prevGiftCount) {
+                            localDoc.star_gifts = mergedGifts;
+                            hasChanges = true;
+                        }
+                    }
                 } else {
                     localDocs.unshift(cloudDoc);
                     hasChanges = true;
@@ -9629,8 +9906,10 @@ async function syncDocumentsFromDrive(isManual = false) {
                     }
                 } else if (state.currentPage === 'home') {
                     renderHomePage();
+                } else if (state.currentPage === 'dashboard' || state.currentPage === 'stats') {
+                    renderDashboardPage();
                 } else if (state.currentPage === 'detail' && state.currentDocId) {
-                    renderDetailPage(state.currentDocId);
+                    renderDetailPage(state.currentDocId, true);
                 }
             }
 

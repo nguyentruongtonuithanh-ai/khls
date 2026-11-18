@@ -291,6 +291,45 @@ function doPost(e) {
         doc: targetDoc || null
       });
     }
+
+    // 1e. Ghi nhận lượt tặng sao (1-5 sao, mỗi người 1 lần) hoặc lượt tải về trên Drive
+    if (data.action === "gift_star" || data.action === "download") {
+      var allDocs = loadDocuments(folder);
+      var targetDoc = allDocs.find(function(d) {
+        return (data.docId && String(d.id) === String(data.docId)) ||
+               (data.driveId && String(d.drive_id) === String(data.driveId));
+      });
+      if (targetDoc) {
+        if (data.action === "download") {
+          targetDoc.download_count = (Number(targetDoc.download_count) || 0) + 1;
+        } else if (data.action === "gift_star" && data.gift) {
+          if (!Array.isArray(targetDoc.star_gifts)) targetDoc.star_gifts = [];
+          var g = data.gift;
+          var gKey = (g.user_id !== undefined && g.user_id !== null && g.user_id !== "")
+            ? "id:" + String(g.user_id).trim().toLowerCase()
+            : "un:" + String(g.username || g.fullname || "").trim().toLowerCase();
+          var exists = targetDoc.star_gifts.some(function(item) {
+            var k = (item.user_id !== undefined && item.user_id !== null && item.user_id !== "")
+              ? "id:" + String(item.user_id).trim().toLowerCase()
+              : "un:" + String(item.username || item.fullname || "").trim().toLowerCase();
+            return k && k === gKey;
+          });
+          if (!exists) {
+            targetDoc.star_gifts.push({
+              user_id: g.user_id || "",
+              username: g.username || "",
+              fullname: g.fullname || "Giáo viên",
+              department: g.department || "",
+              stars: Math.min(5, Math.max(1, parseInt(g.stars, 10) || 1)),
+              created_at: g.created_at || new Date().toISOString()
+            });
+          }
+        }
+        saveDocumentsDb(folder, allDocs);
+        return responseJSON({ status: "success", message: "Đã đồng bộ tương tác học liệu", doc: targetDoc });
+      }
+      return responseJSON({ status: "error", message: "Không tìm thấy mã học liệu: " + data.docId });
+    }
     
     // 2. Tải lên tệp học liệu mới (Chỉ tạo thư mục Danh mục -> Khối -> Môn khi có tệp được đăng)
     var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
