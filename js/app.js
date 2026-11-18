@@ -2396,6 +2396,25 @@ function handleSaveDoc(e) {
     closeEditDocModal();
     showToast(`Đã lưu cập nhật cho học liệu "${title}"! 💾`, 'success');
 
+    // Đồng bộ cập nhật và di chuyển thư mục trên Google Drive (nếu có kết nối Apps Script)
+    if (doc.drive_id || doc.id) {
+        uploadDocToCloudDrive({
+            action: 'move',
+            docId: doc.id,
+            driveId: doc.drive_id || '',
+            title: doc.title,
+            description: doc.description || '',
+            category: doc.category,
+            categoryName: getCategoryName(doc.category),
+            grade: doc.grade,
+            gradeName: getGradeName(doc.grade, doc.category),
+            subject: doc.subject || '',
+            subjectName: doc.subject ? getSubjectName(doc.subject, doc.category, doc.grade) : '',
+            week: doc.week || 1,
+            folderId: localStorage.getItem('khls_my_drive_folder_id') || ''
+        }).catch(() => {});
+    }
+
     if (state.currentPage === 'browse') {
         const b = state.currentBrowse || {};
         renderBrowsePage(b.cat, b.grade, b.subject, b.query);
@@ -7507,8 +7526,11 @@ function initUploadForm() {
                 title: title,
                 description: cloudDescription,
                 category: cat,
+                categoryName: getCategoryName(cat),
                 grade: grade,
+                gradeName: getGradeName(grade, cat),
                 subject: subject || '',
+                subjectName: subject ? getSubjectName(subject, cat, grade) : '',
                 week: resolvedWeek,
                 fileName: cloudFileName,
                 fileType: cloudFileType,
@@ -8306,6 +8328,95 @@ function getFolder(folderId) {
   return DriveApp.getRootFolder();
 }
 
+var APP_ROOT_FOLDER_NAME = "Kho Học Liệu Số - TH Núi Thành";
+var CATEGORY_FOLDER_MAP = {
+  khbd: "Kế hoạch bài dạy",
+  bgdt: "Bài giảng điện tử",
+  dethi: "Đề thi",
+  phieubt: "Phiếu bài tập",
+  trochoi: "Trò chơi tương tác",
+  video: "Video",
+  chuyenmon: "Sinh hoạt chuyên môn",
+  sangtao: "Sản phẩm sáng tạo",
+  tuhoc: "Tài liệu tự học",
+  gvcn: "Công tác chủ nhiệm"
+};
+var SUBJECT_FOLDER_MAP = {
+  toan: "Toán",
+  tiengviet: "Tiếng Việt",
+  tienganh: "Tiếng Anh",
+  tnxh: "TN & XH",
+  khoahoc: "Khoa học",
+  lsdl: "LS & ĐL",
+  tinhoc: "Tin học",
+  congnghe: "Công nghệ",
+  daoduc: "Đạo đức",
+  hdtn: "HĐTN",
+  amnhac: "Âm nhạc",
+  mythuat: "Mỹ thuật",
+  gdtc: "GDTC"
+};
+
+function sanitizeFolderName(name) {
+  return String(name || "")
+    .replace(/[\\\\/:*?"<>|]/g, "-")
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+
+function getOrCreateSubFolder(parentFolder, folderName) {
+  var cleanName = sanitizeFolderName(folderName);
+  if (!cleanName) return parentFolder;
+  var existing = parentFolder.getFoldersByName(cleanName);
+  if (existing.hasNext()) {
+    return existing.next();
+  }
+  return parentFolder.createFolder(cleanName);
+}
+
+// Chỉ tự động tạo cây thư mục (Danh mục -> Khối lớp -> Môn học) khi có học liệu thực sự được lưu
+function resolveTargetDocFolder(rootFolder, data) {
+  var current = rootFolder;
+  var segments = [];
+  try {
+    if (rootFolder.getId() === DriveApp.getRootFolder().getId()) {
+      current = getOrCreateSubFolder(current, APP_ROOT_FOLDER_NAME);
+      segments.push(current.getName());
+    }
+  } catch (e) {}
+
+  var catName = sanitizeFolderName(data.categoryName || CATEGORY_FOLDER_MAP[data.category] || data.category || "Học liệu số");
+  if (catName) {
+    current = getOrCreateSubFolder(current, catName);
+    segments.push(catName);
+  }
+
+  var gradeName = "";
+  if (data.gradeName) {
+    gradeName = sanitizeFolderName(data.gradeName);
+  } else if (data.grade && String(data.grade) !== "all") {
+    gradeName = sanitizeFolderName("Khối " + data.grade);
+  }
+  if (gradeName) {
+    current = getOrCreateSubFolder(current, gradeName);
+    segments.push(gradeName);
+  }
+
+  var subjectName = "";
+  if (data.subject && String(data.subject) !== "all") {
+    subjectName = sanitizeFolderName(data.subjectName || SUBJECT_FOLDER_MAP[data.subject] || data.subject);
+  }
+  if (subjectName) {
+    current = getOrCreateSubFolder(current, subjectName);
+    segments.push(subjectName);
+  }
+
+  return {
+    folder: current,
+    path: segments.join(" / ")
+  };
+}
+
 function getDatabaseFile(folder) {
   var files = folder.getFilesByName(DB_FILE_NAME);
   if (files.hasNext()) {
@@ -8358,7 +8469,10 @@ function doPost(e) {
     // 1. Phê duyệt, Từ chối hoặc Đặt lại trạng thái chờ duyệt học liệu
     if (data.action === "review" || data.action === "approve" || data.action === "reject" || data.action === "pending" || data.action === "reset") {
       var allDocs = loadDocuments(folder);
-      var targetDoc = allDocs.find(function(d) { return d.id === data.docId; });
+      var targetDoc = allDocs.find(function(d) {
+        return String(d.id) === String(data.docId) ||
+               (data.driveId && String(d.drive_id) === String(data.driveId));
+      });
       if (targetDoc) {
         if (data.action === "pending" || data.action === "reset") {
           targetDoc.status = "pending";
@@ -8385,8 +8499,60 @@ function doPost(e) {
       saveDocumentsDb(folder, newDocs);
       return responseJSON({ status: "success", message: "Đã xóa học liệu trên Drive", deletedDocId: data.docId });
     }
+
+    // 1c. Đồng bộ cấu trúc danh mục website (KHÔNG tạo thư mục trống trên Drive)
+    if (data.action === "sync_structure" || data.docId === "__khls_structure__") {
+      var allDocs = loadDocuments(folder);
+      var structIdx = allDocs.findIndex(function(d) { return d.id === "__khls_structure__"; });
+      var structDoc = {
+        id: "__khls_structure__",
+        title: "__KHLSSYSTEM_STRUCTURE__",
+        description: data.description || "",
+        updated_at: new Date().toISOString()
+      };
+      if (structIdx >= 0) {
+        allDocs[structIdx] = structDoc;
+      } else {
+        allDocs.push(structDoc);
+      }
+      saveDocumentsDb(folder, allDocs);
+      return responseJSON({ status: "success", message: "Đã đồng bộ cấu trúc danh mục", structure: structDoc });
+    }
+
+    // 1d. Di chuyển học liệu sang thư mục mới khi quản trị viên chỉnh sửa Danh mục/Khối/Môn
+    if (data.action === "move") {
+      var allDocs = loadDocuments(folder);
+      var targetDoc = allDocs.find(function(d) {
+        return (data.docId && String(d.id) === String(data.docId)) ||
+               (data.driveId && String(d.drive_id) === String(data.driveId));
+      });
+      var moveTarget = resolveTargetDocFolder(folder, data);
+      var movedDriveId = data.driveId || (targetDoc ? targetDoc.drive_id : "");
+      if (movedDriveId) {
+        try {
+          var driveFile = DriveApp.getFileById(movedDriveId);
+          driveFile.moveTo(moveTarget.folder);
+        } catch (moveErr) {}
+      }
+      if (targetDoc) {
+        if (data.title) targetDoc.title = data.title;
+        if (data.description !== undefined) targetDoc.description = data.description;
+        if (data.category) targetDoc.category = data.category;
+        if (data.grade !== undefined) targetDoc.grade = String(data.grade);
+        if (data.subject !== undefined) targetDoc.subject = data.subject;
+        if (data.week !== undefined) targetDoc.week = Number(data.week) || 1;
+        targetDoc.folder_path = moveTarget.path;
+        saveDocumentsDb(folder, allDocs);
+      }
+      return responseJSON({
+        status: "success",
+        message: "Đã cập nhật vị trí học liệu trên Drive",
+        folderPath: moveTarget.path,
+        doc: targetDoc || null
+      });
+    }
     
-    // 2. Tải lên tệp học liệu mới
+    // 2. Tải lên tệp học liệu mới (Chỉ tạo thư mục Danh mục -> Khối -> Môn khi có tệp được đăng)
     var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
     var contentType = data.fileType || "application/octet-stream";
     var base64Data = data.base64Data;
@@ -8395,11 +8561,13 @@ function doPost(e) {
       return responseJSON({ status: "error", message: "Thiếu dữ liệu tệp tin base64Data" });
     }
     
+    var targetInfo = resolveTargetDocFolder(folder, data);
     var bytes = Utilities.base64Decode(base64Data);
     var blob = Utilities.newBlob(bytes, contentType, fileName);
-    var file = folder.createFile(blob);
+    var file = targetInfo.folder.createFile(blob);
     
     var fileDesc = "Người đóng góp: " + (data.author || "Giáo viên") + "\\n";
+    fileDesc += "Thư mục: " + targetInfo.path + "\\n";
     if (data.description) fileDesc += "Mô tả: " + data.description;
     file.setDescription(fileDesc);
     
@@ -8421,6 +8589,8 @@ function doPost(e) {
       category: data.category || "khbd",
       grade: String(data.grade || "1"),
       subject: data.subject || "toan",
+      week: Number(data.week) || 1,
+      folder_path: targetInfo.path,
       file_name: fileName,
       file_size: file.getSize(),
       file_type: ext,
@@ -8453,7 +8623,8 @@ function doPost(e) {
       downloadUrl: downloadUrl,
       fileName: fileName,
       doc: newDocRecord,
-      folderName: folder.getName(),
+      folderName: targetInfo.folder.getName(),
+      folderPath: targetInfo.path,
       createdAt: new Date().toISOString()
     });
     
@@ -9461,8 +9632,11 @@ async function handleContributeSubmit(e) {
             title: title,
             description: gasDescription,
             category: category,
+            categoryName: getCategoryName(category),
             grade: grade,
+            gradeName: getGradeName(grade, category),
             subject: subject || '',
+            subjectName: subject ? getSubjectName(subject, category, grade) : '',
             week: resolvedWeek,
             fileName: uploadFileName,
             fileType: uploadFileType,
@@ -9495,8 +9669,11 @@ async function handleContributeSubmit(e) {
             title: title,
             description: desc,
             category: category,
+            categoryName: getCategoryName(category),
             grade: grade,
+            gradeName: getGradeName(grade, category),
             subject: subject || '',
+            subjectName: subject ? getSubjectName(subject, category, grade) : '',
             week: resolvedWeek,
             file_name: localFileName,
             file_size: localFileSize,

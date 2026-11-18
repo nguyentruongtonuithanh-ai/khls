@@ -49,8 +49,7 @@ Hệ thống đã tích hợp tính năng **Đóng góp học liệu trực ti�
 
 ```javascript
 // ============================================================
-// GOOGLE APPS SCRIPT: TỰ ĐỘNG ĐỒNG BỘ HAI CHIỀU GIỮA MÁY A VÀ MÁY B
-// Lưu trữ tệp & Cơ sở dữ liệu dùng chung tại Google Drive Trường
+// GOOGLE APPS SCRIPT: ĐỒNG BỘ DỮ LIỆU & LƯU HỌC LIỆU VÀO GOOGLE DRIVE
 // Tài khoản Quản trị: nguyentruongtonuithanh@gmail.com
 // Trường Tiểu Học Núi Thành
 // ============================================================
@@ -67,6 +66,95 @@ function getFolder(folderId) {
     }
   }
   return DriveApp.getRootFolder();
+}
+
+var APP_ROOT_FOLDER_NAME = "Kho Học Liệu Số - TH Núi Thành";
+var CATEGORY_FOLDER_MAP = {
+  khbd: "Kế hoạch bài dạy",
+  bgdt: "Bài giảng điện tử",
+  dethi: "Đề thi",
+  phieubt: "Phiếu bài tập",
+  trochoi: "Trò chơi tương tác",
+  video: "Video",
+  chuyenmon: "Sinh hoạt chuyên môn",
+  sangtao: "Sản phẩm sáng tạo",
+  tuhoc: "Tài liệu tự học",
+  gvcn: "Công tác chủ nhiệm"
+};
+var SUBJECT_FOLDER_MAP = {
+  toan: "Toán",
+  tiengviet: "Tiếng Việt",
+  tienganh: "Tiếng Anh",
+  tnxh: "TN & XH",
+  khoahoc: "Khoa học",
+  lsdl: "LS & ĐL",
+  tinhoc: "Tin học",
+  congnghe: "Công nghệ",
+  daoduc: "Đạo đức",
+  hdtn: "HĐTN",
+  amnhac: "Âm nhạc",
+  mythuat: "Mỹ thuật",
+  gdtc: "GDTC"
+};
+
+function sanitizeFolderName(name) {
+  return String(name || "")
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getOrCreateSubFolder(parentFolder, folderName) {
+  var cleanName = sanitizeFolderName(folderName);
+  if (!cleanName) return parentFolder;
+  var existing = parentFolder.getFoldersByName(cleanName);
+  if (existing.hasNext()) {
+    return existing.next();
+  }
+  return parentFolder.createFolder(cleanName);
+}
+
+// Chỉ tự động tạo cây thư mục (Danh mục -> Khối lớp -> Môn học) khi có học liệu thực sự được lưu
+function resolveTargetDocFolder(rootFolder, data) {
+  var current = rootFolder;
+  var segments = [];
+  try {
+    if (rootFolder.getId() === DriveApp.getRootFolder().getId()) {
+      current = getOrCreateSubFolder(current, APP_ROOT_FOLDER_NAME);
+      segments.push(current.getName());
+    }
+  } catch (e) {}
+
+  var catName = sanitizeFolderName(data.categoryName || CATEGORY_FOLDER_MAP[data.category] || data.category || "Học liệu số");
+  if (catName) {
+    current = getOrCreateSubFolder(current, catName);
+    segments.push(catName);
+  }
+
+  var gradeName = "";
+  if (data.gradeName) {
+    gradeName = sanitizeFolderName(data.gradeName);
+  } else if (data.grade && String(data.grade) !== "all") {
+    gradeName = sanitizeFolderName("Khối " + data.grade);
+  }
+  if (gradeName) {
+    current = getOrCreateSubFolder(current, gradeName);
+    segments.push(gradeName);
+  }
+
+  var subjectName = "";
+  if (data.subject && String(data.subject) !== "all") {
+    subjectName = sanitizeFolderName(data.subjectName || SUBJECT_FOLDER_MAP[data.subject] || data.subject);
+  }
+  if (subjectName) {
+    current = getOrCreateSubFolder(current, subjectName);
+    segments.push(subjectName);
+  }
+
+  return {
+    folder: current,
+    path: segments.join(" / ")
+  };
 }
 
 function getDatabaseFile(folder) {
@@ -94,7 +182,6 @@ function saveDocumentsDb(folder, docs) {
   file.setContent(JSON.stringify(docs));
 }
 
-// 1. Phục vụ Máy B (và mọi máy tính khác) tải về danh sách học liệu mới nhất
 function doGet(e) {
   try {
     var folderId = (e && e.parameter && e.parameter.folderId) || DEFAULT_FOLDER_ID;
@@ -110,7 +197,6 @@ function doGet(e) {
   }
 }
 
-// 2. Tiếp nhận khi Máy A (hoặc bất kỳ máy nào) tải tệp lên hoặc duyệt bài
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) {
@@ -120,11 +206,11 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var folder = getFolder(data.folderId || DEFAULT_FOLDER_ID);
     
-    // Xử lý Phê duyệt, Từ chối hoặc Đặt lại trạng thái chờ duyệt học liệu
+    // 1. Phê duyệt, Từ chối hoặc Đặt lại trạng thái chờ duyệt học liệu
     if (data.action === "review" || data.action === "approve" || data.action === "reject" || data.action === "pending" || data.action === "reset") {
       var allDocs = loadDocuments(folder);
       var targetDoc = allDocs.find(function(d) {
-        return String(d.id) === String(data.docId) || 
+        return String(d.id) === String(data.docId) ||
                (data.driveId && String(d.drive_id) === String(data.driveId));
       });
       if (targetDoc) {
@@ -141,8 +227,8 @@ function doPost(e) {
       }
       return responseJSON({ status: "error", message: "Không tìm thấy mã học liệu: " + data.docId });
     }
-
-    // Xử lý Xóa vĩnh viễn học liệu khỏi cơ sở dữ liệu trên Drive
+    
+    // 1b. Xóa học liệu khỏi cơ sở dữ liệu trên Drive
     if (data.action === "delete") {
       var allDocs = loadDocuments(folder);
       var newDocs = allDocs.filter(function(d) {
@@ -154,7 +240,7 @@ function doPost(e) {
       return responseJSON({ status: "success", message: "Đã xóa học liệu trên Drive", deletedDocId: data.docId });
     }
 
-    // Xử lý Đồng bộ Cấu trúc thư mục (Danh mục, Khối lớp, Môn học) dùng chung toàn trường
+    // 1c. Đồng bộ cấu trúc danh mục website (KHÔNG tạo thư mục trống trên Drive)
     if (data.action === "sync_structure" || data.docId === "__khls_structure__") {
       var allDocs = loadDocuments(folder);
       var structIdx = allDocs.findIndex(function(d) { return d.id === "__khls_structure__"; });
@@ -170,10 +256,43 @@ function doPost(e) {
         allDocs.push(structDoc);
       }
       saveDocumentsDb(folder, allDocs);
-      return responseJSON({ status: "success", message: "Đã đồng bộ cấu trúc thư mục lên Drive", structure: structDoc });
+      return responseJSON({ status: "success", message: "Đã đồng bộ cấu trúc danh mục", structure: structDoc });
+    }
+
+    // 1d. Di chuyển học liệu sang thư mục mới khi quản trị viên chỉnh sửa Danh mục/Khối/Môn
+    if (data.action === "move") {
+      var allDocs = loadDocuments(folder);
+      var targetDoc = allDocs.find(function(d) {
+        return (data.docId && String(d.id) === String(data.docId)) ||
+               (data.driveId && String(d.drive_id) === String(data.driveId));
+      });
+      var moveTarget = resolveTargetDocFolder(folder, data);
+      var movedDriveId = data.driveId || (targetDoc ? targetDoc.drive_id : "");
+      if (movedDriveId) {
+        try {
+          var driveFile = DriveApp.getFileById(movedDriveId);
+          driveFile.moveTo(moveTarget.folder);
+        } catch (moveErr) {}
+      }
+      if (targetDoc) {
+        if (data.title) targetDoc.title = data.title;
+        if (data.description !== undefined) targetDoc.description = data.description;
+        if (data.category) targetDoc.category = data.category;
+        if (data.grade !== undefined) targetDoc.grade = String(data.grade);
+        if (data.subject !== undefined) targetDoc.subject = data.subject;
+        if (data.week !== undefined) targetDoc.week = Number(data.week) || 1;
+        targetDoc.folder_path = moveTarget.path;
+        saveDocumentsDb(folder, allDocs);
+      }
+      return responseJSON({
+        status: "success",
+        message: "Đã cập nhật vị trí học liệu trên Drive",
+        folderPath: moveTarget.path,
+        doc: targetDoc || null
+      });
     }
     
-    // Tải lên tệp học liệu mới
+    // 2. Tải lên tệp học liệu mới (Chỉ tạo thư mục Danh mục -> Khối -> Môn khi có tệp được đăng)
     var fileName = data.fileName || ("HocLieu_" + new Date().getTime());
     var contentType = data.fileType || "application/octet-stream";
     var base64Data = data.base64Data;
@@ -182,11 +301,13 @@ function doPost(e) {
       return responseJSON({ status: "error", message: "Thiếu dữ liệu tệp tin base64Data" });
     }
     
+    var targetInfo = resolveTargetDocFolder(folder, data);
     var bytes = Utilities.base64Decode(base64Data);
     var blob = Utilities.newBlob(bytes, contentType, fileName);
-    var file = folder.createFile(blob);
+    var file = targetInfo.folder.createFile(blob);
     
     var fileDesc = "Người đóng góp: " + (data.author || "Giáo viên") + "\n";
+    fileDesc += "Thư mục: " + targetInfo.path + "\n";
     if (data.description) fileDesc += "Mô tả: " + data.description;
     file.setDescription(fileDesc);
     
@@ -199,7 +320,7 @@ function doPost(e) {
     var previewUrl = "https://drive.google.com/file/d/" + fileId + "/preview";
     var downloadUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
     
-    // Lưu thông tin học liệu vào database dùng chung trên Drive để Máy B tự động đọc được
+    // Lưu vào cơ sở dữ liệu chung trên Google Drive để mọi máy tính cùng thấy
     var ext = fileName.split(".").pop().toLowerCase();
     var newDocRecord = {
       id: data.docId || ("doc-" + new Date().getTime()),
@@ -208,6 +329,8 @@ function doPost(e) {
       category: data.category || "khbd",
       grade: String(data.grade || "1"),
       subject: data.subject || "toan",
+      week: Number(data.week) || 1,
+      folder_path: targetInfo.path,
       file_name: fileName,
       file_size: file.getSize(),
       file_type: ext,
@@ -240,7 +363,8 @@ function doPost(e) {
       downloadUrl: downloadUrl,
       fileName: fileName,
       doc: newDocRecord,
-      folderName: folder.getName(),
+      folderName: targetInfo.folder.getName(),
+      folderPath: targetInfo.path,
       createdAt: new Date().toISOString()
     });
     
