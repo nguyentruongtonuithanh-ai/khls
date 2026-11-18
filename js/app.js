@@ -1345,8 +1345,17 @@ function handleRoute() {
     updatePendingBadge();
 
     // Route dispatcher
+    const triggerAutoSync = () => {
+        const now = Date.now();
+        if (!window._lastAutoCloudSync || (now - window._lastAutoCloudSync) > 1500) {
+            window._lastAutoCloudSync = now;
+            syncDocumentsFromDrive(false);
+        }
+    };
+
     if (page === 'home') {
         renderHomePage();
+        triggerAutoSync();
     } else if (page === 'upload') {
         if (!state.user) {
             openAuthRequiredModal();
@@ -1384,6 +1393,7 @@ function handleRoute() {
         renderProfilePage();
     } else if (page === 'dashboard') {
         renderDashboardPage();
+        triggerAutoSync();
     } else if (page === 'admin') {
         renderAdminPage();
     }
@@ -2906,8 +2916,153 @@ function getDocUserStarGift(doc, user = state.user) {
     }) || null;
 }
 
-function mergeStarGifts(listA, listB) {
-    return getDocStarGifts({ star_gifts: [...(Array.isArray(listA) ? listA : []), ...(Array.isArray(listB) ? listB : [])] });
+function mergeStarGifts(listA, listB, listC = []) {
+    return getDocStarGifts({
+        star_gifts: [
+            ...(Array.isArray(listA) ? listA : []),
+            ...(Array.isArray(listB) ? listB : []),
+            ...(Array.isArray(listC) ? listC : [])
+        ]
+    });
+}
+
+function getLocalDocInteractionsMap() {
+    try {
+        const raw = localStorage.getItem('khls_doc_interactions_v1');
+        return raw ? (JSON.parse(raw) || {}) : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function mergeInteractionsMaps(mapA, mapB) {
+    const out = {};
+    [mapA, mapB].forEach(src => {
+        if (!src || typeof src !== 'object') return;
+        Object.entries(src).forEach(([docId, val]) => {
+            if (!val || typeof val !== 'object') return;
+            const prev = out[docId] || { download_count: 0, star_gifts: [] };
+            out[docId] = {
+                download_count: Math.max(Number(prev.download_count) || 0, Number(val.download_count) || 0),
+                star_gifts: mergeStarGifts(prev.star_gifts, val.star_gifts)
+            };
+        });
+    });
+    return out;
+}
+
+function collectAllDocInteractionsMap() {
+    let map = getLocalDocInteractionsMap();
+    const docs = store.getDocuments();
+    const currentMap = {};
+    docs.forEach(d => {
+        if (!d || !d.id) return;
+        const gifts = getDocStarGifts(d);
+        const dl = Number(d.download_count) || 0;
+        if (dl > 0 || gifts.length > 0) {
+            const entry = { download_count: dl, star_gifts: gifts };
+            currentMap[String(d.id)] = entry;
+            if (d.drive_id) currentMap[String(d.drive_id)] = entry;
+        }
+    });
+    map = mergeInteractionsMaps(map, currentMap);
+    try {
+        localStorage.setItem('khls_doc_interactions_v1', JSON.stringify(map));
+    } catch (e) {}
+    return map;
+}
+
+async function syncInteractionActionToCloud(payload) {
+    collectAllDocInteractionsMap();
+    const res = await uploadDocToCloudDrive(payload);
+    if (res && res.driveResult && res.driveResult.status === 'success') {
+        return true;
+    }
+    // Fallback cho Code.gs cũ chưa hỗ trợ action gift_star / download: lưu qua __khls_structure__
+    if (res && res.activeGas) {
+        try {
+            await syncDocumentsFromDrive(false);
+            collectAllDocInteractionsMap();
+            await pushStructureToCloud(false);
+            return true;
+        } catch (e) {}
+    }
+    return false;
+}
+
+function openDocStarGiftersModal(docId) {
+    const doc = store.getDocuments().find(d => String(d.id) === String(docId));
+    if (!doc) return;
+    const gifts = getDocStarGifts(doc);
+    const total = gifts.reduce((sum, g) => sum + (Number(g.stars) || 0), 0);
+
+    let modal = document.getElementById('doc-star-gifters-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'doc-star-gifters-modal';
+        modal.innerHTML = `
+            <div class="modal">
+                <button class="modal-close" id="doc-star-gifters-close" aria-label="Đóng">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <div class="modal-header">
+                    <h2 class="modal-title" id="doc-star-gifters-title">🎁 Danh sách tặng sao</h2>
+                    <p class="modal-desc" id="doc-star-gifters-desc"></p>
+                </div>
+                <div class="modal-body" id="doc-star-gifters-body" style="max-height:60vh; overflow-y:auto;"></div>
+                <div class="modal-footer" style="display:flex; justify-content:flex-end; padding-top:12px;">
+                    <button type="button" class="btn btn-secondary" id="doc-star-gifters-ok">Đóng</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const closeFn = () => modal.classList.remove('active');
+        modal.querySelector('#doc-star-gifters-close')?.addEventListener('click', closeFn);
+        modal.querySelector('#doc-star-gifters-ok')?.addEventListener('click', closeFn);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeFn();
+        });
+    }
+
+    const titleEl = modal.querySelector('#doc-star-gifters-title');
+    const descEl = modal.querySelector('#doc-star-gifters-desc');
+    const bodyEl = modal.querySelector('#doc-star-gifters-body');
+
+    if (titleEl) titleEl.textContent = `🎁 Đồng nghiệp đã tặng sao`;
+    if (descEl) descEl.textContent = `${doc.title || doc.file_name || 'Học liệu'} • Tổng ${total} ⭐ (${gifts.length} người tặng)`;
+    if (bodyEl) {
+        bodyEl.innerHTML = gifts.length > 0
+            ? `
+                <div class="admin-table-container">
+                    <table class="admin-table" style="font-size:0.86rem;">
+                        <thead>
+                            <tr>
+                                <th style="width:44px;">STT</th>
+                                <th>Người tặng</th>
+                                <th>Tổ</th>
+                                <th style="text-align:center;">Số sao</th>
+                                <th style="text-align:center;">Thời gian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${gifts.map((g, i) => `
+                                <tr>
+                                    <td>${i + 1}</td>
+                                    <td><strong>${escapeHtml(g.fullname)}</strong></td>
+                                    <td>${escapeHtml(g.department || '—')}</td>
+                                    <td style="text-align:center; color:#fbbf24; font-weight:700; white-space:nowrap;">${'★'.repeat(g.stars)} (${g.stars} ⭐)</td>
+                                    <td style="text-align:center; font-size:0.78rem; color:var(--text-muted);">${timeAgo(g.created_at)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `
+            : `<div style="padding:18px; text-align:center; color:var(--text-muted);">Chưa có ai tặng sao cho học liệu này. Hãy là người đầu tiên tặng sao cho tác giả!</div>`;
+    }
+
+    modal.classList.add('active');
 }
 
 function toggleStarGiftBar(docId, forceState = null) {
@@ -2980,8 +3135,11 @@ function submitDocStarGift(docId, stars) {
 
     showToast(`🌟 Đã tặng ${starVal} sao cho tác giả ${getDocAuthorName(doc)}!`, 'success');
     renderDetailPage(doc.id, true);
+    if (document.getElementById('home-dashboard-content')) {
+        document.getElementById('home-dashboard-content').innerHTML = getDashboardHtml(true);
+    }
 
-    uploadDocToCloudDrive({
+    syncInteractionActionToCloud({
         action: 'gift_star',
         docId: doc.id,
         driveId: doc.drive_id || '',
@@ -3079,7 +3237,7 @@ function renderDetailPage(docId, skipViewIncrement = false) {
                         <span>📅 ${timeAgo(doc.created_at)}</span>
                         <span>👁️ ${doc.view_count} xem</span>
                         <span>⬇️ ${doc.download_count || 0} tải</span>
-                        <span>🎁 ${getDocGiftedStarsTotal(doc)} sao tặng (${getDocStarGifts(doc).length} lượt)</span>
+                        <span onclick="openDocStarGiftersModal('${String(doc.id).replace(/'/g, "\\'")}')" style="cursor:pointer; color:#fbbf24; font-weight:600;" title="Nhấn để xem danh sách người đã tặng sao">🎁 ${getDocGiftedStarsTotal(doc)} sao tặng (${getDocStarGifts(doc).length} người)${getDocStarGifts(doc).length > 0 ? ' • Xem' : ''}</span>
                         <span>⭐ ${doc.avg_rating ? doc.avg_rating.toFixed(1) : '5.0'} (${doc.rating_count || 0} đánh giá)</span>
                     </div>
 
@@ -3242,7 +3400,7 @@ function handleDownloadDoc(docId) {
 
     doc.download_count = (doc.download_count || 0) + 1;
     store.saveDocuments(docs);
-    uploadDocToCloudDrive({
+    syncInteractionActionToCloud({
         action: 'download',
         docId: doc.id,
         driveId: doc.drive_id || '',
@@ -7634,6 +7792,7 @@ async function pushStructureToCloud(showNotification = false) {
         deleted_doc_ids,
         deleted_user_ids,
         users,
+        doc_interactions: collectAllDocInteractionsMap(),
         timestamp,
         updated_by: (state.user && state.user.fullname) || 'Admin',
         updated_at: new Date().toISOString()
@@ -9480,14 +9639,18 @@ async function syncDocumentsFromDrive(isManual = false) {
 
         const data = await resp.json();
         if (data && data.status === 'success' && Array.isArray(data.documents)) {
-            // 1. Tự động đồng bộ Cấu trúc thư mục và Danh sách học liệu đã xóa từ Admin
+            // 1. Tự động đồng bộ Cấu trúc thư mục, Danh sách đã xóa và Tương tác (Tặng sao / Lượt tải)
             const structDocs = data.documents.filter(d => d.id === '__khls_structure__' || d.title === '__KHLSSYSTEM_STRUCTURE__');
             let cloudStruct = null;
+            let cloudInteractions = {};
             let maxTimestamp = 0;
             structDocs.forEach(d => {
                 try {
                     const parsed = typeof d.description === 'string' ? JSON.parse(d.description) : d.description;
-                    if (parsed && (parsed.timestamp || parsed.categories || parsed.subjects || parsed.deleted_doc_ids)) {
+                    if (parsed && parsed.doc_interactions) {
+                        cloudInteractions = mergeInteractionsMaps(cloudInteractions, parsed.doc_interactions);
+                    }
+                    if (parsed && (parsed.timestamp || parsed.categories || parsed.subjects || parsed.deleted_doc_ids || parsed.doc_interactions)) {
                         const t = Number(parsed.timestamp) || 1;
                         if (t >= maxTimestamp) {
                             maxTimestamp = t;
@@ -9496,6 +9659,12 @@ async function syncDocumentsFromDrive(isManual = false) {
                     }
                 } catch(e) {}
             });
+            if (Object.keys(cloudInteractions).length > 0) {
+                try {
+                    const mergedAllInter = mergeInteractionsMaps(getLocalDocInteractionsMap(), cloudInteractions);
+                    localStorage.setItem('khls_doc_interactions_v1', JSON.stringify(mergedAllInter));
+                } catch(e) {}
+            }
 
             if (cloudStruct) {
                 const localTime = Number(localStorage.getItem('khls_structure_timestamp') || '0');
@@ -9886,6 +10055,32 @@ async function syncDocumentsFromDrive(isManual = false) {
                             store.saveNotifications(notifs);
                         }
                     }
+                }
+            });
+
+            // 2b. Áp dụng tương tác (Tặng sao & Lượt tải) đồng bộ từ Google Drive cho toàn bộ học liệu cục bộ
+            const fullInteractions = mergeInteractionsMaps(getLocalDocInteractionsMap(), cloudInteractions);
+            localDocs.forEach(d => {
+                if (!d) return;
+                const interById = d.id ? fullInteractions[String(d.id)] : null;
+                const interByDrive = d.drive_id ? fullInteractions[String(d.drive_id)] : null;
+                if (!interById && !interByDrive) return;
+
+                const targetDl = Math.max(
+                    Number(d.download_count) || 0,
+                    Number(interById?.download_count) || 0,
+                    Number(interByDrive?.download_count) || 0
+                );
+                if (targetDl > (Number(d.download_count) || 0)) {
+                    d.download_count = targetDl;
+                    hasChanges = true;
+                }
+
+                const mergedGifts = mergeStarGifts(d.star_gifts, interById?.star_gifts, interByDrive?.star_gifts);
+                const prevGiftCount = Array.isArray(d.star_gifts) ? d.star_gifts.length : 0;
+                if (mergedGifts.length > prevGiftCount) {
+                    d.star_gifts = mergedGifts;
+                    hasChanges = true;
                 }
             });
 
